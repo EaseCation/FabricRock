@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "fabricrock",
+  "version": "${version}",
+  "name": "Fabric Rock",
+  "description": "",
+  "authors": [],
+  "contact": {
+    "repo": "https://github.com/EaseCation/FabricRock"
+  },
+  "license": "MIT",
+  "icon": "assets/fabricrock/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "client": [
+      "net.easecation.fabricrock.client.FabricRockClient"
+    ],
+    "main": [
+      "net.easecation.fabricrock.FabricRock"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
