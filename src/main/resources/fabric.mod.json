@@ -1,27 +1,44 @@
 {
   "schemaVersion": 1,
-  "id": "fabricrock",
+  "id": "bedrock-loader",
   "version": "${version}",
-  "name": "Fabric Rock",
-  "description": "",
-  "authors": [],
+  "name": "Bedrock Loader",
+  "description": "Effortlessly transforming Minecraft Bedrock Addons into new horizons for Fabric.",
+  "authors": [
+    "Choi-Jungwoo"
+  ],
   "contact": {
-    "repo": "https://github.com/EaseCation/FabricRock"
+    "homepage": "https://fabricmc.net/",
+    "sources": "https://github.com/FabricMC/fabric-example-mod"
   },
-  "license": "MIT",
-  "icon": "assets/fabricrock/icon.png",
+  "license": "CC0-1.0",
+  "icon": "assets/bedrock-loader/icon.png",
   "environment": "*",
   "entrypoints": {
-    "client": [
-      "net.easecation.fabricrock.client.FabricRockClient"
-    ],
     "main": [
-      "net.easecation.fabricrock.FabricRock"
+      {
+        "value": "net.easecation.bedrockloader.BedrockLoader",
+        "adapter": "kotlin"
+      }
+    ],
+    "fabric-datagen": [
+      {
+        "value": "net.easecation.bedrockloader.BedrockLoaderDataGenerator",
+        "adapter": "kotlin"
+      }
     ]
   },
+  "mixins": [
+    "bedrock-loader.mixins.json"
+  ],
   "depends": {
-    "fabricloader": ">=${loader_version}",
-    "fabric": "*",
-    "minecraft": "${minecraft_version}"
+    "fabricloader": ">=0.15.6",
+    "minecraft": "~1.18.2",
+    "java": ">=17",
+    "fabric-api": "*",
+    "fabric-language-kotlin": ">=1.9.22"
+  },
+  "suggests": {
+    "another-mod": "*"
   }
 }
