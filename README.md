@@ -13,7 +13,8 @@ Before you begin, ensure you have Fabric Loader and Fabric API installed in your
 
 1. Download the latest version of Bedrock Loader from the Releases section.
 2. Place the downloaded `.jar` file in your `mods` folder located in your Minecraft directory.
-3. Launch Minecraft Java Edition using the Fabric profile.
+3. Download and install dependence mods: [Fabric API](https://www.curseforge.com/minecraft/mc-mods/fabric-api) and [Fabric Language Kotlin](https://www.curseforge.com/minecraft/mc-mods/fabric-language-kotlin).
+4. Launch Minecraft Java Edition using the Fabric profile.
 
 ## Using Bedrock Loader
 

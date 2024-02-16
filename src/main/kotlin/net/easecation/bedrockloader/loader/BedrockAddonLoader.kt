@@ -29,7 +29,7 @@ object BedrockAddonLoader {
     val registeredBlocks: MutableMap<Identifier, Block> = mutableMapOf()
 
     fun load() {
-        val dataFolder: File = BedrockLoader.getGameDir().resolve("config/bedrock-addons")
+        val dataFolder: File = BedrockLoader.getGameDir().resolve("config/bedrock-loader")
         if (dataFolder.exists()) {
             dataFolder.mkdirs()
         }
