@@ -20,12 +20,6 @@
         "value": "net.easecation.bedrockloader.BedrockLoader",
         "adapter": "kotlin"
       }
-    ],
-    "fabric-datagen": [
-      {
-        "value": "net.easecation.bedrockloader.BedrockLoaderDataGenerator",
-        "adapter": "kotlin"
-      }
     ]
   },
   "mixins": [
