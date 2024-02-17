@@ -1,11 +1,15 @@
 package net.easecation.bedrockloader.bedrock.block.component
 
+/**
+ * Custom Blocks: Render and Lighting Options
+ * https://learn.microsoft.com/en-us/minecraft/creator/documents/customblockrenderlighting?view=minecraft-bedrock-stable
+ */
 class ComponentMaterialInstances : LinkedHashMap<String, ComponentMaterialInstances.Instance>(), IBlockComponent {
 
     data class Instance(
-            val ambientOcclusion: Boolean?,
-            val faceDimming: Boolean?,
-            val renderMethod: RenderMethod?,
+            val ambient_occlusion: Boolean?,
+            val face_dimming: Boolean?,
+            val render_method: RenderMethod?,
             val texture: String?
     )
 

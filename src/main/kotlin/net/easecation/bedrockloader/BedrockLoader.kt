@@ -5,16 +5,12 @@ import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.client.itemgroup.FabricItemGroupBuilder
 import net.fabricmc.loader.api.FabricLoader
 import net.fabricmc.loader.api.ModContainer
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.option.GameOptions
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
 import net.minecraft.util.Identifier
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 
 object BedrockLoader : ModInitializer {

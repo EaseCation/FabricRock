@@ -34,8 +34,8 @@ dependencies {
 	modImplementation "net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}"
 	// Uncomment the following line to enable the deprecated Fabric API modules. 
 	// These are included in the Fabric API production distribution and allow you to update your mod to the latest modules at a later more convenient time.
-	implementation 'com.google.code.findbugs:jsr305:3.0.2'
 	// modImplementation "net.fabricmc.fabric-api:fabric-api-deprecated:${project.fabric_version}"
+	implementation 'com.google.code.findbugs:jsr305:3.0.2'
 }
 
 processResources {

@@ -3,11 +3,12 @@ package net.easecation.bedrockloader.bedrock.definition
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
+import com.google.gson.annotations.SerializedName
 import net.minecraft.util.Identifier
 import java.lang.reflect.Type
 
 data class BlockResourceDefinition(
-        val format_version: String,
+        @SerializedName("format_version") val formatVersion: String,
         val blocks: Map<Identifier, Block>
 ) {
 
