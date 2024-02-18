@@ -6,6 +6,7 @@ import net.easecation.bedrockloader.bedrock.block.component.ComponentPlacementFi
 import net.easecation.bedrockloader.bedrock.block.component.ComponentSelectionBox
 import net.easecation.bedrockloader.bedrock.pack.SemVersion
 import net.easecation.bedrockloader.bedrock.definition.BlockResourceDefinition
+import net.easecation.bedrockloader.bedrock.definition.GeometryDefinition
 import net.minecraft.util.Identifier
 import java.lang.reflect.Type
 import java.util.UUID
@@ -25,6 +26,8 @@ object GsonUtil {
             .registerTypeAdapter(ComponentGeometry::class.java, ComponentGeometry.Deserializer())
             .registerTypeAdapter(ComponentSelectionBox::class.java, ComponentSelectionBox.Deserializer())
             .registerTypeAdapter(ComponentPlacementFilter::class.java, ComponentPlacementFilter.Deserializer())
+            // geometry
+            .registerTypeAdapter(GeometryDefinition.Uv::class.java, GeometryDefinition.Uv.Deserializer())
             .create()
 
     class UUIDSerializer : JsonSerializer<UUID>, JsonDeserializer<UUID> {

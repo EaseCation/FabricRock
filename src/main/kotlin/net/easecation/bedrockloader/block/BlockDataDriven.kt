@@ -22,12 +22,13 @@ class BlockDataDriven private constructor(val identifier: Identifier, val compon
         }
 
         private fun calculateSettings(components: BlockComponents): Settings {
-            val settings = FabricBlockSettings.of(Material.METAL).hardness(4.0f)
+            val settings = FabricBlockSettings.of(Material.METAL).hardness(4.0f)  // TODO hardness
             components.minecraftCollisionBox?.let {
                 if (it.size.all { e -> e == 0f }) {
                     settings.collidable(false)
                 }
             }
+            // TODO SelectionBox
             components.minecraftLightEmission?.let {
                 settings.luminance(it)
             }

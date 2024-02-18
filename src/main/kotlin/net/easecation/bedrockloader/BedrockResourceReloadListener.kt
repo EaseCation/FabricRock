@@ -1,8 +1,6 @@
 package net.easecation.bedrockloader
 
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener
-import net.fabricmc.fabric.impl.resource.loader.FabricModResourcePack
-import net.fabricmc.fabric.mixin.resource.loader.NamespaceResourceManagerAccessor
 import net.minecraft.resource.ResourceManager
 import net.minecraft.util.Identifier
 

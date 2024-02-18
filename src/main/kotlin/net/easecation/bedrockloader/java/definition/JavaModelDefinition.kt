@@ -1,6 +1,8 @@
 package net.easecation.bedrockloader.java.definition
 
+import net.minecraft.util.Identifier
+
 data class JavaModelDefinition(
-        val parent: String? = null,
-        val textures: Map<String, String>? = null
+        var parent: String? = null,
+        var textures: Map<String, Identifier>? = null
 )

@@ -13,7 +13,7 @@ data class BlockResourceDefinition(
 ) {
 
     data class Block(
-            val textures: Textures,
+            val textures: Textures?,
             val carried_textures: String?,
             val sound: String?
     )

@@ -20,6 +20,12 @@
         "value": "net.easecation.bedrockloader.BedrockLoader",
         "adapter": "kotlin"
       }
+    ],
+    "client": [
+      {
+        "value": "net.easecation.bedrockloader.BedrockLoaderClient",
+        "adapter": "kotlin"
+      }
     ]
   },
   "mixins": [

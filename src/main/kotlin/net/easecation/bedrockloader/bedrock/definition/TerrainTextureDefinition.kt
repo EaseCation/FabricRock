@@ -1,5 +1,7 @@
 package net.easecation.bedrockloader.bedrock.definition
 
+import net.easecation.bedrockloader.bedrock.BedrockTexturePath
+
 data class TerrainTextureDefinition(
         val resource_pack_name: String?,
         val texture_name: String?,
@@ -8,6 +10,6 @@ data class TerrainTextureDefinition(
         val texture_data: Map<String, TextureData>
 ) {
     data class TextureData(
-            val textures: String
+            val textures: BedrockTexturePath
     )
 }

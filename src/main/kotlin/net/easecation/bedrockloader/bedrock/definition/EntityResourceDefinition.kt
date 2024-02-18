@@ -1,6 +1,7 @@
 package net.easecation.bedrockloader.bedrock.definition
 
 import com.google.gson.annotations.SerializedName
+import net.minecraft.util.Identifier
 
 data class EntityResourceDefinition(
         @SerializedName("format_version") val formatVersion: String,
@@ -8,22 +9,22 @@ data class EntityResourceDefinition(
 ) {
 
     data class ClientEntity(
-            val description: Description
+            val description: ClientEntityDescription
     )
 
-    data class Description(
+    data class ClientEntityDescription(
             val animations: Map<String, String>?,
             val enable_attachables: Boolean?,
             val geometry: Map<String, String>?,
             val queryable_geometry: String?,
             val hide_armor: Boolean?,
             val held_item_ignores_lighting: Boolean?,
-            val identifier: String,
+            val identifier: Identifier,
             val materials: Map<String, String>?,
             val min_engine_version: String?,
             val particle_effects: Map<String, String>?,
             val particle_emitters: Map<String, String>?,
-            val render_controllers: List<Any>?,
+            val render_controllers: List<String>?,
             val scripts: Scripts?,
             val sound_effects: Map<String, String>?,
             val spawn_egg: SpawnEgg?,

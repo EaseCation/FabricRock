@@ -9,7 +9,7 @@ import java.lang.reflect.Type
 
 sealed class ComponentGeometry : IBlockComponent {
 
-    data class ComponentGeometrySimple(val value: String) : ComponentGeometry()
+    data class ComponentGeometrySimple(val identifier: String) : ComponentGeometry()
 
     data class ComponentGeometryFull(val identifier: String,
                                      val bone_visibility: Map<String, Boolean>?

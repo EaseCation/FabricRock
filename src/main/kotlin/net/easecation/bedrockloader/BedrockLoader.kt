@@ -1,6 +1,7 @@
 package net.easecation.bedrockloader
 
-import net.easecation.bedrockloader.loader.BedrockAddonLoader
+import net.easecation.bedrockloader.loader.BedrockAddonsLoader
+import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.client.itemgroup.FabricItemGroupBuilder
 import net.fabricmc.loader.api.FabricLoader
@@ -24,23 +25,30 @@ object BedrockLoader : ModInitializer {
 		logger.info("Initializing BedrockLoader...")
 
 		logger.info("Loading bedrock addons...")
-		BedrockAddonLoader.load()
+		BedrockAddonsLoader.load()
 
 		// group
 		var iconItem = Items.BONE_BLOCK
-		if (BedrockAddonLoader.registeredItems.isNotEmpty()) {
-			iconItem = BedrockAddonLoader.registeredItems.entries.first().value
+		if (BedrockAddonsRegistry.items.isNotEmpty()) {
+			iconItem = BedrockAddonsRegistry.items.values.first()
 		}
 		FabricItemGroupBuilder.create(Identifier("bedrock-loader", "bedrock-loader"))
 				.icon { ItemStack(iconItem) }
 				.appendItems { stacks ->
-					BedrockAddonLoader.registeredItems.forEach { (_, item) ->
+					BedrockAddonsRegistry.items.forEach { (_, item) ->
 						stacks.add(ItemStack(item))
 					}
 				}
 				.build()
 
 		logger.info("BedrockLoader initialized!")
+
+		// 测试
+		test()
+	}
+
+	private fun test() {
+
 	}
 
 	fun getGameDir(): File {
