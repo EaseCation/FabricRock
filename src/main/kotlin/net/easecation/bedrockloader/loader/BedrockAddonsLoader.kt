@@ -98,7 +98,7 @@ object BedrockAddonsLoader {
                 stream.setLevel(Deflater.BEST_COMPRESSION)
                 val files: Collection<File> = TreeSet(FileUtils.listFiles(directory, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE))
                 for (file in files) {
-                    val entry = ZipEntry(directory.toPath().relativize(file.toPath()).toString())
+                    val entry = ZipEntry(directory.toPath().relativize(file.toPath()).toString().replace("\\", "/"))
                             .setCreationTime(time)
                             .setLastModifiedTime(time)
                             .setLastAccessTime(time)
