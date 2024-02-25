@@ -36,7 +36,7 @@ object BedrockAddonsLoader {
 
     fun load() {
         val dataFolder: File = BedrockLoader.getGameDir().resolve("config/bedrock-loader")
-        if (dataFolder.exists()) {
+        if (!dataFolder.exists()) {
             dataFolder.mkdirs()
         }
         // 从dataFolder中读取所有的zip文件
