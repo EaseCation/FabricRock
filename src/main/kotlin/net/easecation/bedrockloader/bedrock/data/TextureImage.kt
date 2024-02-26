@@ -11,7 +11,8 @@ data class TextureImage(
 
     enum class ImageType {
         PNG,
-        JPG;
+        JPG,
+        TGA;
         fun getExtension(): String {
             return name.lowercase()
         }

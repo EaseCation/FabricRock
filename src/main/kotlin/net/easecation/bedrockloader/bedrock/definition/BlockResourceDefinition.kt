@@ -8,7 +8,7 @@ import net.minecraft.util.Identifier
 import java.lang.reflect.Type
 
 data class BlockResourceDefinition(
-        @SerializedName("format_version") val formatVersion: String,
+        @SerializedName("format_version") val formatVersion: List<Int>,
         val blocks: Map<Identifier, Block>
 ) {
 
@@ -28,7 +28,7 @@ data class BlockResourceDefinition(
                 blocks[identifier] = context.deserialize(value, Block::class.java)
             }
             return BlockResourceDefinition(
-                    obj["format_version"].asString,
+                    obj["format_version"].asJsonArray.map { it.asInt },
                     blocks
             )
         }

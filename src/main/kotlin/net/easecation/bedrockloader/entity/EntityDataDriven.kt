@@ -7,6 +7,8 @@ import net.minecraft.entity.EntityType
 import net.minecraft.entity.EquipmentSlot
 import net.minecraft.entity.SpawnGroup
 import net.minecraft.entity.attribute.DefaultAttributeContainer
+import net.minecraft.entity.attribute.EntityAttributes
+import net.minecraft.entity.damage.DamageSource
 import net.minecraft.entity.mob.MobEntity
 import net.minecraft.item.ItemStack
 import net.minecraft.util.Arm
@@ -32,6 +34,13 @@ class EntityDataDriven(
         fun buildEntityAttributes(components: EntityComponents): DefaultAttributeContainer.Builder {
             val builder = MobEntity.createMobAttributes()
             // TODO components
+            // Add HealthComponent, KnockbackResistanceComponent, MovementComponent
+            components.let {
+                it.minecraftHealth?.max?.let { value -> builder.add(EntityAttributes.GENERIC_MAX_HEALTH, value.toDouble()) } ?:
+                it.minecraftHealth?.value?.let { value -> builder.add(EntityAttributes.GENERIC_MAX_HEALTH, value.toDouble()) }
+                it.minecraftKnockbackResistance?.value?.let { value -> builder.add(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE, value.toDouble()) }
+                it.minecraftMovement?.value?.let { value ->  builder.add(EntityAttributes.GENERIC_MOVEMENT_SPEED, value.toDouble()) }
+            }
             return builder
         }
     }
@@ -51,5 +60,25 @@ class EntityDataDriven(
         return Arm.RIGHT
     }
 
+    override fun hasNoGravity(): Boolean {
+        return components.minecraftPhysics?.has_gravity == true
+    }
+
+    override fun damage(source: DamageSource?, amount: Float): Boolean {
+        return components.minecraftHealth?.min?.let {
+            when {
+                health - amount > 1 && source != DamageSource.OUT_OF_WORLD -> {
+                    return super.damage(source, amount)
+                }
+                else -> {
+                    if (source == DamageSource.OUT_OF_WORLD) {
+                        return false
+                    }
+                    health += amount
+                    return super.damage(source, amount)
+                }
+            }
+        }?: return super.damage(source, amount)
+    }
 
 }
