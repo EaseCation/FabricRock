@@ -22,8 +22,13 @@ data class SemVersion(
         }
 
         override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): SemVersion {
-            val jsonArr = json.asJsonArray
-            return SemVersion(jsonArr[0].asInt, jsonArr[1].asInt, jsonArr[2].asInt)
+            if (json.isJsonPrimitive && json.asJsonPrimitive.isString) {
+                val version = json.asString.split(".")
+                return SemVersion(version[0].toInt(), version[1].toInt(), version[2].toInt())
+            } else {
+                val jsonArr = json.asJsonArray
+                return SemVersion(jsonArr[0].asInt, jsonArr[1].asInt, jsonArr[2].asInt)
+            }
         }
     }
 }

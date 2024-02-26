@@ -4,11 +4,13 @@ import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
+import com.google.gson.reflect.TypeToken
+import net.easecation.bedrockloader.bedrock.pack.SemVersion
 import net.minecraft.util.Identifier
 import java.lang.reflect.Type
 
 data class BlockResourceDefinition(
-        @SerializedName("format_version") val formatVersion: List<Int>,
+        @SerializedName("format_version") val formatVersion: SemVersion,
         val blocks: Map<Identifier, Block>
 ) {
 
@@ -27,8 +29,9 @@ data class BlockResourceDefinition(
                 val identifier = Identifier(key)
                 blocks[identifier] = context.deserialize(value, Block::class.java)
             }
+            val type = object: TypeToken<SemVersion>() {}.type
             return BlockResourceDefinition(
-                    obj["format_version"].asJsonArray.map { it.asInt },
+                    context.deserialize(obj["format_version"], type),
                     blocks
             )
         }
