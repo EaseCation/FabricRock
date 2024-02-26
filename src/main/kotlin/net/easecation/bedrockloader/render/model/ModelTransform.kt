@@ -7,7 +7,7 @@ import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 
 @Environment(value = EnvType.CLIENT)
-class ModelTransform private constructor(val pivotX: Float, val pivotY: Float, val pivotZ: Float, val pitch: Float, val yaw: Float, val roll: Float) {
+class ModelTransform private constructor(val pivotX: Float, val pivotY: Float, val pivotZ: Float, val pitch: Float, val yaw: Float, val roll: Float, val detachPivot: Boolean = false) {
     companion object {
         val NONE: ModelTransform = of(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f)
         fun pivot(pivotX: Float, pivotY: Float, pivotZ: Float): ModelTransform {
@@ -18,8 +18,8 @@ class ModelTransform private constructor(val pivotX: Float, val pivotY: Float, v
             return of(0.0f, 0.0f, 0.0f, pitch, yaw, roll)
         }
 
-        fun of(pivotX: Float, pivotY: Float, pivotZ: Float, pitch: Float, yaw: Float, roll: Float): ModelTransform {
-            return ModelTransform(pivotX, pivotY, pivotZ, pitch, yaw, roll)
+        fun of(pivotX: Float, pivotY: Float, pivotZ: Float, pitch: Float, yaw: Float, roll: Float, detachPivot: Boolean = false): ModelTransform {
+            return ModelTransform(pivotX, pivotY, pivotZ, pitch, yaw, roll, detachPivot)
         }
     }
 }

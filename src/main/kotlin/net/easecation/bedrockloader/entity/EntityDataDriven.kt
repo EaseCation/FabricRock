@@ -3,6 +3,7 @@ package net.easecation.bedrockloader.entity
 import net.easecation.bedrockloader.bedrock.entity.components.EntityComponents
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.fabricmc.fabric.api.`object`.builder.v1.entity.FabricEntityTypeBuilder
+import net.minecraft.entity.EntityDimensions
 import net.minecraft.entity.EntityType
 import net.minecraft.entity.EquipmentSlot
 import net.minecraft.entity.SpawnGroup
@@ -29,6 +30,7 @@ class EntityDataDriven(
                         ?: throw IllegalStateException("[EntityDataDriven] Entity $identifier has no components")
                 EntityDataDriven(identifier, components, type, world)
             }
+            builder.dimensions(EntityDimensions.fixed(1f, 1f))
             return builder.build()
         }
         fun buildEntityAttributes(components: EntityComponents): DefaultAttributeContainer.Builder {
