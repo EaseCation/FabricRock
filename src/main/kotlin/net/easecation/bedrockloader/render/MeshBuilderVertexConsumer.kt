@@ -75,19 +75,19 @@ class MeshBuilderVertexConsumer : VertexIndexedVertexConsumer {
     }
 
     override fun vertex(x: Double, y: Double, z: Double): VertexConsumer {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.vertex($x, $y, $z)")
+        BedrockLoader.logger.info("MeshBuilderVertexConsumer.vertex($x, $y, $z)")
         emitter.pos(vertexIndex, x.toFloat(), y.toFloat(), z.toFloat())
         return this
     }
 
     override fun color(red: Int, green: Int, blue: Int, alpha: Int): VertexConsumer {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.color($red, $green, $blue, $alpha)")
+        BedrockLoader.logger.info("MeshBuilderVertexConsumer.color($red, $green, $blue, $alpha)")
         emitter.spriteColor(0, red, green, blue, alpha)
         return this
     }
 
     override fun texture(u: Float, v: Float): VertexConsumer {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.texture($u, $v)")
+        BedrockLoader.logger.info("MeshBuilderVertexConsumer.texture($u, $v)")
         emitter.sprite(vertexIndex, 0, u, v)
         return this
     }
@@ -103,25 +103,25 @@ class MeshBuilderVertexConsumer : VertexIndexedVertexConsumer {
     }
 
     override fun light(u: Int, v: Int): VertexConsumer {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.light($u, $v)")
+        BedrockLoader.logger.info("MeshBuilderVertexConsumer.light($u, $v)")
         emitter.lightmap(vertexIndex, v)
         return this
     }
 
     override fun light(light: Int): VertexConsumer {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.light($light)")
+        BedrockLoader.logger.info("MeshBuilderVertexConsumer.light($light)")
         emitter.lightmap(vertexIndex, light)
         return this
     }
 
     override fun normal(x: Float, y: Float, z: Float): VertexConsumer {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.normal($x, $y, $z)")
+        BedrockLoader.logger.info("MeshBuilderVertexConsumer.normal($x, $y, $z)")
         emitter.normal(vertexIndex, x, y, z)
         return this
     }
 
     override fun next() {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.next()")
+        BedrockLoader.logger.info("MeshBuilderVertexConsumer.next()")
         emitter.emit()
     }
 

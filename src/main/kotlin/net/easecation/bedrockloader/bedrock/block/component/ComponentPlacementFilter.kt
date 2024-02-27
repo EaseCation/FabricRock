@@ -4,6 +4,7 @@ import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
 import java.lang.reflect.Type
+import java.util.*
 
 data class ComponentPlacementFilter(
         val conditions: List<Condition>
@@ -34,7 +35,7 @@ data class ComponentPlacementFilter(
             val obj = json.asJsonObject
             val conditions = obj.getAsJsonArray("conditions").map { it ->
                 val condition = it.asJsonObject
-                val allowedFaces = condition.getAsJsonArray("allowed_faces")?.map { AllowedFaces.valueOf(it.asString) }
+                val allowedFaces = condition.getAsJsonArray("allowed_faces")?.map { AllowedFaces.valueOf(it.asString.uppercase(Locale.getDefault())) }
                 val blockFilter = condition.getAsJsonArray("block_filter")?.map {
                     if (it.isJsonObject) {
                         val block = it.asJsonObject
