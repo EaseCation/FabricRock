@@ -8,6 +8,7 @@ import net.easecation.bedrockloader.bedrock.block.component.ComponentSelectionBo
 import net.easecation.bedrockloader.bedrock.pack.SemVersion
 import net.easecation.bedrockloader.bedrock.definition.BlockResourceDefinition
 import net.easecation.bedrockloader.bedrock.definition.GeometryDefinition
+import net.easecation.bedrockloader.bedrock.entity.components.ComponentRideable
 import net.minecraft.util.Identifier
 import java.lang.reflect.Type
 import java.util.UUID
@@ -28,6 +29,8 @@ object GsonUtil {
             .registerTypeAdapter(ComponentSelectionBox::class.java, ComponentSelectionBox.Deserializer())
             .registerTypeAdapter(ComponentCollisionBox::class.java, ComponentCollisionBox.Deserializer())
             .registerTypeAdapter(ComponentPlacementFilter::class.java, ComponentPlacementFilter.Deserializer())
+            // entity component
+            .registerTypeAdapter(ComponentRideable::class.java, ComponentRideable.Deserializer())
             // geometry
             .registerTypeAdapter(GeometryDefinition.Uv::class.java, GeometryDefinition.Uv.Deserializer())
             .create()
