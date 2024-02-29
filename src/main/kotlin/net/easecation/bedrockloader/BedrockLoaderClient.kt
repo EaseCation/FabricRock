@@ -1,6 +1,7 @@
 package net.easecation.bedrockloader
 
 import net.easecation.bedrockloader.render.BedrockModelProvider
+import net.easecation.bedrockloader.render.BedrockVariantProvider
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
@@ -11,6 +12,7 @@ object BedrockLoaderClient : ClientModInitializer {
 
     override fun onInitializeClient() {
         ModelLoadingRegistry.INSTANCE.registerResourceProvider { rm -> BedrockModelProvider }
+        ModelLoadingRegistry.INSTANCE.registerVariantProvider() { rm -> BedrockVariantProvider }
     }
 
 }

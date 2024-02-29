@@ -6,4 +6,6 @@ interface VertexIndexedVertexConsumer : VertexConsumer {
 
     fun vertexIndex(index: Int)
 
+    fun nextQuad()
+
 }

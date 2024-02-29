@@ -18,7 +18,7 @@ object BedrockLoader : ModInitializer {
 
     val logger: Logger = LoggerFactory.getLogger("bedrock-loader")
 
-	private const val NAMESPACE: String = "bedrock-loader"
+	const val NAMESPACE: String = "bedrock-loader"
 	val BEDROCK_LOADER_MOD: ModContainer = FabricLoader.getInstance().getModContainer(NAMESPACE).orElseThrow()
 
 	override fun onInitialize() {

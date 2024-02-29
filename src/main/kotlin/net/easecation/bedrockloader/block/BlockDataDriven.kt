@@ -23,7 +23,7 @@ class BlockDataDriven private constructor(val identifier: Identifier, val compon
         }
 
         private fun calculateSettings(components: BlockComponents): Settings {
-            val settings = FabricBlockSettings.of(Material.METAL).hardness(4.0f)  // TODO hardness
+            val settings = FabricBlockSettings.of(Material.METAL).hardness(4.0f).nonOpaque()  // TODO hardness
             components.minecraftCollisionBox?.let {
                 when (it) {
                     is ComponentCollisionBox.ComponentCollisionBoxBoolean -> {
@@ -66,5 +66,4 @@ class BlockDataDriven private constructor(val identifier: Identifier, val compon
             return super.getOutlineShape(state, view, pos, context)
         }
     }
-
 }

@@ -17,7 +17,6 @@ import net.minecraft.client.render.model.json.JsonUnbakedModel
 import net.minecraft.client.render.model.json.ModelOverrideList
 import net.minecraft.client.render.model.json.ModelTransformation
 import net.minecraft.client.texture.Sprite
-import net.minecraft.client.texture.SpriteAtlasTexture
 import net.minecraft.client.util.SpriteIdentifier
 import net.minecraft.client.util.math.MatrixStack
 import net.minecraft.item.ItemStack
@@ -27,6 +26,7 @@ import net.minecraft.util.math.Direction
 import net.minecraft.world.BlockRenderView
 import java.util.*
 import java.util.function.Supplier
+import kotlin.collections.ArrayList
 
 
 @Environment(EnvType.CLIENT)
@@ -34,11 +34,9 @@ class BedrockGeometryModel(
         private val bedrockModel: GeometryDefinition.Model,
 ) : EntityModel<EntityDataDriven>(), UnbakedModel, BakedModel, FabricBakedModel {
 
-    private val DEFAULT_BLOCK_MODEL = Identifier("minecraft:block/block")
-    private val SPRITE_IDS = arrayOf(SpriteIdentifier(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE, Identifier("minecraft:block/furnace_front_on")),
-            SpriteIdentifier(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE, Identifier("minecraft:block/furnace_top"))
-    )
-    private val SPRITES = arrayOfNulls<Sprite>(2)
+    private val defaultBlockModel = Identifier("minecraft:block/block")
+    private val spriteIds: ArrayList<SpriteIdentifier> = ArrayList()
+    private val sprites: ArrayList<Sprite> = ArrayList()
 
     private var transformation: ModelTransformation? = null
     private val modelPart: ModelPart = getTexturedModelData().createModel()
@@ -52,14 +50,18 @@ class BedrockGeometryModel(
         }
     }
 
+    fun addSprite(spriteId: SpriteIdentifier) {
+        spriteIds.add(spriteId)
+    }
+
     override fun getModelDependencies(): Collection<Identifier> {
         return emptyList() // 模型不依赖于其他模型。
     }
 
     override fun getTextureDependencies(unbakedModelGetter: java.util.function.Function<Identifier, UnbakedModel>?, unresolvedTextureReferences: MutableSet<com.mojang.datafixers.util.Pair<String, String>>?): MutableList<SpriteIdentifier> {
         val map = mutableListOf<SpriteIdentifier>()
-        for (i in 0..1) {
-            map.add(SPRITE_IDS[i])
+        spriteIds.forEach {
+            map.add(it)
         }
         return map  // 本模型（以及其模型依赖，依赖的依赖，等）依赖的纹理。 TODO
     }
@@ -67,14 +69,14 @@ class BedrockGeometryModel(
     override fun bake(loader: ModelLoader, textureGetter: java.util.function.Function<SpriteIdentifier, Sprite>, rotationContainer: ModelBakeSettings?, modelId: Identifier?): BakedModel {
         BedrockLoader.logger.info("Baking model... $modelId ${bedrockModel.description.identifier}")
         // 加载默认方块模型
-        val defaultBlockModel = loader.getOrLoadModel(DEFAULT_BLOCK_MODEL) as JsonUnbakedModel
+        val defaultBlockModel = loader.getOrLoadModel(defaultBlockModel) as JsonUnbakedModel
         // 获取 ModelTransformation
         transformation = defaultBlockModel.transformations
         // 获得sprites
-        for (i in 0..1) {
-            SPRITES[i] = textureGetter.apply(SPRITE_IDS[i])
+        spriteIds.forEach {
+            sprites.add(textureGetter.apply(it))
         }
-        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart)
+        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, sprites[0])
         return this
     }
 
@@ -99,7 +101,7 @@ class BedrockGeometryModel(
     }
 
     override fun getParticleSprite(): Sprite {
-        return SPRITES[1]!! // 方块被破坏时产生的颗粒，使用furnace_top
+        return sprites[0] // 方块被破坏时产生的颗粒，使用furnace_top
     }
 
     override fun isVanillaAdapter(): Boolean {
@@ -125,6 +127,7 @@ class BedrockGeometryModel(
     // EntityModel methods
 
     override fun render(matrices: MatrixStack, vertices: VertexConsumer, light: Int, overlay: Int, red: Float, green: Float, blue: Float, alpha: Float) {
+        matrices.translate(0.0, 1.5, 0.0)
         modelPart.render(matrices, vertices, light, overlay, red, green, blue, alpha)
     }
 

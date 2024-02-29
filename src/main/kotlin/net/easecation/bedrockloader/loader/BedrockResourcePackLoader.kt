@@ -17,6 +17,8 @@ import net.easecation.bedrockloader.util.GsonUtil
 import net.fabricmc.api.EnvType
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry
 import net.fabricmc.loader.api.FabricLoader
+import net.minecraft.client.texture.SpriteAtlasTexture
+import net.minecraft.client.util.SpriteIdentifier
 import net.minecraft.entity.EntityType
 import net.minecraft.util.Identifier
 import java.io.File
@@ -41,7 +43,7 @@ class BedrockResourcePackLoader(
         for (block in context.resource.blocks) {
             val identifier = block.key
             val dir = namespaceDir(identifier.namespace)
-            createBlockTextures(identifier, block.value.textures)
+            createBlockTextures(identifier, block.value.textures, context.behavior.blocks[identifier]?.components?.minecraftMaterialInstances)
             createBlockModel(
                     dir.resolve("models/block/${identifier.path}.json"),
                     identifier,
@@ -51,10 +53,11 @@ class BedrockResourcePackLoader(
             )
             createItemModel(dir.resolve("models/item/${identifier.path}.json"), identifier)
             createBlockState(
-                    dir.resolve("blockstates/${identifier.path}.json"),
-                    identifier,
-                    context.behavior.blocks[identifier]?.components?.minecraftGeometry,
-                    context.behavior.blocks[identifier]?.components?.minecraftMaterialInstances)
+                dir.resolve("blockstates/${identifier.path}.json"),
+                identifier,
+                context.behavior.blocks[identifier]?.components?.minecraftGeometry,
+                context.behavior.blocks[identifier]?.components?.minecraftMaterialInstances
+            )
         }
         // Entity
         for (entity in context.resource.entities) {
@@ -134,6 +137,10 @@ class BedrockResourcePackLoader(
             if (!texturesBlock.exists()) {
                 texturesBlock.mkdirs()
             }
+            val texturesBlocks = textures.resolve("blocks")
+            if (!texturesBlocks.exists()) {
+                texturesBlocks.mkdirs()
+            }
             val texturesEntity = textures.resolve("entity")
             if (!texturesEntity.exists()) {
                 texturesEntity.mkdirs()
@@ -147,20 +154,20 @@ class BedrockResourcePackLoader(
      * 创建一个方块状态文件，内部包含model路径（附带命名空间）
      * 如果方块带模型，则详见createBlockModel，在创建的方块模型中，继承与自定义基岩版geometry模型，从而调用自定义渲染器和烘焙器来渲染基岩版模型
      */
-    private fun createBlockState(file: File, identifier: Identifier, geometry: ComponentGeometry?, materialInstances: ComponentMaterialInstances?) {
+    private fun createBlockState(
+        file: File,
+        identifier: Identifier,
+        geometry: ComponentGeometry?,
+        materialInstances: ComponentMaterialInstances?
+    ) {
         // TODO block state
-        var model = "${identifier.namespace}:block/${identifier.path}"
         // 带有模型的方块情况：通过行为包定义模型和贴图
-        when (geometry) {
-            is ComponentGeometry.ComponentGeometrySimple -> {
-                model = geometry.identifier
-            }
-            is ComponentGeometry.ComponentGeometryFull -> {
-                model = geometry.identifier
-                // TODO bone_visibility
-            }
-            else -> {}
-        }
+//        val model = when (geometry) {
+//            is ComponentGeometry.ComponentGeometrySimple -> geometry.identifier
+//            is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
+//            null -> "${identifier.namespace}:block/${identifier.path}"
+//        }
+        val model = "${identifier.namespace}:block/${identifier.path}"
         val blockState = JavaBlockStatesDefinition(
                 variants = mapOf(
                         "" to JavaBlockStatesDefinition.Variant(model)
@@ -174,7 +181,11 @@ class BedrockResourcePackLoader(
     /**
      * 根据方块材质包中的定义，创建一个方块贴图文件（附带命名空间）
      */
-    private fun createBlockTextures(identifier: Identifier, textures: BlockResourceDefinition.Textures?) {
+    private fun createBlockTextures(
+        identifier: Identifier,
+        textures: BlockResourceDefinition.Textures?,
+        materialInstances: ComponentMaterialInstances?
+    ) {
         val namespaceDir = this.namespaceDir(identifier.namespace)
         when (textures) {
             is BlockResourceDefinition.Textures.TexturesAllFace -> {
@@ -223,91 +234,101 @@ class BedrockResourcePackLoader(
             }
             else -> {}
         }
+        materialInstances?.forEach { name, instance ->
+            val texture = context.resource.terrainTexture[instance.texture]?.textures
+            if (texture == null || !texture.contains("textures/")) {
+                BedrockLoader.logger.warn("[BedrockResourcePackLoader] Material instance texture not found: ${instance.texture}")
+                return@forEach
+            }
+            val bedrockTexture = context.resource.textureImages[texture]
+            if (bedrockTexture == null) {
+                BedrockLoader.logger.warn("[BedrockResourcePackLoader] Material instance texture not found: ${instance.texture}")
+                return@forEach
+            }
+            val file = namespaceDir.resolve(texture + "." + bedrockTexture.type.getExtension())
+            bedrockTexture.image.let { image ->
+                ImageIO.write(image, file.extension, file)
+            }
+
+        }
     }
 
     /**
      * 根据方块材质包和行为包中的定义，创建一个方块模型文件（如果设定了模型，则应用模型；否则应用正常方块模型）
      */
     private fun createBlockModel(file: File, identifier: Identifier, textures: BlockResourceDefinition.Textures?, geometry: ComponentGeometry?, materialInstances: ComponentMaterialInstances?) {
-        val model = JavaModelDefinition()
-
         if (geometry != null) {
-            return
-        }
-        // 带有模型的方块情况：通过行为包定义模型和贴图
-        when (geometry) {
-            is ComponentGeometry.ComponentGeometrySimple -> {
-                model.parent = geometry.identifier
+            // 带有模型的方块情况：通过行为包定义模型和贴图
+            val geometryIdentifier = when (geometry) {
+                is ComponentGeometry.ComponentGeometrySimple -> geometry.identifier
+                is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
             }
-            is ComponentGeometry.ComponentGeometryFull -> {
-                model.parent = geometry.identifier
-                // TODO bone_visibility
-            }
-            else -> {
-                when (textures) {
-                    is BlockResourceDefinition.Textures.TexturesAllFace -> {
-                        model.parent = "block/cube_all"
+            val bedrockModel = BedrockAddonsRegistry.models[geometryIdentifier] ?: return
+            val textureKey = materialInstances?.get("*")?.texture ?: return
+            val terrainTexture = context.resource.terrainTexture[textureKey]?.textures ?: return
+            val texture = if (terrainTexture.startsWith("textures/", ignoreCase = true)) terrainTexture.substring("textures/".length) else terrainTexture
+            val spriteId = SpriteIdentifier(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE, Identifier(identifier.namespace, texture))
+            bedrockModel.addSprite(spriteId)
+        } else {
+            val model = JavaModelDefinition()
+            model.parent = "block/cube_all"
+
+            // 通过行为包定义了贴图
+            materialInstances?.forEach { (key, value) ->
+                if (key == "*") {
+                    value.texture?.let { texture ->
+                        val javaTexture = context.resource.terrainTextureToJava(texture, identifier.namespace)
+                        if (javaTexture != null) {
+                            model.textures = mapOf("all" to javaTexture)  // TODO 不确定是什么key...
+                        }
                     }
-                    is BlockResourceDefinition.Textures.TexturesMultiFace -> {
-                        model.parent = "block/cube"
-                    }
-                    else -> {}
+                } else {
+                    BedrockLoader.logger.info("[BedrockResourcePackLoader] Material instance $key -> $value is not supported yet.")
                 }
             }
-        }
 
-        // 通过行为包定义了贴图
-        materialInstances?.forEach { (key, value) ->
-            if (key == "*") {
-                value.texture?.let { texture ->
-                    val javaTexture = context.resource.terrainTextureToJava(texture, identifier.namespace)
-                    if (javaTexture != null) {
-                        model.textures = mapOf("all" to javaTexture)  // TODO 不确定是什么key...
+            // 普通方块情况：通过材质包的blocks.json定义贴图
+            when (textures) {
+                is BlockResourceDefinition.Textures.TexturesAllFace -> {
+                    val texture = context.resource.terrainTexture[textures.all]?.textures
+                    if (texture == null || !texture.contains("textures/")) {
+                        BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: ${textures.all}")
+                        return
                     }
+                    context.resource.terrainTextureToJava(textures.all, identifier.namespace)
+                        ?.let { model.textures = mapOf("all" to it) }
                 }
-            } else {
-                BedrockLoader.logger.info("[BedrockResourcePackLoader] Material instance $key -> $value is not supported yet.")
-            }
-        }
 
-        // 普通方块情况：通过材质包的blocks.json定义贴图
-        when (textures) {
-            is BlockResourceDefinition.Textures.TexturesAllFace -> {
-                val texture = context.resource.terrainTexture[textures.all]?.textures
-                if (texture == null || !texture.contains("textures/")) {
-                    BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: ${textures.all}")
-                    return
-                }
-                context.resource.terrainTextureToJava(textures.all, identifier.namespace)?.let { model.textures = mapOf("all" to it) }
-            }
-            is BlockResourceDefinition.Textures.TexturesMultiFace -> {
-                val texturesMap = mutableMapOf<String, Identifier>()
+                is BlockResourceDefinition.Textures.TexturesMultiFace -> {
+                    val texturesMap = mutableMapOf<String, Identifier>()
 
-                val directions = mapOf(
+                    val directions = mapOf(
                         "up" to textures.up,
                         "down" to textures.down,
                         "north" to textures.north,
                         "south" to textures.south,
                         "east" to textures.east,
                         "west" to textures.west
-                )
+                    )
 
-                for ((direction, textureKey) in directions) {
-                    textureKey?.let {
-                        val texture = context.resource.terrainTextureToJava(it, identifier.namespace)
-                        if (texture != null) {
-                            texturesMap[direction] = texture
+                    for ((direction, textureKey) in directions) {
+                        textureKey?.let {
+                            val texture = context.resource.terrainTextureToJava(it, identifier.namespace)
+                            if (texture != null) {
+                                texturesMap[direction] = texture
+                            }
                         }
                     }
+
+                    model.textures = texturesMap
                 }
 
-                model.textures = texturesMap
+                else -> {}
             }
-            else -> {}
-        }
 
-        FileWriter(file).use { writer ->
-            GsonUtil.GSON.toJson(model, writer)
+            FileWriter(file).use { writer ->
+                GsonUtil.GSON.toJson(model, writer)
+            }
         }
     }
 

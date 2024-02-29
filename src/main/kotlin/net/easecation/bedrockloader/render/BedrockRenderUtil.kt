@@ -3,7 +3,10 @@ package net.easecation.bedrockloader.render
 import net.easecation.bedrockloader.bedrock.definition.GeometryDefinition
 import net.easecation.bedrockloader.render.model.*
 import net.fabricmc.fabric.api.renderer.v1.mesh.Mesh
+import net.minecraft.client.texture.Sprite
 import net.minecraft.client.util.math.MatrixStack
+import net.minecraft.util.math.Quaternion
+import net.minecraft.util.math.Vec3f
 
 object BedrockRenderUtil {
 
@@ -70,10 +73,9 @@ object BedrockRenderUtil {
         }
 
         val modelData = ModelData()
-        val rootPartData = modelData.root.addChild("offset", ModelPartBuilder.create(), ModelTransform.pivot(0f, 24f, 0f))
         for (bone in bones) {
             if (bone.parent == null) {
-                addBoneToModelData(bone, rootPartData)
+                addBoneToModelData(bone, modelData.root)
             }
         }
         return modelData
@@ -84,9 +86,11 @@ object BedrockRenderUtil {
      * @param modelPart The ModelPart to convert.
      * @return The created Mesh.
      */
-    fun bakeModelPartToMesh(modelPart: ModelPart): Mesh {
+    fun bakeModelPartToMesh(modelPart: ModelPart, sprite: Sprite): Mesh {
         val matrixStack = MatrixStack()
-        val vertices = MeshBuilderVertexConsumer()
+        matrixStack.translate(0.5, 0.0, 0.5)
+        matrixStack.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(180f))
+        val vertices = MeshBuilderVertexConsumer(sprite)
         modelPart.render(matrixStack, vertices, 1, 1)
         return vertices.build()
     }

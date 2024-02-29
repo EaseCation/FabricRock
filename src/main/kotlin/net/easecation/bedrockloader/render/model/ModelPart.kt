@@ -254,6 +254,9 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
                     )
                     vertexIndex++
                 }
+                if (vertexConsumer is VertexIndexedVertexConsumer) {
+                    vertexConsumer.nextQuad()
+                }
             }
         }
     }
