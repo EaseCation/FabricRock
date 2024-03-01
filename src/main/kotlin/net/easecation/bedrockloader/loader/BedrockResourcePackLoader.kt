@@ -332,7 +332,9 @@ class BedrockResourcePackLoader(
                     model.textures = texturesMap
                 }
 
-                else -> {}
+                else -> {
+                    BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block $identifier has no textures defined.")
+                }
             }
 
             FileWriter(file).use { writer ->
