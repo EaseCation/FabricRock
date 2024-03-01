@@ -4,7 +4,6 @@ import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.bedrock.data.TextureImage
 import net.easecation.bedrockloader.bedrock.definition.*
 import net.easecation.bedrockloader.util.GsonUtil
-import net.minecraft.util.Identifier
 import java.io.InputStreamReader
 import java.util.zip.ZipFile
 import javax.imageio.ImageIO
@@ -20,6 +19,12 @@ object BedrockResourceDeserializer : PackDeserializer<BedrockResourceContext> {
                     context.terrainTexture.putAll(terrainTextureDefinition.texture_data)
                 }
             }
+            zip.getEntry("textures/item_texture.json")?.let { entry ->
+                zip.getInputStream(entry).use { stream ->
+                    val itemTextureDefinition = GsonUtil.GSON.fromJson(InputStreamReader(stream), ItemTextureDefinition::class.java)
+                    context.itemTexture.putAll(itemTextureDefinition.texture_data)
+                }
+            }
             zip.getEntry("blocks.json")?.let { entry ->
                 zip.getInputStream(entry).use { stream ->
                     val blockResourceDefinition = GsonUtil.GSON.fromJson(InputStreamReader(stream), BlockResourceDefinition::class.java)
@@ -31,7 +36,7 @@ object BedrockResourceDeserializer : PackDeserializer<BedrockResourceContext> {
                 val entry = entries.nextElement()
                 val name = entry.name
                 // texture
-                if (name.startsWith("textures/") && (name.endsWith(".png") || name.endsWith(".jpg"))) {
+                if (name.startsWith("textures/") && (name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".tga"))) {
                     try {
                         val ext = name.substring(name.lastIndexOf('.') + 1)
                         val withoutExt = name.substring(0, name.lastIndexOf('.'))

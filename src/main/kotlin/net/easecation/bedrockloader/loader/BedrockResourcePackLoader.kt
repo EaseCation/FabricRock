@@ -16,11 +16,14 @@ import net.easecation.bedrockloader.render.BedrockGeometryModel
 import net.easecation.bedrockloader.util.GsonUtil
 import net.fabricmc.api.EnvType
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry
+import net.fabricmc.fabric.api.item.v1.FabricItemSettings
 import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.client.texture.SpriteAtlasTexture
 import net.minecraft.client.util.SpriteIdentifier
 import net.minecraft.entity.EntityType
+import net.minecraft.item.SpawnEggItem
 import net.minecraft.util.Identifier
+import net.minecraft.util.registry.Registry
 import java.io.File
 import java.io.FileWriter
 import javax.imageio.ImageIO
@@ -63,9 +66,15 @@ class BedrockResourcePackLoader(
         for (entity in context.resource.entities) {
             val identifier = entity.key
             val clientEntity = entity.value.description
+            val dir = namespaceDir(identifier.namespace)
             val entityType = BedrockAddonsRegistry.getOrRegisterEntityType(identifier)
             // textures
             createEntityTextures(identifier, clientEntity)
+            createSpawnEggItem(
+                dir.resolve("models/item/${identifier.path + "_spawn_egg"}.json"),
+                identifier,
+                clientEntity
+            )
             // renderer
             if (env == EnvType.CLIENT) {
                 registerRenderController(clientEntity, identifier, entityType)
@@ -341,6 +350,61 @@ class BedrockResourcePackLoader(
         )
         FileWriter(file).use { writer ->
             GsonUtil.GSON.toJson(model, writer)
+        }
+    }
+
+    /**
+     * 直接创建一个继承于对应实体的生物蛋物品
+     */
+    @OptIn(ExperimentalStdlibApi::class)
+    private fun createSpawnEggItem(file: File, identifier: Identifier, clientEntity: EntityResourceDefinition.ClientEntityDescription, primaryColor: Int = 0xffffff, secondaryColor: Int = 0xffffff) {
+        context.behavior.entities[identifier]?.description?.is_spawnable?.let {
+            val entityType = BedrockAddonsRegistry.getOrRegisterEntityType(identifier)
+            clientEntity.spawn_egg?.let {
+                val entityName = context.resource.entities[identifier]?.description?.identifier?.path
+                val id = Identifier(identifier.namespace, "${entityName}_spawn_egg")
+                val spawnEggItem: SpawnEggItem = if (it.base_color != null && it.overlay_color != null) {
+                    SpawnEggItem(entityType, it.base_color.replace("#", "").hexToInt(HexFormat.Default), it.overlay_color.replace("#", "").hexToInt(HexFormat.Default), FabricItemSettings())
+                } else if (it.base_color != null){
+                    SpawnEggItem(entityType, it.base_color.replace("#", "").hexToInt(HexFormat.Default), secondaryColor, FabricItemSettings())
+                } else if (it.overlay_color != null) {
+                    SpawnEggItem(entityType, primaryColor, it.overlay_color.replace("#", "").hexToInt(HexFormat.Default), FabricItemSettings())
+                } else  {
+                    SpawnEggItem(entityType, primaryColor, secondaryColor, FabricItemSettings())
+                }
+                val model: JavaModelDefinition
+                if (it.texture != null) {
+                    model = JavaModelDefinition(
+                        parent = Identifier("minecraft", "item/generated").toString(),
+                        textures = context.resource.itemTextureToJava(it.texture, identifier.namespace)?.let {
+                            mapOf("layer0" to it)
+                        }
+                    )
+                    val spawnEggTexture = it.texture
+                    context.resource.itemTexture[spawnEggTexture]?.textures?.let {
+                        val bedrockTexture = context.resource.textureImages[it]
+                        if (bedrockTexture == null) {
+                            BedrockLoader.logger.warn("[BedrockResourcePackLoader] Entity spawn egg texture not found: ${spawnEggTexture}")
+                            return
+                        }
+                        val namespaceDir = this.namespaceDir(identifier.namespace)
+                        val bedrockTextureFile = namespaceDir.resolve("textures/" + model.textures!!["layer0"]!!.path + "." + bedrockTexture.type.getExtension())
+                        bedrockTextureFile.parentFile.mkdirs()
+                        bedrockTexture.image.let { image ->
+                            ImageIO.write(image, bedrockTextureFile.extension, bedrockTextureFile)
+                        }
+                    }
+                } else {
+                    model = JavaModelDefinition(
+                        parent = Identifier("", "item/template_spawn_egg").toString()
+                    )
+                }
+                Registry.register(Registry.ITEM, id, spawnEggItem)
+                BedrockAddonsRegistry.items[id] = spawnEggItem
+                FileWriter(file).use { writer ->
+                    GsonUtil.GSON.toJson(model, writer)
+                }
+            }
         }
     }
 
