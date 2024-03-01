@@ -10,6 +10,7 @@ import net.minecraft.util.Identifier
 class BedrockResourceContext {
 
     val terrainTexture: MutableMap<String, TerrainTextureDefinition.TextureData> = mutableMapOf()
+    val itemTexture: MutableMap<String, ItemTextureDefinition.TextureData> = mutableMapOf()
     val blocks: MutableMap<Identifier, BlockResourceDefinition.Block> = mutableMapOf()
     val entities: MutableMap<Identifier, EntityResourceDefinition.ClientEntity> = mutableMapOf()
     val geometries: MutableMap<String, GeometryDefinition.Model> = mutableMapOf()
@@ -23,6 +24,7 @@ class BedrockResourceContext {
         geometries.putAll(other.geometries)
         renderControllers.putAll(other.renderControllers)
         textureImages.putAll(other.textureImages)
+        itemTexture.putAll(other.itemTexture)
     }
 
     fun terrainTextureToJava(textureKey: String, namespace: String) : JavaTexturePath? {
@@ -34,4 +36,12 @@ class BedrockResourceContext {
         return Identifier(namespace, texture.replace("textures/", ""))
     }
 
+    fun itemTextureToJava(textureKey: String, namespace: String) : JavaTexturePath? {
+        val texture = itemTexture[textureKey]?.textures
+        if (texture == null || !texture.contains("textures/")) {
+            BedrockLoader.logger.warn("[BedrockResourcePackLoader] Item texture not found: $textureKey")
+            return null
+        }
+        return Identifier(namespace, texture.replace("textures/", ""))
+    }
 }
