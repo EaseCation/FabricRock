@@ -2,6 +2,7 @@ package net.easecation.bedrockloader.block
 
 import net.easecation.bedrockloader.bedrock.block.component.BlockComponents
 import net.easecation.bedrockloader.bedrock.block.component.ComponentCollisionBox
+import net.easecation.bedrockloader.bedrock.block.component.ComponentSelectionBox
 import net.fabricmc.fabric.api.`object`.builder.v1.block.FabricBlockSettings
 import net.minecraft.block.Block
 import net.minecraft.block.BlockState
@@ -52,14 +53,17 @@ class BlockDataDriven private constructor(val identifier: Identifier, val compon
             val it = components.minecraftCollisionBox
             when (it) {
                 is ComponentCollisionBox.ComponentCollisionBoxBoolean -> {
-                    if (!it.value) {
-                        return VoxelShapes.empty()
-                    } else {
-                        return super.getOutlineShape(state, view, pos, context)
-                    }
+                    return super.getOutlineShape(state, view, pos, context)
                 }
                 is ComponentCollisionBox.ComponentCollisionBoxCustom -> {
-                    return VoxelShapes.cuboid(it.origin[0].toDouble(), it.origin[1].toDouble(), it.origin[2].toDouble(), it.origin[0].toDouble() + it.size[0].toDouble(), it.origin[1].toDouble() + it.size[1].toDouble(), it.origin[2].toDouble() + it.size[2].toDouble())
+                    return VoxelShapes.cuboid(
+                            (it.origin[0].toDouble() + 8) / 16,
+                            it.origin[1].toDouble() / 16,
+                            (it.origin[2].toDouble() + 8) / 16,
+                            (it.origin[0].toDouble() + 8) / 16 + it.size[0].toDouble() / 16,
+                            it.origin[1].toDouble() / 16 + it.size[1].toDouble() / 16,
+                            (it.origin[2].toDouble() + 8) / 16 + it.size[2].toDouble() / 16
+                    )
                 }
             }
         } else {
