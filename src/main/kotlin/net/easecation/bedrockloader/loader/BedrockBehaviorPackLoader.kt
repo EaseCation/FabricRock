@@ -1,5 +1,6 @@
 package net.easecation.bedrockloader.loader
 
+import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.bedrock.block.component.ComponentMaterialInstances
 import net.easecation.bedrockloader.block.BlockDataDriven
 import net.easecation.bedrockloader.deserializer.BedrockPackContext
@@ -26,7 +27,7 @@ class BedrockBehaviorPackLoader(
             BedrockAddonsRegistry.blocks[id] = block
             if (env == EnvType.CLIENT) {
                 beh.components.minecraftMaterialInstances?.let { materialInstances ->
-                    val renderMethod = materialInstances["*"]?.render_method ?: return
+                    val renderMethod = materialInstances["*"]?.render_method ?: return@let
                     if (renderMethod == ComponentMaterialInstances.RenderMethod.alpha_test) {
                         BlockRenderLayerMap.INSTANCE.putBlock(block, RenderLayer.getCutout())
                     } else if (renderMethod == ComponentMaterialInstances.RenderMethod.blend) {
@@ -38,8 +39,10 @@ class BedrockBehaviorPackLoader(
             Registry.register(Registry.ITEM, id, item)
             BedrockAddonsRegistry.items[id] = item
         }
+        BedrockLoader.logger.info("test")
         // Entity
         context.behavior.entities.forEach { (id, beh) ->
+            BedrockLoader.logger.info("Registering entity $id")
             // entity type
             val entityType = BedrockAddonsRegistry.getOrRegisterEntityType(id)
             BedrockAddonsRegistry.entityComponents[id] = beh.components

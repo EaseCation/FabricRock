@@ -1,5 +1,6 @@
 package net.easecation.bedrockloader.deserializer
 
+import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.bedrock.definition.BlockBehaviourDefinition
 import net.easecation.bedrockloader.bedrock.definition.EntityBehaviourDefinition
 import net.easecation.bedrockloader.util.GsonUtil
