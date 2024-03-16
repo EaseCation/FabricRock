@@ -39,8 +39,10 @@ class BedrockResourcePackLoader(
         val env = FabricLoader.getInstance().environmentType
         this.init()
         // Geometry
-        context.resource.geometries.forEach { (key, value) ->
-            BedrockAddonsRegistry.models[key] = BedrockGeometryModel(value)
+        if (env == EnvType.CLIENT) {
+            context.resource.geometries.forEach { (key, value) ->
+                BedrockAddonsRegistry.models[key] = BedrockGeometryModel(value)
+            }
         }
         // Blocks
         for (block in context.resource.blocks) {
