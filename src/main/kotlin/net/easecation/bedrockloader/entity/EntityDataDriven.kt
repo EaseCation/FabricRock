@@ -1,12 +1,10 @@
 package net.easecation.bedrockloader.entity
 
+import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.bedrock.entity.components.EntityComponents
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.fabricmc.fabric.api.`object`.builder.v1.entity.FabricEntityTypeBuilder
-import net.minecraft.entity.EntityDimensions
-import net.minecraft.entity.EntityType
-import net.minecraft.entity.EquipmentSlot
-import net.minecraft.entity.SpawnGroup
+import net.minecraft.entity.*
 import net.minecraft.entity.attribute.DefaultAttributeContainer
 import net.minecraft.entity.attribute.EntityAttributes
 import net.minecraft.entity.damage.DamageSource
@@ -47,6 +45,22 @@ class EntityDataDriven(
         }
     }
 
+    override fun isPushable(): Boolean {
+        return components.minecraftPushable?.is_pushable ?: false
+    }
+
+    override fun pushAwayFrom(entity: Entity?) {
+        if (this.isPushable) {
+            super.pushAwayFrom(entity)
+        }
+    }
+
+    override fun pushAway(entity: Entity?) {
+        if (this.isPushable) {
+            super.pushAway(entity)
+        }
+    }
+
     override fun getArmorItems(): MutableIterable<ItemStack> {
         return mutableListOf()
     }
@@ -63,7 +77,7 @@ class EntityDataDriven(
     }
 
     override fun hasNoGravity(): Boolean {
-        return components.minecraftPhysics?.has_gravity == true
+        return components.minecraftPhysics?.has_gravity == false
     }
 
     override fun damage(source: DamageSource?, amount: Float): Boolean {

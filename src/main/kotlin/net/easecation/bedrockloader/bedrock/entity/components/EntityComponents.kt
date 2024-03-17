@@ -21,5 +21,6 @@ data class EntityComponents(
         @SerializedName("minecraft:skin_id") val minecraftSkinId: Int?,
         @SerializedName("minecraft:health") val minecraftHealth: ComponentHealth?,
         @SerializedName("minecraft:rideable") val minecraftRideable: ComponentRideable?,
-        @SerializedName("minecraft:is_immobile") val minecraftIsImmobile: ComponentIsImmobile?
+        @SerializedName("minecraft:is_immobile") val minecraftIsImmobile: ComponentIsImmobile?,
+        @SerializedName("minecraft:pushable") val minecraftPushable: ComponentPushable?,
 )

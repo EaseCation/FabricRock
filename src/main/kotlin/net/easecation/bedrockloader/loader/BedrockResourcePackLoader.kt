@@ -388,14 +388,14 @@ class BedrockResourcePackLoader(
                     context.resource.itemTexture[spawnEggTexture]?.textures?.let {
                         val bedrockTexture = context.resource.textureImages[it]
                         if (bedrockTexture == null) {
-                            BedrockLoader.logger.warn("[BedrockResourcePackLoader] Entity spawn egg texture not found: ${spawnEggTexture}")
-                            return
-                        }
-                        val namespaceDir = this.namespaceDir(identifier.namespace)
-                        val bedrockTextureFile = namespaceDir.resolve("textures/" + model.textures!!["layer0"]!!.path + "." + bedrockTexture.type.getExtension())
-                        bedrockTextureFile.parentFile.mkdirs()
-                        bedrockTexture.image.let { image ->
-                            ImageIO.write(image, bedrockTextureFile.extension, bedrockTextureFile)
+                            BedrockLoader.logger.warn("[BedrockResourcePackLoader] Entity spawn egg texture not found: $spawnEggTexture")
+                        } else {
+                            val namespaceDir = this.namespaceDir(identifier.namespace)
+                            val bedrockTextureFile = namespaceDir.resolve("textures/" + model.textures!!["layer0"]!!.path + "." + bedrockTexture.type.getExtension())
+                            bedrockTextureFile.parentFile.mkdirs()
+                            bedrockTexture.image.let { image ->
+                                ImageIO.write(image, bedrockTextureFile.extension, bedrockTextureFile)
+                            }
                         }
                     }
                 } else {

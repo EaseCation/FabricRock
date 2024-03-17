@@ -39,7 +39,6 @@ class BedrockBehaviorPackLoader(
             Registry.register(Registry.ITEM, id, item)
             BedrockAddonsRegistry.items[id] = item
         }
-        BedrockLoader.logger.info("test")
         // Entity
         context.behavior.entities.forEach { (id, beh) ->
             BedrockLoader.logger.info("Registering entity $id")
