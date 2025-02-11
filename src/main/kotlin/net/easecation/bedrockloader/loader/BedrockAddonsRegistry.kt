@@ -6,8 +6,9 @@ import net.easecation.bedrockloader.render.BedrockGeometryModel
 import net.minecraft.block.Block
 import net.minecraft.entity.EntityType
 import net.minecraft.item.Item
+import net.minecraft.registry.Registries
+import net.minecraft.registry.Registry
 import net.minecraft.util.Identifier
-import net.minecraft.util.registry.Registry
 
 object BedrockAddonsRegistry {
 
@@ -19,7 +20,7 @@ object BedrockAddonsRegistry {
 
     fun getOrRegisterEntityType(id: Identifier): EntityType<EntityDataDriven> =
             entities.getOrElse(id) {
-                Registry.register(Registry.ENTITY_TYPE, id, EntityDataDriven.buildEntityType(id)).also { entities[id] = it }
+                Registry.register(Registries.ENTITY_TYPE, id, EntityDataDriven.buildEntityType(id)).also { entities[id] = it }
             }
 
 }

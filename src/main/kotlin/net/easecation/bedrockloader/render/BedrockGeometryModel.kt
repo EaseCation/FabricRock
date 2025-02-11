@@ -19,14 +19,10 @@ import net.minecraft.client.render.model.json.ModelTransformation
 import net.minecraft.client.texture.Sprite
 import net.minecraft.client.util.SpriteIdentifier
 import net.minecraft.client.util.math.MatrixStack
-import net.minecraft.item.ItemStack
 import net.minecraft.util.Identifier
-import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
-import net.minecraft.world.BlockRenderView
-import java.util.*
-import java.util.function.Supplier
-import kotlin.collections.ArrayList
+import net.minecraft.util.math.random.Random
+import java.util.function.Function
 
 
 @Environment(EnvType.CLIENT)
@@ -58,18 +54,18 @@ class BedrockGeometryModel(
         return emptyList() // 模型不依赖于其他模型。
     }
 
-    override fun getTextureDependencies(unbakedModelGetter: java.util.function.Function<Identifier, UnbakedModel>?, unresolvedTextureReferences: MutableSet<com.mojang.datafixers.util.Pair<String, String>>?): MutableList<SpriteIdentifier> {
-        val map = mutableListOf<SpriteIdentifier>()
-        spriteIds.forEach {
-            map.add(it)
-        }
-        return map  // 本模型（以及其模型依赖，依赖的依赖，等）依赖的纹理。 TODO
+    override fun setParents(modelLoader: Function<Identifier, UnbakedModel>?) {
     }
 
-    override fun bake(loader: ModelLoader, textureGetter: java.util.function.Function<SpriteIdentifier, Sprite>, rotationContainer: ModelBakeSettings?, modelId: Identifier?): BakedModel {
+    override fun bake(
+        baker: Baker,
+        textureGetter: Function<SpriteIdentifier, Sprite>,
+        rotationContainer: ModelBakeSettings?,
+        modelId: Identifier?
+    ): BakedModel {
         BedrockLoader.logger.info("Baking model... $modelId ${bedrockModel.description.identifier}")
         // 加载默认方块模型
-        val defaultBlockModel = loader.getOrLoadModel(defaultBlockModel) as JsonUnbakedModel
+        val defaultBlockModel = baker.getOrLoadModel(defaultBlockModel) as JsonUnbakedModel
         // 获取 ModelTransformation
         transformation = defaultBlockModel.transformations
         // 获得sprites
@@ -80,8 +76,8 @@ class BedrockGeometryModel(
         return this
     }
 
-    override fun getQuads(state: BlockState?, face: Direction?, random: Random?): List<BakedQuad> {
-        return emptyList() // 不需要，因为我们使用的是 FabricBakedModel
+    override fun getQuads(state: BlockState?, face: Direction?, random: Random?): MutableList<BakedQuad> {
+        return mutableListOf() // 不需要，因为我们使用的是 FabricBakedModel
     }
 
     override fun useAmbientOcclusion(): Boolean {
@@ -106,14 +102,6 @@ class BedrockGeometryModel(
 
     override fun isVanillaAdapter(): Boolean {
         return false // false 以触发 FabricBakedModel 渲染
-    }
-
-    override fun emitBlockQuads(blockView: BlockRenderView?, state: BlockState?, pos: BlockPos?, randomSupplier: Supplier<Random>?, context: net.fabricmc.fabric.api.renderer.v1.render.RenderContext?) {
-        context?.meshConsumer()?.accept(mesh)
-    }
-
-    override fun emitItemQuads(stack: ItemStack?, randomSupplier: Supplier<Random>?, context: net.fabricmc.fabric.api.renderer.v1.render.RenderContext) {
-        context.meshConsumer().accept(mesh);
     }
 
     override fun getTransformation(): ModelTransformation {

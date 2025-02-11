@@ -8,7 +8,9 @@ import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.minecraft.client.render.VertexConsumer
 import net.minecraft.client.util.math.MatrixStack
-import net.minecraft.util.math.*
+import net.minecraft.util.math.Direction
+import org.joml.Quaternionf
+import org.joml.Vector3f
 import java.util.*
 import java.util.stream.Stream
 
@@ -101,13 +103,13 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
     fun rotate(matrices: MatrixStack) {
         matrices.translate((this.pivotX / 16.0f).toDouble(), (this.pivotY / 16.0f).toDouble(), (this.pivotZ / 16.0f).toDouble())
         if (this.roll != 0.0f) {
-            matrices.multiply(Vec3f.POSITIVE_Z.getRadialQuaternion(this.roll))
+            matrices.multiply(Quaternionf().rotationZ(this.roll))
         }
         if (this.yaw != 0.0f) {
-            matrices.multiply(Vec3f.POSITIVE_Y.getRadialQuaternion(this.yaw))
+            matrices.multiply(Quaternionf().rotationY(this.yaw))
         }
         if (this.pitch != 0.0f) {
-            matrices.multiply(Vec3f.POSITIVE_X.getRadialQuaternion(this.pitch))
+            matrices.multiply(Quaternionf().rotationX(this.pitch))
         }
         if (detachPivot) {
             matrices.translate(-(this.pivotX / 16.0f).toDouble(), -(this.pivotY / 16.0f).toDouble(), -(this.pivotZ / 16.0f).toDouble())
@@ -223,47 +225,39 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
             }
         }
 
-        fun renderCuboid(entry: MatrixStack.Entry, vertexConsumer: VertexConsumer, light: Int, overlay: Int, red: Float, green: Float, blue: Float, alpha: Float) {
-            val transformMatrix4f = entry.positionMatrix  // 变换矩阵
-            val normalMatrix3f = entry.normalMatrix  // 法相矩阵
+        fun renderCuboid(
+            entry: MatrixStack.Entry,
+            vertexConsumer: VertexConsumer,
+            light: Int,
+            overlay: Int,
+            red: Float,
+            green: Float,
+            blue: Float,
+            alpha: Float
+        ) {
+            val matrix4f = entry.positionMatrix
+            val vector3f = Vector3f()
+
             for (quad in this.sides) {
-                val directionUnitVector = quad!!.direction.copy()
-                directionUnitVector.transform(normalMatrix3f)
-                val directionUnitVectorX = directionUnitVector.x
-                val directionUnitVectorY = directionUnitVector.y
-                val directionUnitVectorZ = directionUnitVector.z
-                val vertices = quad.vertices
-                var vertexIndex = 0
-                val verticesLength = vertices.size
-                while (vertexIndex < verticesLength) {
-                    val vertex = vertices[vertexIndex]
-                    val vertexPosX = vertex.pos.x / 16.0f
-                    val vertexPosY = vertex.pos.y / 16.0f
-                    val vertexPosZ = vertex.pos.z / 16.0f
-                    val quaternion = Vector4f(vertexPosX, vertexPosY, vertexPosZ, 1.0f)  // 普通坐标转为四元数的
-                    quaternion.transform(transformMatrix4f)
-                    if (vertexConsumer is VertexIndexedVertexConsumer) {
-                        vertexConsumer.vertexIndex(vertexIndex)
-                    }
-                    vertexConsumer.vertex(
-                            quaternion.x, quaternion.y, quaternion.z,
-                            red, green, blue, alpha,
-                            vertex.u, vertex.v,
-                            overlay, light,
-                            directionUnitVectorX, directionUnitVectorY, directionUnitVectorZ
-                    )
-                    vertexIndex++
-                }
-                if (vertexConsumer is VertexIndexedVertexConsumer) {
-                    vertexConsumer.nextQuad()
+                val vector3f2 = entry.transformNormal(quad!!.direction, vector3f)
+                val f = vector3f2.x()
+                val g = vector3f2.y()
+                val h = vector3f2.z()
+
+                for (vertex in quad!!.vertices) {
+                    val i = vertex.pos.x() / 16.0f
+                    val j = vertex.pos.y() / 16.0f
+                    val k = vertex.pos.z() / 16.0f
+                    val vector3f3 = matrix4f.transformPosition(i, j, k, vector3f)
+                    vertexConsumer.vertex(vector3f3.x(), vector3f3.y(), vector3f3.z(), red, green, blue, alpha, vertex.u, vertex.v, overlay, light, f, g, h)
                 }
             }
         }
     }
 
     @Environment(value = EnvType.CLIENT)
-    internal class Vertex(val pos: Vec3f, val u: Float, val v: Float) {
-        constructor(x: Float, y: Float, z: Float, u: Float, v: Float) : this(Vec3f(x, y, z), u, v)
+    internal class Vertex(val pos: Vector3f, val u: Float, val v: Float) {
+        constructor(x: Float, y: Float, z: Float, u: Float, v: Float) : this(Vector3f(x, y, z), u, v)
 
         fun remap(u: Float, v: Float): Vertex {
             return Vertex(this.pos, u, v)
@@ -272,7 +266,7 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
 
     @Environment(value = EnvType.CLIENT)
     internal class Quad(val vertices: Array<Vertex>, u1: Float, v1: Float, u2: Float, v2: Float, squishU: Float, squishV: Float, flip: Boolean, direction: Direction) {
-        val direction: Vec3f
+        val direction: Vector3f
 
         init {
             val f = 0.0f / squishU
@@ -291,7 +285,7 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
             }
             this.direction = direction.unitVector
             if (flip) {
-                this.direction.multiplyComponentwise(-1.0f, 1.0f, 1.0f)
+                this.direction.mul(-1.0f, 1.0f, 1.0f)
             }
         }
     }

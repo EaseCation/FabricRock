@@ -16,14 +16,15 @@ import net.easecation.bedrockloader.render.BedrockGeometryModel
 import net.easecation.bedrockloader.util.GsonUtil
 import net.fabricmc.api.EnvType
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry
-import net.fabricmc.fabric.api.item.v1.FabricItemSettings
 import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.client.texture.SpriteAtlasTexture
 import net.minecraft.client.util.SpriteIdentifier
 import net.minecraft.entity.EntityType
+import net.minecraft.item.Item
 import net.minecraft.item.SpawnEggItem
+import net.minecraft.registry.Registries
+import net.minecraft.registry.Registry
 import net.minecraft.util.Identifier
-import net.minecraft.util.registry.Registry
 import java.io.File
 import java.io.FileWriter
 import javax.imageio.ImageIO
@@ -368,13 +369,13 @@ class BedrockResourcePackLoader(
                 val entityName = context.resource.entities[identifier]?.description?.identifier?.path
                 val id = Identifier(identifier.namespace, "${entityName}_spawn_egg")
                 val spawnEggItem: SpawnEggItem = if (it.base_color != null && it.overlay_color != null) {
-                    SpawnEggItem(entityType, it.base_color.replace("#", "").hexToInt(HexFormat.Default), it.overlay_color.replace("#", "").hexToInt(HexFormat.Default), FabricItemSettings())
+                    SpawnEggItem(entityType, it.base_color.replace("#", "").hexToInt(HexFormat.Default), it.overlay_color.replace("#", "").hexToInt(HexFormat.Default), Item.Settings())
                 } else if (it.base_color != null){
-                    SpawnEggItem(entityType, it.base_color.replace("#", "").hexToInt(HexFormat.Default), secondaryColor, FabricItemSettings())
+                    SpawnEggItem(entityType, it.base_color.replace("#", "").hexToInt(HexFormat.Default), secondaryColor, Item.Settings())
                 } else if (it.overlay_color != null) {
-                    SpawnEggItem(entityType, primaryColor, it.overlay_color.replace("#", "").hexToInt(HexFormat.Default), FabricItemSettings())
+                    SpawnEggItem(entityType, primaryColor, it.overlay_color.replace("#", "").hexToInt(HexFormat.Default), Item.Settings())
                 } else  {
-                    SpawnEggItem(entityType, primaryColor, secondaryColor, FabricItemSettings())
+                    SpawnEggItem(entityType, primaryColor, secondaryColor, Item.Settings())
                 }
                 val model: JavaModelDefinition
                 if (it.texture != null) {
@@ -403,7 +404,7 @@ class BedrockResourcePackLoader(
                         parent = Identifier("", "item/template_spawn_egg").toString()
                     )
                 }
-                Registry.register(Registry.ITEM, id, spawnEggItem)
+                Registry.register(Registries.ITEM, id, spawnEggItem)
                 BedrockAddonsRegistry.items[id] = spawnEggItem
                 FileWriter(file).use { writer ->
                     GsonUtil.GSON.toJson(model, writer)

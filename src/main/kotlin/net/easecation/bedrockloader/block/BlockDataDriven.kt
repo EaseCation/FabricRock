@@ -2,11 +2,8 @@ package net.easecation.bedrockloader.block
 
 import net.easecation.bedrockloader.bedrock.block.component.BlockComponents
 import net.easecation.bedrockloader.bedrock.block.component.ComponentCollisionBox
-import net.easecation.bedrockloader.bedrock.block.component.ComponentSelectionBox
-import net.fabricmc.fabric.api.`object`.builder.v1.block.FabricBlockSettings
 import net.minecraft.block.Block
 import net.minecraft.block.BlockState
-import net.minecraft.block.Material
 import net.minecraft.block.ShapeContext
 import net.minecraft.util.Identifier
 import net.minecraft.util.math.BlockPos
@@ -24,17 +21,17 @@ class BlockDataDriven private constructor(val identifier: Identifier, val compon
         }
 
         private fun calculateSettings(components: BlockComponents): Settings {
-            val settings = FabricBlockSettings.of(Material.METAL).hardness(4.0f).nonOpaque()  // TODO hardness
+            val settings = Settings.create().hardness(4.0f).nonOpaque()  // TODO hardness
             components.minecraftCollisionBox?.let {
                 when (it) {
                     is ComponentCollisionBox.ComponentCollisionBoxBoolean -> {
                         if (!it.value) {
-                            settings.collidable(false)
+                            settings.noCollision()
                         }
                     }
                     is ComponentCollisionBox.ComponentCollisionBoxCustom -> {
                         if (it.size.all { e -> e == 0f }) {
-                            settings.collidable(false)
+                            settings.noCollision()
                         }
                     }
                 }
@@ -42,7 +39,7 @@ class BlockDataDriven private constructor(val identifier: Identifier, val compon
             }
             // TODO SelectionBox
             components.minecraftLightEmission?.let {
-                settings.luminance(it)
+                settings.luminance { _ -> it }
             }
             return settings
         }

@@ -3,11 +3,18 @@ package net.easecation.bedrockloader
 import net.easecation.bedrockloader.loader.BedrockAddonsLoader
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.fabricmc.api.ModInitializer
-import net.fabricmc.fabric.api.client.itemgroup.FabricItemGroupBuilder
+import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup
+import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroupEntries
+import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents
+import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents.ModifyEntries
 import net.fabricmc.loader.api.FabricLoader
 import net.fabricmc.loader.api.ModContainer
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
+import net.minecraft.registry.Registries
+import net.minecraft.registry.Registry
+import net.minecraft.registry.RegistryKey
+import net.minecraft.text.Text
 import net.minecraft.util.Identifier
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -21,25 +28,26 @@ object BedrockLoader : ModInitializer {
 	const val NAMESPACE: String = "bedrock-loader"
 	val BEDROCK_LOADER_MOD: ModContainer = FabricLoader.getInstance().getModContainer(NAMESPACE).orElseThrow()
 
+	val ITEM_GROUP_KEY = RegistryKey.of(Registries.ITEM_GROUP.key, Identifier("bedrock-loader", "bedrock-loader"))
+	val ITEM_GROUP = FabricItemGroup.builder()
+		.icon { ItemStack(BedrockAddonsRegistry.items.values.firstOrNull() ?: Items.BONE_BLOCK) }
+		.displayName(Text.translatable("itemGroup.bedrock-loader.bedrock-loader"))
+		.build()
+
 	override fun onInitialize() {
 		logger.info("Initializing BedrockLoader...")
 
 		logger.info("Loading bedrock addons...")
 		BedrockAddonsLoader.load()
 
-		// group
-		var iconItem = Items.BONE_BLOCK
-		if (BedrockAddonsRegistry.items.isNotEmpty()) {
-			iconItem = BedrockAddonsRegistry.items.values.first()
-		}
-		FabricItemGroupBuilder.create(Identifier("bedrock-loader", "bedrock-loader"))
-				.icon { ItemStack(iconItem) }
-				.appendItems { stacks ->
-					BedrockAddonsRegistry.items.forEach { (_, item) ->
-						stacks.add(ItemStack(item))
-					}
+		Registry.register(Registries.ITEM_GROUP, ITEM_GROUP_KEY, ITEM_GROUP);
+
+		ItemGroupEvents.modifyEntriesEvent(ITEM_GROUP_KEY)
+			.register(ModifyEntries { itemGroup ->
+				BedrockAddonsRegistry.items.values.forEach {
+					itemGroup.add(ItemStack(it))
 				}
-				.build()
+			})
 
 		logger.info("BedrockLoader initialized!")
 

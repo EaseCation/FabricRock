@@ -5,8 +5,7 @@ import net.easecation.bedrockloader.render.model.*
 import net.fabricmc.fabric.api.renderer.v1.mesh.Mesh
 import net.minecraft.client.texture.Sprite
 import net.minecraft.client.util.math.MatrixStack
-import net.minecraft.util.math.Quaternion
-import net.minecraft.util.math.Vec3f
+import org.joml.Quaternionf
 
 object BedrockRenderUtil {
 
@@ -89,7 +88,8 @@ object BedrockRenderUtil {
     fun bakeModelPartToMesh(modelPart: ModelPart, sprite: Sprite): Mesh {
         val matrixStack = MatrixStack()
         matrixStack.translate(0.5, 0.0, 0.5)
-        matrixStack.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(180f))
+        org.joml.Math.toRadians(180f)
+        matrixStack.multiply(Quaternionf().rotateX(180f * (Math.PI.toFloat() * 2 / 360F)))
         val vertices = MeshBuilderVertexConsumer(sprite)
         modelPart.render(matrixStack, vertices, 1, 1)
         return vertices.build()

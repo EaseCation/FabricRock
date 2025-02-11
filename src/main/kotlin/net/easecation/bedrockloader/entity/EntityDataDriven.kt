@@ -1,6 +1,5 @@
 package net.easecation.bedrockloader.entity
 
-import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.bedrock.entity.components.EntityComponents
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.fabricmc.fabric.api.`object`.builder.v1.entity.FabricEntityTypeBuilder
@@ -8,6 +7,7 @@ import net.minecraft.entity.*
 import net.minecraft.entity.attribute.DefaultAttributeContainer
 import net.minecraft.entity.attribute.EntityAttributes
 import net.minecraft.entity.damage.DamageSource
+import net.minecraft.entity.damage.DamageTypes
 import net.minecraft.entity.mob.MobEntity
 import net.minecraft.item.ItemStack
 import net.minecraft.util.Arm
@@ -80,14 +80,14 @@ class EntityDataDriven(
         return components.minecraftPhysics?.has_gravity == false
     }
 
-    override fun damage(source: DamageSource?, amount: Float): Boolean {
+    override fun damage(source: DamageSource, amount: Float): Boolean {
         return components.minecraftHealth?.min?.let {
             when {
-                health - amount > 1 && source != DamageSource.OUT_OF_WORLD -> {
+                health - amount > 1 && !source.isOf(DamageTypes.OUT_OF_WORLD) -> {
                     return super.damage(source, amount)
                 }
                 else -> {
-                    if (source == DamageSource.OUT_OF_WORLD) {
+                    if (source.isOf(DamageTypes.OUT_OF_WORLD)) {
                         return false
                     }
                     health += amount
