@@ -9,6 +9,7 @@ import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.fabricmc.fabric.api.renderer.v1.mesh.Mesh
 import net.fabricmc.fabric.api.renderer.v1.model.FabricBakedModel
+import net.fabricmc.fabric.api.renderer.v1.render.RenderContext
 import net.minecraft.block.BlockState
 import net.minecraft.client.render.VertexConsumer
 import net.minecraft.client.render.entity.model.EntityModel
@@ -19,10 +20,14 @@ import net.minecraft.client.render.model.json.ModelTransformation
 import net.minecraft.client.texture.Sprite
 import net.minecraft.client.util.SpriteIdentifier
 import net.minecraft.client.util.math.MatrixStack
+import net.minecraft.item.ItemStack
 import net.minecraft.util.Identifier
+import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
 import net.minecraft.util.math.random.Random
+import net.minecraft.world.BlockRenderView
 import java.util.function.Function
+import java.util.function.Supplier
 
 
 @Environment(EnvType.CLIENT)
@@ -55,6 +60,7 @@ class BedrockGeometryModel(
     }
 
     override fun setParents(modelLoader: Function<Identifier, UnbakedModel>?) {
+        // 与模型继承有关，我们这里还不需要使用到
     }
 
     override fun bake(
@@ -102,6 +108,14 @@ class BedrockGeometryModel(
 
     override fun isVanillaAdapter(): Boolean {
         return false // false 以触发 FabricBakedModel 渲染
+    }
+
+    override fun emitBlockQuads(blockRenderView: BlockRenderView, blockState: BlockState, blockPos: BlockPos, supplier: Supplier<Random>, renderContext: RenderContext) {
+        mesh?.outputTo(renderContext.emitter)
+    }
+
+    override fun emitItemQuads(itemStack: ItemStack, supplier: Supplier<Random>, renderContext: RenderContext) {
+        mesh?.outputTo(renderContext.emitter)
     }
 
     override fun getTransformation(): ModelTransformation {

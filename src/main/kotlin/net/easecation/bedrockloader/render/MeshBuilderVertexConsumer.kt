@@ -24,13 +24,13 @@ class MeshBuilderVertexConsumer(private val sprite: Sprite) : VertexIndexedVerte
 
     override fun color(red: Int, green: Int, blue: Int, alpha: Int): VertexConsumer {
         // BedrockLoader.logger.info("MeshBuilderVertexConsumer.color($red, $green, $blue, $alpha)")
-        emitter.spriteColor(vertexIndex, 0, (red and 0xFF) or ((green and 0xFF) shl 8) or ((blue and 0xFF) shl 16) or ((alpha and 0xFF) shl 24))
+        emitter.color(vertexIndex, (red and 0xFF) or ((green and 0xFF) shl 8) or ((blue and 0xFF) shl 16) or ((alpha and 0xFF) shl 24))
         return this
     }
 
     override fun texture(u: Float, v: Float): VertexConsumer {
         // BedrockLoader.logger.info("MeshBuilderVertexConsumer.texture($u, $v)")
-        emitter.sprite(vertexIndex, 0, u, v)
+        emitter.uv(vertexIndex, u, v)
         return this
     }
 
@@ -73,18 +73,18 @@ class MeshBuilderVertexConsumer(private val sprite: Sprite) : VertexIndexedVerte
 
     override fun nextQuad() {
         // BedrockLoader.logger.info("MeshBuilderVertexConsumer.nextQuad()")
-        emitter.spriteBake(0, sprite, MutableQuadView.BAKE_NORMALIZED)
+        emitter.spriteBake(sprite, MutableQuadView.BAKE_NORMALIZED)
         emitter.emit()
     }
 
     override fun fixedColor(red: Int, green: Int, blue: Int, alpha: Int) {
         // BedrockLoader.logger.info("MeshBuilderVertexConsumer.fixedColor($red, $green, $blue, $alpha)")
-        emitter.spriteColor(vertexIndex, 0, (red and 0xFF) or ((green and 0xFF) shl 8) or ((blue and 0xFF) shl 16) or ((alpha and 0xFF) shl 24))
+        emitter.color(vertexIndex, (red and 0xFF) or ((green and 0xFF) shl 8) or ((blue and 0xFF) shl 16) or ((alpha and 0xFF) shl 24))
     }
 
     override fun unfixColor() {
         // BedrockLoader.logger.info("MeshBuilderVertexConsumer.unfixColor()")
-        emitter.spriteColor(vertexIndex, 0, -1)
+        emitter.color(vertexIndex, -1)
     }
 
     fun build(): Mesh {
