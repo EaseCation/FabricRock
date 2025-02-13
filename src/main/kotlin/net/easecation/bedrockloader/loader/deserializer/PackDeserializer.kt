@@ -1,4 +1,4 @@
-package net.easecation.bedrockloader.deserializer
+package net.easecation.bedrockloader.loader.deserializer
 
 import java.util.zip.ZipFile
 

@@ -1,4 +1,4 @@
-package net.easecation.bedrockloader.deserializer
+package net.easecation.bedrockloader.loader.context
 
 import net.easecation.bedrockloader.bedrock.definition.BlockBehaviourDefinition
 import net.easecation.bedrockloader.bedrock.definition.EntityBehaviourDefinition

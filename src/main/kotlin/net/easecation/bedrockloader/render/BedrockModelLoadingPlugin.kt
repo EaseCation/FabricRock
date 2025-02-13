@@ -32,5 +32,12 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                 else -> null
             }
         }
+
+        BedrockAddonsRegistry.blocks.forEach { (id, block) ->
+            pluginContext.registerBlockStateResolver(block) { context ->
+                val model = context.getOrLoadModel(id.withPath { "block/${it}" })
+                context.setModel(context.block().defaultState, model)
+            }
+        }
     }
 }

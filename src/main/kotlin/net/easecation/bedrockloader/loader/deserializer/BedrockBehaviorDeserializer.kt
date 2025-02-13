@@ -1,8 +1,8 @@
-package net.easecation.bedrockloader.deserializer
+package net.easecation.bedrockloader.loader.deserializer
 
-import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.bedrock.definition.BlockBehaviourDefinition
 import net.easecation.bedrockloader.bedrock.definition.EntityBehaviourDefinition
+import net.easecation.bedrockloader.loader.context.BedrockBehaviorContext
 import net.easecation.bedrockloader.util.GsonUtil
 import net.minecraft.util.Identifier
 import java.io.InputStreamReader

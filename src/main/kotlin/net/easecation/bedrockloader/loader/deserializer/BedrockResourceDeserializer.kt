@@ -1,8 +1,9 @@
-package net.easecation.bedrockloader.deserializer
+package net.easecation.bedrockloader.loader.deserializer
 
 import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.bedrock.data.TextureImage
 import net.easecation.bedrockloader.bedrock.definition.*
+import net.easecation.bedrockloader.loader.context.BedrockResourceContext
 import net.easecation.bedrockloader.util.GsonUtil
 import java.io.InputStreamReader
 import java.util.zip.ZipFile

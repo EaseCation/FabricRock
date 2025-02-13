@@ -3,7 +3,7 @@ package net.easecation.bedrockloader.loader
 import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.bedrock.block.component.ComponentMaterialInstances
 import net.easecation.bedrockloader.block.BlockDataDriven
-import net.easecation.bedrockloader.deserializer.BedrockPackContext
+import net.easecation.bedrockloader.loader.context.BedrockPackContext
 import net.easecation.bedrockloader.entity.EntityDataDriven
 import net.fabricmc.api.EnvType
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap

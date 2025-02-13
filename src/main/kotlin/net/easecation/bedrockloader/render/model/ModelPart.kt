@@ -3,7 +3,6 @@
  */
 package net.easecation.bedrockloader.render.model
 
-import net.easecation.bedrockloader.render.VertexIndexedVertexConsumer
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.minecraft.client.render.VertexConsumer
@@ -117,12 +116,6 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
     }
 
     private fun renderCuboids(entry: MatrixStack.Entry, vertexConsumer: VertexConsumer, light: Int, overlay: Int, red: Float, green: Float, blue: Float, alpha: Float) {
-        for (cuboid in this.cuboids) {
-            cuboid.renderCuboid(entry, vertexConsumer, light, overlay, red, green, blue, alpha)
-        }
-    }
-
-    private fun renderCuboids(entry: MatrixStack.Entry, vertexConsumer: VertexIndexedVertexConsumer, light: Int, overlay: Int, red: Float, green: Float, blue: Float, alpha: Float) {
         for (cuboid in this.cuboids) {
             cuboid.renderCuboid(entry, vertexConsumer, light, overlay, red, green, blue, alpha)
         }
@@ -244,20 +237,13 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
                 val g = vector3f2.y()
                 val h = vector3f2.z()
 
-                val vertices = quad.vertices
-                var vertexIndex = 0
-                val verticesLength = vertices.size
-                while (vertexIndex < verticesLength) {
-                    val vertex = vertices[vertexIndex]
+                for (vertex in quad.vertices) {
                     val i = vertex.pos.x() / 16.0f
                     val j = vertex.pos.y() / 16.0f
                     val k = vertex.pos.z() / 16.0f
                     val vector3f3 = matrix4f.transformPosition(i, j, k, vector3f)
-                    (vertexConsumer as? VertexIndexedVertexConsumer)?.vertexIndex(vertexIndex)
                     vertexConsumer.vertex(vector3f3.x(), vector3f3.y(), vector3f3.z(), red, green, blue, alpha, vertex.u, vertex.v, overlay, light, f, g, h)
-                    vertexIndex++
                 }
-                (vertexConsumer as? VertexIndexedVertexConsumer)?.nextQuad()
             }
         }
     }

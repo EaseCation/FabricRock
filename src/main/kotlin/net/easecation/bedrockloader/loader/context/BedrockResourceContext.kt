@@ -1,4 +1,4 @@
-package net.easecation.bedrockloader.deserializer
+package net.easecation.bedrockloader.loader.context
 
 import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.bedrock.BedrockTexturePath
@@ -27,21 +27,27 @@ class BedrockResourceContext {
         itemTexture.putAll(other.itemTexture)
     }
 
-    fun terrainTextureToJava(textureKey: String, namespace: String) : JavaTexturePath? {
+    fun terrainTextureToJava(namespace: String, textureKey: String) : JavaTexturePath? {
         val texture = terrainTexture[textureKey]?.textures
-        if (texture == null || !texture.contains("textures/")) {
+        if (texture == null) {
             BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: $textureKey")
             return null
         }
-        return Identifier(namespace, texture.replace("textures/", ""))
+        return Identifier(
+            namespace,
+            "block/${texture.substringAfterLast("/")}"
+        )
     }
 
-    fun itemTextureToJava(textureKey: String, namespace: String) : JavaTexturePath? {
+    fun itemTextureToJava(namespace: String, textureKey: String) : JavaTexturePath? {
         val texture = itemTexture[textureKey]?.textures
-        if (texture == null || !texture.contains("textures/")) {
+        if (texture == null) {
             BedrockLoader.logger.warn("[BedrockResourcePackLoader] Item texture not found: $textureKey")
             return null
         }
-        return Identifier(namespace, texture.replace("textures/", ""))
+        return Identifier(
+            namespace,
+            "item/${texture.substringAfterLast("/")}"
+        )
     }
 }

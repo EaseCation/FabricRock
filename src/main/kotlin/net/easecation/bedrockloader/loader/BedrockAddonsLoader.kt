@@ -4,9 +4,9 @@ import com.google.common.io.Files
 import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.bedrock.pack.BedrockPack
 import net.easecation.bedrockloader.bedrock.pack.ZippedBedrockPack
-import net.easecation.bedrockloader.deserializer.BedrockBehaviorDeserializer
-import net.easecation.bedrockloader.deserializer.BedrockPackContext
-import net.easecation.bedrockloader.deserializer.BedrockResourceDeserializer
+import net.easecation.bedrockloader.loader.deserializer.BedrockBehaviorDeserializer
+import net.easecation.bedrockloader.loader.context.BedrockPackContext
+import net.easecation.bedrockloader.loader.deserializer.BedrockResourceDeserializer
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.filefilter.TrueFileFilter
 import java.io.File

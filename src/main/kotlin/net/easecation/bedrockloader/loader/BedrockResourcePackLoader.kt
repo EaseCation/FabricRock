@@ -6,10 +6,9 @@ import net.easecation.bedrockloader.bedrock.block.component.ComponentMaterialIns
 import net.easecation.bedrockloader.render.RenderControllerWithClientEntity
 import net.easecation.bedrockloader.bedrock.definition.BlockResourceDefinition
 import net.easecation.bedrockloader.bedrock.definition.EntityResourceDefinition
-import net.easecation.bedrockloader.deserializer.BedrockPackContext
+import net.easecation.bedrockloader.loader.context.BedrockPackContext
 import net.easecation.bedrockloader.entity.EntityDataDriven
 import net.easecation.bedrockloader.render.renderer.EntityDataDrivenRenderer
-import net.easecation.bedrockloader.java.definition.JavaBlockStatesDefinition
 import net.easecation.bedrockloader.java.definition.JavaMCMeta
 import net.easecation.bedrockloader.java.definition.JavaModelDefinition
 import net.easecation.bedrockloader.render.BedrockGeometryModel
@@ -17,13 +16,13 @@ import net.easecation.bedrockloader.util.GsonUtil
 import net.fabricmc.api.EnvType
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry
 import net.fabricmc.loader.api.FabricLoader
-import net.minecraft.client.texture.SpriteAtlasTexture
 import net.minecraft.client.util.SpriteIdentifier
 import net.minecraft.entity.EntityType
 import net.minecraft.item.Item
 import net.minecraft.item.SpawnEggItem
 import net.minecraft.registry.Registries
 import net.minecraft.registry.Registry
+import net.minecraft.screen.PlayerScreenHandler
 import net.minecraft.util.Identifier
 import java.io.File
 import java.io.FileWriter
@@ -149,10 +148,6 @@ class BedrockResourcePackLoader(
             if (!texturesBlock.exists()) {
                 texturesBlock.mkdirs()
             }
-            val texturesBlocks = textures.resolve("blocks")
-            if (!texturesBlocks.exists()) {
-                texturesBlocks.mkdirs()
-            }
             val texturesEntity = textures.resolve("entity")
             if (!texturesEntity.exists()) {
                 texturesEntity.mkdirs()
@@ -179,15 +174,16 @@ class BedrockResourcePackLoader(
 //            is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
 //            null -> "${identifier.namespace}:block/${identifier.path}"
 //        }
-        val model = "${identifier.namespace}:block/${identifier.path}"
-        val blockState = JavaBlockStatesDefinition(
-                variants = mapOf(
-                        "" to JavaBlockStatesDefinition.Variant(model)
-                )
-        )
-        FileWriter(file).use { writer ->
-            GsonUtil.GSON.toJson(blockState, writer)
-        }
+        // 方块模型更改为在BedrockModelLoadingPlugin中通过registerBlockStateResolver注册
+//        val model = "${identifier.namespace}:block/${identifier.path}"
+//        val blockState = JavaBlockStatesDefinition(
+//                variants = mapOf(
+//                        "" to JavaBlockStatesDefinition.Variant(model)
+//                )
+//        )
+//        FileWriter(file).use { writer ->
+//            GsonUtil.GSON.toJson(blockState, writer)
+//        }
     }
 
     /**
@@ -202,16 +198,17 @@ class BedrockResourcePackLoader(
         when (textures) {
             is BlockResourceDefinition.Textures.TexturesAllFace -> {
                 val texture = context.resource.terrainTexture[textures.all]?.textures
-                if (texture == null || !texture.contains("textures/")) {
+                if (texture == null) {
                     BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: ${textures.all}")
                     return
                 }
+                val path = "textures/block/${texture.substringAfterLast("/")}"
                 val bedrockTexture = context.resource.textureImages[texture]
                 if (bedrockTexture == null) {
                     BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: ${textures.all}")
                     return
                 }
-                val file = namespaceDir.resolve(texture + "." + bedrockTexture.type.getExtension())
+                val file = namespaceDir.resolve(path + "." + bedrockTexture.type.getExtension())
                 bedrockTexture.image.let { image ->
                     ImageIO.write(image, file.extension, file)
                 }
@@ -228,16 +225,17 @@ class BedrockResourcePackLoader(
                 for ((_, textureKey) in directions) {
                     textureKey?.let {
                         val texture = context.resource.terrainTexture[it]?.textures
-                        if (texture == null || !texture.contains("textures/")) {
+                        if (texture == null) {
                             BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: $it")
                             return
                         }
+                        val path = "textures/block/${texture.substringAfterLast("/")}"
                         val bedrockTexture = context.resource.textureImages[texture]
                         if (bedrockTexture == null) {
                             BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: $it")
                             return
                         }
-                        val file = namespaceDir.resolve(texture + "." + bedrockTexture.type.getExtension())
+                        val file = namespaceDir.resolve(path + "." + bedrockTexture.type.getExtension())
                         bedrockTexture.image.let { image ->
                             ImageIO.write(image, file.extension, file)
                         }
@@ -248,16 +246,17 @@ class BedrockResourcePackLoader(
         }
         materialInstances?.forEach { name, instance ->
             val texture = context.resource.terrainTexture[instance.texture]?.textures
-            if (texture == null || !texture.contains("textures/")) {
+            if (texture == null) {
                 BedrockLoader.logger.warn("[BedrockResourcePackLoader] Material instance texture not found: ${instance.texture}")
                 return@forEach
             }
+            val path = "textures/block/${texture.substringAfterLast("/")}"
             val bedrockTexture = context.resource.textureImages[texture]
             if (bedrockTexture == null) {
                 BedrockLoader.logger.warn("[BedrockResourcePackLoader] Material instance texture not found: ${instance.texture}")
                 return@forEach
             }
-            val file = namespaceDir.resolve(texture + "." + bedrockTexture.type.getExtension())
+            val file = namespaceDir.resolve(path + "." + bedrockTexture.type.getExtension())
             bedrockTexture.image.let { image ->
                 ImageIO.write(image, file.extension, file)
             }
@@ -277,9 +276,11 @@ class BedrockResourcePackLoader(
             }
             val bedrockModel = BedrockAddonsRegistry.models[geometryIdentifier] ?: return
             val textureKey = materialInstances?.get("*")?.texture ?: return
-            val terrainTexture = context.resource.terrainTexture[textureKey]?.textures ?: return
-            val texture = if (terrainTexture.startsWith("textures/", ignoreCase = true)) terrainTexture.substring("textures/".length) else terrainTexture
-            val spriteId = SpriteIdentifier(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE, Identifier(identifier.namespace, texture))
+            val texture = context.resource.terrainTexture[textureKey]?.textures ?: return
+            val spriteId = SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, Identifier(
+                identifier.namespace,
+                "block/${texture.substringAfterLast("/")}"
+            ))
             bedrockModel.addSprite(spriteId)
         } else {
             val model = JavaModelDefinition()
@@ -289,7 +290,7 @@ class BedrockResourcePackLoader(
             materialInstances?.forEach { (key, value) ->
                 if (key == "*") {
                     value.texture?.let { texture ->
-                        val javaTexture = context.resource.terrainTextureToJava(texture, identifier.namespace)
+                        val javaTexture = context.resource.terrainTextureToJava(identifier.namespace, texture)
                         if (javaTexture != null) {
                             model.textures = mapOf("all" to javaTexture)  // TODO 不确定是什么key...
                         }
@@ -303,11 +304,11 @@ class BedrockResourcePackLoader(
             when (textures) {
                 is BlockResourceDefinition.Textures.TexturesAllFace -> {
                     val texture = context.resource.terrainTexture[textures.all]?.textures
-                    if (texture == null || !texture.contains("textures/")) {
+                    if (texture == null) {
                         BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: ${textures.all}")
                         return
                     }
-                    context.resource.terrainTextureToJava(textures.all, identifier.namespace)
+                    context.resource.terrainTextureToJava(identifier.namespace, textures.all)
                         ?.let { model.textures = mapOf("all" to it) }
                 }
 
@@ -325,7 +326,7 @@ class BedrockResourcePackLoader(
 
                     for ((direction, textureKey) in directions) {
                         textureKey?.let {
-                            val texture = context.resource.terrainTextureToJava(it, identifier.namespace)
+                            val texture = context.resource.terrainTextureToJava(identifier.namespace, it)
                             if (texture != null) {
                                 texturesMap[direction] = texture
                             }
@@ -381,7 +382,7 @@ class BedrockResourcePackLoader(
                 if (it.texture != null) {
                     model = JavaModelDefinition(
                         parent = Identifier("minecraft", "item/generated").toString(),
-                        textures = context.resource.itemTextureToJava(it.texture, identifier.namespace)?.let {
+                        textures = context.resource.itemTextureToJava(identifier.namespace, it.texture)?.let {
                             mapOf("layer0" to it)
                         }
                     )

@@ -1,4 +1,4 @@
-package net.easecation.bedrockloader.deserializer
+package net.easecation.bedrockloader.loader.context
 
 /**
  * Mixed all content of loaded bedrock pack

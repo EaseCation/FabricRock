@@ -8,7 +8,7 @@ import net.fabricmc.fabric.api.renderer.v1.mesh.MutableQuadView
 import net.minecraft.client.render.VertexConsumer
 import net.minecraft.client.texture.Sprite
 
-class MeshBuilderVertexConsumer(private val sprite: Sprite) : VertexIndexedVertexConsumer {
+class MeshBuilderVertexConsumer(private val sprite: Sprite) : VertexConsumer {
 
     private val renderer: Renderer = RendererAccess.INSTANCE.renderer!!
     private val meshBuilder: MeshBuilder = renderer.meshBuilder()
@@ -64,17 +64,12 @@ class MeshBuilderVertexConsumer(private val sprite: Sprite) : VertexIndexedVerte
 
     override fun next() {
         // BedrockLoader.logger.info("MeshBuilderVertexConsumer.next()")
-    }
-
-    override fun vertexIndex(index: Int) {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.vertexIndex($index)")
-        vertexIndex = index
-    }
-
-    override fun nextQuad() {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.nextQuad()")
-        emitter.spriteBake(sprite, MutableQuadView.BAKE_NORMALIZED)
-        emitter.emit()
+        vertexIndex++
+        if (vertexIndex >= 4) {
+            emitter.spriteBake(sprite, MutableQuadView.BAKE_NORMALIZED)
+            emitter.emit()
+            vertexIndex = 0
+        }
     }
 
     override fun fixedColor(red: Int, green: Int, blue: Int, alpha: Int) {
