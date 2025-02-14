@@ -3,7 +3,6 @@ package net.easecation.bedrockloader.loader
 import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.bedrock.block.component.ComponentGeometry
 import net.easecation.bedrockloader.bedrock.block.component.ComponentMaterialInstances
-import net.easecation.bedrockloader.render.RenderControllerWithClientEntity
 import net.easecation.bedrockloader.bedrock.definition.BlockResourceDefinition
 import net.easecation.bedrockloader.bedrock.definition.EntityResourceDefinition
 import net.easecation.bedrockloader.loader.context.BedrockPackContext
@@ -56,7 +55,12 @@ class BedrockResourcePackLoader(
                     context.behavior.blocks[identifier]?.components?.minecraftGeometry,
                     context.behavior.blocks[identifier]?.components?.minecraftMaterialInstances,
             )
-            createItemModel(dir.resolve("models/item/${identifier.path}.json"), identifier)
+            createBlockItemModel(
+                dir.resolve("models/item/${identifier.path}.json"),
+                identifier,
+                context.behavior.blocks[identifier]?.components?.minecraftGeometry,
+                context.behavior.blocks[identifier]?.components?.minecraftMaterialInstances,
+            )
             createBlockState(
                 dir.resolve("blockstates/${identifier.path}.json"),
                 identifier,
@@ -282,7 +286,7 @@ class BedrockResourcePackLoader(
                 "block/${texture.substringAfterLast("/")}"
             ))
             val model = geometryFactory.create(spriteId)
-            BedrockAddonsRegistry.models[geometryIdentifier] = model
+            BedrockAddonsRegistry.blockModels[identifier] = model
         } else {
             val model = JavaModelDefinition()
             model.parent = "block/cube_all"
@@ -351,12 +355,29 @@ class BedrockResourcePackLoader(
     /**
      * 直接创建一个继承于对应方块模型的物品模型
      */
-    private fun createItemModel(file: File, identifier: Identifier) {
-        val model = JavaModelDefinition(
+    private fun createBlockItemModel(file: File, identifier: Identifier, geometry: ComponentGeometry?, materialInstances: ComponentMaterialInstances?) {
+        if (geometry != null) {
+            // 带有模型的方块情况：通过行为包定义模型和贴图
+            val geometryIdentifier = when (geometry) {
+                is ComponentGeometry.ComponentGeometrySimple -> geometry.identifier
+                is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
+            }
+            val geometryFactory = BedrockAddonsRegistry.geometries[geometryIdentifier] ?: return
+            val textureKey = materialInstances?.get("*")?.texture ?: return
+            val texture = context.resource.terrainTexture[textureKey]?.textures ?: return
+            val spriteId = SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, Identifier(
+                identifier.namespace,
+                "block/${texture.substringAfterLast("/")}"
+            ))
+            val model = geometryFactory.create(spriteId)
+            BedrockAddonsRegistry.itemModels[identifier] = model
+        } else {
+            val model = JavaModelDefinition(
                 parent = Identifier(identifier.namespace, "block/${identifier.path}").toString()
-        )
-        FileWriter(file).use { writer ->
-            GsonUtil.GSON.toJson(model, writer)
+            )
+            FileWriter(file).use { writer ->
+                GsonUtil.GSON.toJson(model, writer)
+            }
         }
     }
 
@@ -445,13 +466,21 @@ class BedrockResourcePackLoader(
                 }
                 val controller = controllers[0]
                 val renderController = context.resource.renderControllers[controller]
-                if (renderController != null) {
-                    val renderControllerInstance = RenderControllerWithClientEntity(renderController, clientEntity)
-                    EntityRendererRegistry.register(entityType) { context -> EntityDataDrivenRenderer.create(context, renderControllerInstance, 0.5f) }
-                    BedrockLoader.logger.debug("[BedrockResourcePackLoader] Entity {} render controller registered: {}", clientEntity.identifier, controller)
-                } else {
-                    BedrockLoader.logger.warn("[BedrockResourcePackLoader] Entity {} render controller not found: {}", clientEntity.identifier, controller)
+                val identifier = clientEntity.identifier
+                val geometryMolang = renderController?.geometry ?: return@let
+                val geometryAlias = geometryMolang.substringAfter("geometry.").substringAfter("Geometry.")
+                val geometryIdentifier = clientEntity.geometry?.get(geometryAlias) ?: return@let
+                val geometryFactory = BedrockAddonsRegistry.geometries[geometryIdentifier] ?: return@let
+                val textureMolang = renderController.textures?.firstOrNull() ?: return@let
+                val textureAlias = textureMolang.substringAfter("texture.").substringAfter("Texture.")
+                val texture = clientEntity.textures?.get(textureAlias) ?: return@let
+                val spriteId = SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, Identifier(identifier.namespace, texture))
+                val model = geometryFactory.create(spriteId)
+                BedrockAddonsRegistry.entityModel[identifier] = model
+                EntityRendererRegistry.register(entityType) { context ->
+                    EntityDataDrivenRenderer.create(context, clientEntity, 0.5f)
                 }
+                BedrockLoader.logger.debug("[BedrockResourcePackLoader] Entity {} render controller registered: {}", clientEntity.identifier, controller)
             }
         }
     }

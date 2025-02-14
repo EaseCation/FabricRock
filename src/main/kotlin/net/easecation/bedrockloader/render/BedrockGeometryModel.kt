@@ -33,7 +33,7 @@ import java.util.function.Supplier
 @Environment(EnvType.CLIENT)
 class BedrockGeometryModel(
         private val bedrockModel: GeometryDefinition.Model,
-        private val spriteId: SpriteIdentifier
+        val spriteId: SpriteIdentifier
 ) : EntityModel<EntityDataDriven>(), UnbakedModel, BakedModel, FabricBakedModel {
 
     class Factory(private val bedrockModel: GeometryDefinition.Model) {
