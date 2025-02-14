@@ -20,7 +20,7 @@ class BedrockLoaderResourcePackProvider : ResourcePackProvider {
         }
 
         val metadata = ResourcePackInfo(
-            "bedrock-loader",
+            "bedrock-loader-resource",
             Text.translatable("pack.name.bedrock-loader"),
             ModResourcePackCreator.RESOURCE_PACK_SOURCE,
             Optional.empty()

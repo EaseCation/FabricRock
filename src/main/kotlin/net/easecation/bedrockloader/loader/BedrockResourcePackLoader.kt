@@ -41,7 +41,7 @@ class BedrockResourcePackLoader(
         // Geometry
         if (env == EnvType.CLIENT) {
             context.resource.geometries.forEach { (key, value) ->
-                BedrockAddonsRegistry.models[key] = BedrockGeometryModel(value)
+                BedrockAddonsRegistry.geometries[key] = BedrockGeometryModel.Factory(value)
             }
         }
         // Blocks
@@ -79,7 +79,7 @@ class BedrockResourcePackLoader(
             )
             // renderer
             if (env == EnvType.CLIENT) {
-                registerRenderController(clientEntity, identifier, entityType)
+                registerRenderController(clientEntity, entityType)
             }
         }
     }
@@ -274,14 +274,15 @@ class BedrockResourcePackLoader(
                 is ComponentGeometry.ComponentGeometrySimple -> geometry.identifier
                 is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
             }
-            val bedrockModel = BedrockAddonsRegistry.models[geometryIdentifier] ?: return
+            val geometryFactory = BedrockAddonsRegistry.geometries[geometryIdentifier] ?: return
             val textureKey = materialInstances?.get("*")?.texture ?: return
             val texture = context.resource.terrainTexture[textureKey]?.textures ?: return
             val spriteId = SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, Identifier(
                 identifier.namespace,
                 "block/${texture.substringAfterLast("/")}"
             ))
-            bedrockModel.addSprite(spriteId)
+            val model = geometryFactory.create(spriteId)
+            BedrockAddonsRegistry.models[geometryIdentifier] = model
         } else {
             val model = JavaModelDefinition()
             model.parent = "block/cube_all"
@@ -436,20 +437,20 @@ class BedrockResourcePackLoader(
     /**
      * 从ClientEntity读取需要的渲染控制器，然后注册到Java版的渲染控制器中
      */
-    private fun registerRenderController(clientEntity: EntityResourceDefinition.ClientEntityDescription, identifier: Identifier, entityType: EntityType<EntityDataDriven>) {
+    private fun registerRenderController(clientEntity: EntityResourceDefinition.ClientEntityDescription, entityType: EntityType<EntityDataDriven>) {
         clientEntity.render_controllers?.let { controllers ->
             if (controllers.isNotEmpty()) {
                 if (controllers.size > 1) {
-                    BedrockLoader.logger.warn("[BedrockResourcePackLoader] Entity $identifier has more than one render controller, only the first one will be used.")
+                    BedrockLoader.logger.warn("[BedrockResourcePackLoader] Entity {} has more than one render controller, only the first one will be used.", clientEntity.identifier)
                 }
                 val controller = controllers[0]
                 val renderController = context.resource.renderControllers[controller]
                 if (renderController != null) {
                     val renderControllerInstance = RenderControllerWithClientEntity(renderController, clientEntity)
                     EntityRendererRegistry.register(entityType) { context -> EntityDataDrivenRenderer.create(context, renderControllerInstance, 0.5f) }
-                    BedrockLoader.logger.debug("[BedrockResourcePackLoader] Entity {} render controller registered: {}", identifier, controller)
+                    BedrockLoader.logger.debug("[BedrockResourcePackLoader] Entity {} render controller registered: {}", clientEntity.identifier, controller)
                 } else {
-                    BedrockLoader.logger.warn("[BedrockResourcePackLoader] Entity $identifier render controller not found: $controller")
+                    BedrockLoader.logger.warn("[BedrockResourcePackLoader] Entity {} render controller not found: {}", clientEntity.identifier, controller)
                 }
             }
         }

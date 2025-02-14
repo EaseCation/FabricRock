@@ -33,12 +33,17 @@ import java.util.function.Supplier
 @Environment(EnvType.CLIENT)
 class BedrockGeometryModel(
         private val bedrockModel: GeometryDefinition.Model,
+        private val spriteId: SpriteIdentifier
 ) : EntityModel<EntityDataDriven>(), UnbakedModel, BakedModel, FabricBakedModel {
 
-    private val defaultBlockModel = Identifier("minecraft:block/block")
-    private val spriteIds: ArrayList<SpriteIdentifier> = ArrayList()
-    private val sprites: ArrayList<Sprite> = ArrayList()
+    class Factory(private val bedrockModel: GeometryDefinition.Model) {
+        fun create(spriteId: SpriteIdentifier): BedrockGeometryModel {
+            return BedrockGeometryModel(bedrockModel, spriteId)
+        }
+    }
 
+    private val defaultBlockModel = Identifier("minecraft:block/block")
+    private var sprite: Sprite? = null
     private var transformation: ModelTransformation? = null
     private val modelPart: ModelPart = getTexturedModelData().createModel()
     private var mesh: Mesh? = null
@@ -49,10 +54,6 @@ class BedrockGeometryModel(
         BedrockRenderUtil.bedrockBonesToJavaModelData(bedrockModel.bones).let { modelData ->
             return TexturedModelData.of(modelData, bedrockModel.description.texture_width, bedrockModel.description.texture_height)
         }
-    }
-
-    fun addSprite(spriteId: SpriteIdentifier) {
-        spriteIds.add(spriteId)
     }
 
     override fun getModelDependencies(): Collection<Identifier> {
@@ -75,10 +76,8 @@ class BedrockGeometryModel(
         // 获取 ModelTransformation
         transformation = defaultBlockModel.transformations
         // 获得sprites
-        spriteIds.forEach {
-            sprites.add(textureGetter.apply(it))
-        }
-        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, sprites[0])
+        sprite = textureGetter.apply(spriteId)
+        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, sprite!!)
         return this
     }
 
@@ -103,7 +102,7 @@ class BedrockGeometryModel(
     }
 
     override fun getParticleSprite(): Sprite {
-        return sprites[0] // 方块被破坏时产生的颗粒，使用furnace_top
+        return sprite!!
     }
 
     override fun isVanillaAdapter(): Boolean {

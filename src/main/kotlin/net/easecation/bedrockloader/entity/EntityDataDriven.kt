@@ -2,7 +2,6 @@ package net.easecation.bedrockloader.entity
 
 import net.easecation.bedrockloader.bedrock.entity.components.EntityComponents
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
-import net.fabricmc.fabric.api.`object`.builder.v1.entity.FabricEntityTypeBuilder
 import net.minecraft.entity.*
 import net.minecraft.entity.attribute.DefaultAttributeContainer
 import net.minecraft.entity.attribute.EntityAttributes
@@ -23,16 +22,16 @@ class EntityDataDriven(
 
     companion object {
         fun buildEntityType(identifier: Identifier): EntityType<EntityDataDriven> {
-            val builder = FabricEntityTypeBuilder.create(SpawnGroup.CREATURE) { type, world ->
+            return EntityType.Builder.create({ type, world ->
                 val components = BedrockAddonsRegistry.entityComponents[identifier]
-                        ?: throw IllegalStateException("[EntityDataDriven] Entity $identifier has no components")
+                    ?: throw IllegalStateException("[EntityDataDriven] Entity $identifier has no components")
                 EntityDataDriven(identifier, components, type, world)
-            }
-            builder.dimensions(EntityDimensions.fixed(1f, 1f))
-            return builder.build()
+            }, SpawnGroup.CREATURE).apply {
+                dimensions(1f, 1f)
+            }.build()
         }
         fun buildEntityAttributes(components: EntityComponents): DefaultAttributeContainer.Builder {
-            val builder = MobEntity.createMobAttributes()
+            val builder = createMobAttributes()
             // TODO components
             // Add HealthComponent, KnockbackResistanceComponent, MovementComponent
             components.let {

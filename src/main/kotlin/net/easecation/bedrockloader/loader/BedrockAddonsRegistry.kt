@@ -12,6 +12,7 @@ import net.minecraft.util.Identifier
 
 object BedrockAddonsRegistry {
 
+    val geometries: MutableMap<String, BedrockGeometryModel.Factory> = mutableMapOf()
     val items: MutableMap<Identifier, Item> = mutableMapOf()
     val blocks: MutableMap<Identifier, Block> = mutableMapOf()
     val entities: MutableMap<Identifier, EntityType<EntityDataDriven>> = mutableMapOf()
