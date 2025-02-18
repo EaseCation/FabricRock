@@ -100,18 +100,13 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
     }
 
     fun rotate(matrices: MatrixStack) {
-        matrices.translate((this.pivotX / 16.0f).toDouble(), (this.pivotY / 16.0f).toDouble(), (this.pivotZ / 16.0f).toDouble())
-        if (this.roll != 0.0f) {
-            matrices.multiply(Quaternionf().rotationZ(this.roll))
-        }
-        if (this.yaw != 0.0f) {
-            matrices.multiply(Quaternionf().rotationY(this.yaw))
-        }
-        if (this.pitch != 0.0f) {
-            matrices.multiply(Quaternionf().rotationX(this.pitch))
-        }
         if (detachPivot) {
-            matrices.translate(-(this.pivotX / 16.0f).toDouble(), -(this.pivotY / 16.0f).toDouble(), -(this.pivotZ / 16.0f).toDouble())
+            matrices.multiply(Quaternionf().rotationZYX(this.roll, this.yaw, this.pitch), this.pivotX / 16.0f, this.pivotY / 16.0f, this.pivotZ / 16.0f)
+        } else {
+            matrices.translate((this.pivotX / 16.0f).toDouble(), (this.pivotY / 16.0f).toDouble(), (this.pivotZ / 16.0f).toDouble())
+            if (this.pitch != 0.0f || (this.yaw != 0.0f) || (this.roll != 0.0f)) {
+                matrices.multiply(Quaternionf().rotationZYX(this.roll, this.yaw, this.pitch))
+            }
         }
     }
 

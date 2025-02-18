@@ -6,30 +6,32 @@ import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.easecation.bedrockloader.render.BedrockGeometryModel
 import net.minecraft.client.render.entity.EntityRendererFactory
 import net.minecraft.client.render.entity.MobEntityRenderer
+import net.minecraft.client.render.entity.model.EntityModel
 import net.minecraft.util.Identifier
 
 /**
  * 实现了Java版的实体渲染器，通过RenderControllerWithClientEntity来获取实体的渲染信息
  */
 class EntityDataDrivenRenderer private constructor(
-    context: EntityRendererFactory.Context?,
-    entityModel: BedrockGeometryModel?,
-    shadowRadius: Float
-) : MobEntityRenderer<EntityDataDriven, BedrockGeometryModel>(context, entityModel, shadowRadius) {
+    context: EntityRendererFactory.Context,
+    entityModel: EntityModel<EntityDataDriven>,
+    shadowRadius: Float,
+    private val texture: Identifier
+) : MobEntityRenderer<EntityDataDriven, EntityModel<EntityDataDriven>>(context, entityModel, shadowRadius) {
 
     companion object {
         fun create(
-            context: EntityRendererFactory.Context?,
-            clientEntity: EntityResourceDefinition.ClientEntityDescription,
-            shadowRadius: Float
+            context: EntityRendererFactory.Context,
+            model: EntityModel<EntityDataDriven>,
+            shadowRadius: Float,
+            texture: Identifier
         ): EntityDataDrivenRenderer {
-            val model = BedrockAddonsRegistry.entityModel[clientEntity.identifier]
-            return EntityDataDrivenRenderer(context, model, shadowRadius)
+            return EntityDataDrivenRenderer(context, model, shadowRadius, texture)
         }
     }
 
     override fun getTexture(entity: EntityDataDriven): Identifier {
-        return model.spriteId.textureId
+        return texture
     }
 
 }
