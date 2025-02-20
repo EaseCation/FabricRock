@@ -72,12 +72,13 @@ object BedrockAddonsLoader {
 
         // load resource pack
         BedrockLoader.logger.info("Loading resource pack...")
-        BedrockResourcePackLoader(BedrockLoader.getTmpResourceDir(), context).load()
+        val resourcePackLoader = BedrockResourcePackLoader(BedrockLoader.getTmpResourceDir(), context)
+        resourcePackLoader.load()
 
         // load behaviour pack
         BedrockLoader.logger.info("Loading behaviour pack...")
-        val loader = BedrockBehaviorPackLoader(context)
-        loader.load()
+        val behaviorPackLoader = BedrockBehaviorPackLoader(context)
+        behaviorPackLoader.load()
 
         BedrockLoader.logger.info("Loading pack finished! ${BedrockAddonsRegistry.blocks.size} blocks, ${BedrockAddonsRegistry.items.size} items, ${BedrockAddonsRegistry.entities.size} entities")
     }

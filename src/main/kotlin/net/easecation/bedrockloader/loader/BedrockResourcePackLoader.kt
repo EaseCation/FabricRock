@@ -50,7 +50,6 @@ class BedrockResourcePackLoader(
         // Blocks
         for (block in context.resource.blocks) {
             val identifier = block.key
-            val dir = namespaceDir(identifier.namespace)
             createBlockTextures(identifier, block.value.textures, context.behavior.blocks[identifier]?.components?.minecraftMaterialInstances)
             createBlockModel(
                 identifier,
@@ -62,12 +61,6 @@ class BedrockResourcePackLoader(
                 identifier,
                 context.behavior.blocks[identifier]?.components?.minecraftGeometry,
                 context.behavior.blocks[identifier]?.components?.minecraftMaterialInstances,
-            )
-            createBlockState(
-                dir.resolve("blockstates/${identifier.path}.json"),
-                identifier,
-                context.behavior.blocks[identifier]?.components?.minecraftGeometry,
-                context.behavior.blocks[identifier]?.components?.minecraftMaterialInstances
             )
         }
         // Entity
@@ -163,35 +156,6 @@ class BedrockResourcePackLoader(
             initedNamespaces.add(namespace)
         }
         return namespaceDir
-    }
-
-    /**
-     * 创建一个方块状态文件，内部包含model路径（附带命名空间）
-     * 如果方块带模型，则详见createBlockModel，在创建的方块模型中，继承与自定义基岩版geometry模型，从而调用自定义渲染器和烘焙器来渲染基岩版模型
-     */
-    private fun createBlockState(
-        file: File,
-        identifier: Identifier,
-        geometry: ComponentGeometry?,
-        materialInstances: ComponentMaterialInstances?
-    ) {
-        // TODO block state
-        // 带有模型的方块情况：通过行为包定义模型和贴图
-//        val model = when (geometry) {
-//            is ComponentGeometry.ComponentGeometrySimple -> geometry.identifier
-//            is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
-//            null -> "${identifier.namespace}:block/${identifier.path}"
-//        }
-        // 方块模型更改为在BedrockModelLoadingPlugin中通过registerBlockStateResolver注册
-//        val model = "${identifier.namespace}:block/${identifier.path}"
-//        val blockState = JavaBlockStatesDefinition(
-//                variants = mapOf(
-//                        "" to JavaBlockStatesDefinition.Variant(model)
-//                )
-//        )
-//        FileWriter(file).use { writer ->
-//            GsonUtil.GSON.toJson(blockState, writer)
-//        }
     }
 
     /**

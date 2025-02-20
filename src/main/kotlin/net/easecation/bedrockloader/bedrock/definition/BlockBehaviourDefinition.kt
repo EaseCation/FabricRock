@@ -3,6 +3,8 @@ package net.easecation.bedrockloader.bedrock.definition
 import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 import net.easecation.bedrockloader.bedrock.block.component.BlockComponents
+import net.easecation.bedrockloader.bedrock.block.state.IBlockState
+import net.easecation.bedrockloader.bedrock.block.traits.BlockTraits
 import net.minecraft.util.Identifier
 
 data class BlockBehaviourDefinition(
@@ -18,9 +20,10 @@ data class BlockBehaviourDefinition(
     )
 
     data class Description(
-            val identifier: Identifier,
-            val states: Map<String, List<Any>>,
-            val menu_category: MenuCategory
+        val identifier: Identifier,
+        val menu_category: MenuCategory?,
+        val states: Map<String, IBlockState>?,
+        val traits: BlockTraits?
     )
 
     data class MenuCategory(

@@ -1,10 +1,8 @@
 package net.easecation.bedrockloader.util
 
 import com.google.gson.*
-import net.easecation.bedrockloader.bedrock.block.component.ComponentCollisionBox
-import net.easecation.bedrockloader.bedrock.block.component.ComponentGeometry
-import net.easecation.bedrockloader.bedrock.block.component.ComponentPlacementFilter
-import net.easecation.bedrockloader.bedrock.block.component.ComponentSelectionBox
+import net.easecation.bedrockloader.bedrock.block.component.*
+import net.easecation.bedrockloader.bedrock.block.state.IBlockState
 import net.easecation.bedrockloader.bedrock.pack.SemVersion
 import net.easecation.bedrockloader.bedrock.definition.BlockResourceDefinition
 import net.easecation.bedrockloader.bedrock.definition.GeometryDefinition
@@ -24,6 +22,8 @@ object GsonUtil {
             // file
             .registerTypeAdapter(BlockResourceDefinition::class.java, BlockResourceDefinition.Deserializer())
             .registerTypeAdapter(BlockResourceDefinition.Textures::class.java, BlockResourceDefinition.Textures.Deserializer())
+            // block state
+            .registerTypeAdapter(IBlockState::class.java, IBlockState.Deserializer())
             // block component
             .registerTypeAdapter(ComponentGeometry::class.java, ComponentGeometry.Deserializer())
             .registerTypeAdapter(ComponentSelectionBox::class.java, ComponentSelectionBox.Deserializer())

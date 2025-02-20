@@ -2,7 +2,7 @@ package net.easecation.bedrockloader.loader
 
 import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.bedrock.block.component.ComponentMaterialInstances
-import net.easecation.bedrockloader.block.BlockDataDriven
+import net.easecation.bedrockloader.block.BlockContext
 import net.easecation.bedrockloader.loader.context.BedrockPackContext
 import net.easecation.bedrockloader.entity.EntityDataDriven
 import net.fabricmc.api.EnvType
@@ -23,7 +23,7 @@ class BedrockBehaviorPackLoader(
         val env = FabricLoader.getInstance().environmentType
         // Block
         context.behavior.blocks.forEach { (id, beh) ->
-            val block = BlockDataDriven.create(id, beh.components)
+            val block = BlockContext.create(id, beh)
             Registry.register(Registries.BLOCK, id, block)
             BedrockAddonsRegistry.blocks[id] = block
             if (env == EnvType.CLIENT) {
