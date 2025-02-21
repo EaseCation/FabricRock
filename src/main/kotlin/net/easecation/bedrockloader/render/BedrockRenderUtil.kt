@@ -28,14 +28,16 @@ object BedrockRenderUtil {
                 cube.uv?.let {
                     when (it) {
                         is GeometryDefinition.Uv.UvBox -> cubeBuilder.uv(it.uv?.get(0) ?: 0, it.uv?.get(1) ?: 0)
-                        is GeometryDefinition.Uv.UvPerFace -> cubeBuilder.uv(ModelPart.FaceUV(
-                            north = ModelPart.UVMapping(uv = Pair(it.north?.uv?.get(0) ?: 0, it.north?.uv?.get(1) ?: 0), uvSize = Pair(it.north?.uv_size?.get(0) ?: 0, it.north?.uv_size?.get(1) ?: 0)),
-                            east = ModelPart.UVMapping(uv = Pair(it.west?.uv?.get(0) ?: 0, it.west?.uv?.get(1) ?: 0), uvSize = Pair(it.west?.uv_size?.get(0) ?: 0, it.west?.uv_size?.get(1) ?: 0)),
-                            south = ModelPart.UVMapping(uv = Pair(it.south?.uv?.get(0) ?: 0, it.south?.uv?.get(1) ?: 0), uvSize = Pair(it.south?.uv_size?.get(0) ?: 0, it.south?.uv_size?.get(1) ?: 0)),
-                            west = ModelPart.UVMapping(uv = Pair(it.east?.uv?.get(0) ?: 0, it.east?.uv?.get(1) ?: 0), uvSize = Pair(it.east?.uv_size?.get(0) ?: 0, it.east?.uv_size?.get(1) ?: 0)),
-                            up = ModelPart.UVMapping(uv = Pair(it.down?.uv?.get(0) ?: 0, it.down?.uv?.get(1) ?: 0), uvSize = Pair(it.down?.uv_size?.get(0) ?: 0, it.down?.uv_size?.get(1) ?: 0)),
-                            down = ModelPart.UVMapping(uv = Pair(it.up?.uv?.get(0) ?: 0, it.up?.uv?.get(1) ?: 0), uvSize = Pair(it.up?.uv_size?.get(0) ?: 0, it.up?.uv_size?.get(1) ?: 0)),
-                        ))
+                        is GeometryDefinition.Uv.UvPerFace -> {
+                            cubeBuilder.uv(ModelPart.FaceUV(
+                                north = ModelPart.UVMapping(uv = Pair(it.north?.uv?.get(0) ?: 0, it.north?.uv?.get(1) ?: 0), uvSize = Pair(it.north?.uv_size?.get(0) ?: 0, it.north?.uv_size?.get(1) ?: 0), material = it.north?.material_instance),
+                                east = ModelPart.UVMapping(uv = Pair(it.west?.uv?.get(0) ?: 0, it.west?.uv?.get(1) ?: 0), uvSize = Pair(it.west?.uv_size?.get(0) ?: 0, it.west?.uv_size?.get(1) ?: 0), material = it.west?.material_instance),
+                                south = ModelPart.UVMapping(uv = Pair(it.south?.uv?.get(0) ?: 0, it.south?.uv?.get(1) ?: 0), uvSize = Pair(it.south?.uv_size?.get(0) ?: 0, it.south?.uv_size?.get(1) ?: 0), material = it.south?.material_instance),
+                                west = ModelPart.UVMapping(uv = Pair(it.east?.uv?.get(0) ?: 0, it.east?.uv?.get(1) ?: 0), uvSize = Pair(it.east?.uv_size?.get(0) ?: 0, it.east?.uv_size?.get(1) ?: 0), material = it.east?.material_instance),
+                                up = ModelPart.UVMapping(uv = Pair(it.down?.uv?.get(0) ?: 0, it.down?.uv?.get(1) ?: 0), uvSize = Pair(it.down?.uv_size?.get(0) ?: 0, it.down?.uv_size?.get(1) ?: 0), material = it.down?.material_instance),
+                                down = ModelPart.UVMapping(uv = Pair(it.up?.uv?.get(0) ?: 0, it.up?.uv?.get(1) ?: 0), uvSize = Pair(it.up?.uv_size?.get(0) ?: 0, it.up?.uv_size?.get(1) ?: 0), material = it.up?.material_instance),
+                            ))
+                        }
                     }
                 }
                 cube.origin?.let {
@@ -86,11 +88,11 @@ object BedrockRenderUtil {
      * @param modelPart The ModelPart to convert.
      * @return The created Mesh.
      */
-    fun bakeModelPartToMesh(modelPart: ModelPart, sprite: Sprite): Mesh {
+    fun bakeModelPartToMesh(modelPart: ModelPart, defaultSprite: Sprite, sprites: Map<String, Sprite>): Mesh {
         val matrixStack = MatrixStack()
         matrixStack.translate(0.5, 0.0, 0.5)
         matrixStack.multiply(Quaternionf().rotateX(180f * (Math.PI.toFloat() * 2 / 360F)))
-        val vertices = MeshBuilderVertexConsumer(sprite)
+        val vertices = MeshBuilderVertexConsumer(defaultSprite, sprites)
         modelPart.render(matrixStack, vertices, 1, 1)
         return vertices.build()
     }

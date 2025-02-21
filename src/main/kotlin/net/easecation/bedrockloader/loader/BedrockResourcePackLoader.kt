@@ -10,8 +10,8 @@ import net.easecation.bedrockloader.loader.context.BedrockPackContext
 import net.easecation.bedrockloader.entity.EntityDataDriven
 import net.easecation.bedrockloader.render.renderer.EntityDataDrivenRenderer
 import net.easecation.bedrockloader.java.definition.JavaMCMeta
-import net.easecation.bedrockloader.java.definition.JavaModelDefinition
 import net.easecation.bedrockloader.render.BedrockGeometryModel
+import net.easecation.bedrockloader.render.BedrockMaterialInstance
 import net.easecation.bedrockloader.util.GsonUtil
 import net.fabricmc.api.EnvType
 import net.fabricmc.fabric.api.client.model.loading.v1.DelegatingUnbakedModel
@@ -67,15 +67,11 @@ class BedrockResourcePackLoader(
         for (entity in context.resource.entities) {
             val identifier = entity.key
             val clientEntity = entity.value.description
-            val dir = namespaceDir(identifier.namespace)
             val entityType = BedrockAddonsRegistry.getOrRegisterEntityType(identifier)
             // textures
             createEntityTextures(identifier, clientEntity)
-            createSpawnEggItem(
-                dir.resolve("models/item/${identifier.path + "_spawn_egg"}.json"),
-                identifier,
-                clientEntity
-            )
+            createSpawnEggTexture(identifier, clientEntity)
+            createSpawnEggItem(identifier, clientEntity)
             // renderer
             if (env == EnvType.CLIENT) {
                 registerRenderController(clientEntity, entityType)
@@ -144,6 +140,10 @@ class BedrockResourcePackLoader(
             val textures = namespaceDir.resolve("textures")
             if (!textures.exists()) {
                 textures.mkdirs()
+            }
+            val texturesItem = textures.resolve("item")
+            if (!texturesItem.exists()) {
+                texturesItem.mkdirs()
             }
             val texturesBlock = textures.resolve("block")
             if (!texturesBlock.exists()) {
@@ -252,13 +252,16 @@ class BedrockResourcePackLoader(
                 is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
             }
             val geometryFactory = BedrockAddonsRegistry.geometries[geometryIdentifier] ?: return
-            val textureKey = materialInstances?.get("*")?.texture ?: return
-            val texture = context.resource.terrainTexture[textureKey]?.textures ?: return
-            val spriteId = SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, Identifier(
-                identifier.namespace,
-                "block/${texture.substringAfterLast("/")}"
-            ))
-            val model = geometryFactory.create(spriteId)
+            val materials = materialInstances?.mapNotNull { (key, material) ->
+                val textureKey = material.texture ?: return@mapNotNull null
+                val texture = context.resource.terrainTexture[textureKey]?.textures ?: return@mapNotNull null
+                val spriteId = SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, Identifier(
+                    identifier.namespace,
+                    "block/${texture.substringAfterLast("/")}"
+                ))
+                return@mapNotNull key to BedrockMaterialInstance(spriteId)
+            }?.toMap() ?: emptyMap()
+            val model = geometryFactory.create(materials)
             BedrockAddonsRegistry.blockModels[identifier] = model
         } else {
             val textureMap = mutableMapOf<String, Either<SpriteIdentifier, String>>()
@@ -327,16 +330,44 @@ class BedrockResourcePackLoader(
                 is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
             }
             val geometryFactory = BedrockAddonsRegistry.geometries[geometryIdentifier] ?: return
-            val textureKey = materialInstances?.get("*")?.texture ?: return
-            val texture = context.resource.terrainTexture[textureKey]?.textures ?: return
-            val spriteId = SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, Identifier(
-                identifier.namespace,
-                "block/${texture.substringAfterLast("/")}"
-            ))
-            val model = geometryFactory.create(spriteId)
+            val materials = materialInstances?.mapNotNull { (key, material) ->
+                val textureKey = material.texture ?: return@mapNotNull null
+                val texture = context.resource.terrainTexture[textureKey]?.textures ?: return@mapNotNull null
+                val spriteId = SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, Identifier(
+                    identifier.namespace,
+                    "block/${texture.substringAfterLast("/")}"
+                ))
+                return@mapNotNull key to BedrockMaterialInstance(spriteId)
+            }?.toMap() ?: emptyMap()
+            val model = geometryFactory.create(materials)
             BedrockAddonsRegistry.itemModels[identifier] = model
         } else {
             BedrockAddonsRegistry.itemModels[identifier] = DelegatingUnbakedModel(Identifier(identifier.namespace, "block/${identifier.path}"))
+        }
+    }
+
+    private fun createSpawnEggTexture(
+        identifier: Identifier,
+        clientEntity: EntityResourceDefinition.ClientEntityDescription
+    ) {
+        val namespaceDir = this.namespaceDir(identifier.namespace)
+        val spawnEggTexture = clientEntity.spawn_egg?.texture
+        if (spawnEggTexture != null) {
+            val texture = context.resource.itemTexture[spawnEggTexture]?.textures
+            if (texture == null) {
+                BedrockLoader.logger.warn("[BedrockResourcePackLoader] Entity spawn egg texture not found: $spawnEggTexture")
+                return
+            }
+            val path = "textures/item/${texture.substringAfterLast("/")}"
+            val bedrockTexture = context.resource.textureImages[texture]
+            if (bedrockTexture == null) {
+                BedrockLoader.logger.warn("[BedrockResourcePackLoader] Entity spawn egg texture not found: $spawnEggTexture")
+                return
+            }
+            val file = namespaceDir.resolve(path + "." + bedrockTexture.type.getExtension())
+            bedrockTexture.image.let { image ->
+                ImageIO.write(image, file.extension, file)
+            }
         }
     }
 
@@ -344,54 +375,35 @@ class BedrockResourcePackLoader(
      * 直接创建一个继承于对应实体的生物蛋物品
      */
     @OptIn(ExperimentalStdlibApi::class)
-    private fun createSpawnEggItem(file: File, identifier: Identifier, clientEntity: EntityResourceDefinition.ClientEntityDescription, primaryColor: Int = 0xffffff, secondaryColor: Int = 0xffffff) {
+    private fun createSpawnEggItem(
+        identifier: Identifier,
+        clientEntity: EntityResourceDefinition.ClientEntityDescription,
+        primaryColor: Int = 0xffffff,
+        secondaryColor: Int = 0xffffff
+    ) {
         context.behavior.entities[identifier]?.description?.is_spawnable?.let {
             val entityType = BedrockAddonsRegistry.getOrRegisterEntityType(identifier)
-            clientEntity.spawn_egg?.let {
-                val entityName = context.resource.entities[identifier]?.description?.identifier?.path
-                val id = Identifier(identifier.namespace, "${entityName}_spawn_egg")
-                val spawnEggItem: SpawnEggItem = if (it.base_color != null && it.overlay_color != null) {
-                    SpawnEggItem(entityType, it.base_color.replace("#", "").hexToInt(HexFormat.Default), it.overlay_color.replace("#", "").hexToInt(HexFormat.Default), Item.Settings())
-                } else if (it.base_color != null){
-                    SpawnEggItem(entityType, it.base_color.replace("#", "").hexToInt(HexFormat.Default), secondaryColor, Item.Settings())
-                } else if (it.overlay_color != null) {
-                    SpawnEggItem(entityType, primaryColor, it.overlay_color.replace("#", "").hexToInt(HexFormat.Default), Item.Settings())
-                } else  {
-                    SpawnEggItem(entityType, primaryColor, secondaryColor, Item.Settings())
+            val entityName = context.resource.entities[identifier]?.description?.identifier?.path
+            val itemIdentifier = Identifier(identifier.namespace, "${entityName}_spawn_egg")
+            val spawnEggItem = SpawnEggItem(
+                entityType,
+                clientEntity.spawn_egg?.base_color?.replace("#", "")?.hexToInt(HexFormat.Default) ?: primaryColor,
+                clientEntity.spawn_egg?.overlay_color?.replace("#", "")?.hexToInt(HexFormat.Default) ?: secondaryColor,
+                Item.Settings()
+            )
+            val spawnEggTexture = clientEntity.spawn_egg?.texture
+            if (spawnEggTexture != null) {
+                val textureMap = mutableMapOf<String, Either<SpriteIdentifier, String>>()
+                context.resource.itemTextureToJava(itemIdentifier.namespace, spawnEggTexture)?.let {
+                    textureMap["layer0"] = Either.left(SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, it))
                 }
-                val model: JavaModelDefinition
-                if (it.texture != null) {
-                    model = JavaModelDefinition(
-                        parent = Identifier("minecraft", "item/generated").toString(),
-                        textures = context.resource.itemTextureToJava(identifier.namespace, it.texture)?.let {
-                            mapOf("layer0" to it)
-                        }
-                    )
-                    val spawnEggTexture = it.texture
-                    context.resource.itemTexture[spawnEggTexture]?.textures?.let {
-                        val bedrockTexture = context.resource.textureImages[it]
-                        if (bedrockTexture == null) {
-                            BedrockLoader.logger.warn("[BedrockResourcePackLoader] Entity spawn egg texture not found: $spawnEggTexture")
-                        } else {
-                            val namespaceDir = this.namespaceDir(identifier.namespace)
-                            val bedrockTextureFile = namespaceDir.resolve("textures/" + model.textures!!["layer0"]!!.path + "." + bedrockTexture.type.getExtension())
-                            bedrockTextureFile.parentFile.mkdirs()
-                            bedrockTexture.image.let { image ->
-                                ImageIO.write(image, bedrockTextureFile.extension, bedrockTextureFile)
-                            }
-                        }
-                    }
-                } else {
-                    model = JavaModelDefinition(
-                        parent = Identifier("", "item/template_spawn_egg").toString()
-                    )
-                }
-                Registry.register(Registries.ITEM, id, spawnEggItem)
-                BedrockAddonsRegistry.items[id] = spawnEggItem
-                FileWriter(file).use { writer ->
-                    GsonUtil.GSON.toJson(model, writer)
-                }
+                BedrockAddonsRegistry.itemModels[itemIdentifier] = JsonUnbakedModel(Identifier("item/generated"), emptyList(), textureMap, null, null, ModelTransformation.NONE, emptyList())
+            } else {
+                BedrockAddonsRegistry.itemModels[itemIdentifier] = DelegatingUnbakedModel(Identifier("item/template_spawn_egg"))
             }
+
+            Registry.register(Registries.ITEM, itemIdentifier, spawnEggItem)
+            BedrockAddonsRegistry.items[itemIdentifier] = spawnEggItem
         }
     }
 
@@ -435,8 +447,9 @@ class BedrockResourcePackLoader(
                 val texture = clientEntity.textures?.get(textureAlias) ?: return@let
                 val bedrockTexture = context.resource.textureImages[texture] ?: return@let
                 val spriteId = SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, Identifier(identifier.namespace, texture + "." + bedrockTexture.type.getExtension()))
+                val materials = mapOf("*" to BedrockMaterialInstance(spriteId))
                 EntityRendererRegistry.register(entityType) { context ->
-                    val model = geometryFactory.create(spriteId)
+                    val model = geometryFactory.create(materials)
                     BedrockAddonsRegistry.entityModel[identifier] = model
                     EntityDataDrivenRenderer.create(context, model, 0.5f, spriteId.textureId)
                 }

@@ -33,17 +33,18 @@ import java.util.function.Supplier
 @Environment(EnvType.CLIENT)
 class BedrockGeometryModel(
         private val bedrockModel: GeometryDefinition.Model,
-        val spriteId: SpriteIdentifier
+        val materials: Map<String, BedrockMaterialInstance>
 ) : EntityModel<EntityDataDriven>(), UnbakedModel, BakedModel, FabricBakedModel {
 
     class Factory(private val bedrockModel: GeometryDefinition.Model) {
-        fun create(spriteId: SpriteIdentifier): BedrockGeometryModel {
-            return BedrockGeometryModel(bedrockModel, spriteId)
+        fun create(materials: Map<String, BedrockMaterialInstance>): BedrockGeometryModel {
+            return BedrockGeometryModel(bedrockModel, materials)
         }
     }
 
     private val defaultBlockModel = Identifier("minecraft:block/block")
-    private var sprite: Sprite? = null
+    private var defaultSprite: Sprite? = null
+    private var sprites: MutableMap<String, Sprite> = mutableMapOf()
     private var transformation: ModelTransformation? = null
     private val modelPart: ModelPart = getTexturedModelData().createModel()
     private var mesh: Mesh? = null
@@ -76,8 +77,11 @@ class BedrockGeometryModel(
         // 获取 ModelTransformation
         transformation = defaultBlockModel.transformations
         // 获得sprites
-        sprite = textureGetter.apply(spriteId)
-        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, sprite!!)
+        materials.forEach { (key, material) ->
+            sprites[key] = textureGetter.apply(material.spriteId)
+        }
+        defaultSprite = sprites["*"] ?: sprites.values.firstOrNull()
+        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites)
         return this
     }
 
@@ -102,7 +106,7 @@ class BedrockGeometryModel(
     }
 
     override fun getParticleSprite(): Sprite {
-        return sprite!!
+        return defaultSprite!!
     }
 
     override fun isVanillaAdapter(): Boolean {

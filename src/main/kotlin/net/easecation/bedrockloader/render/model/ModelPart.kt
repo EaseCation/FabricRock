@@ -3,6 +3,7 @@
  */
 package net.easecation.bedrockloader.render.model
 
+import net.easecation.bedrockloader.render.MeshBuilderVertexConsumer
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.minecraft.client.render.VertexConsumer
@@ -145,7 +146,8 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
     @Environment(value = EnvType.CLIENT)
     data class UVMapping(
             val uv: Pair<Int, Int>,
-            val uvSize: Pair<Int, Int>
+            val uvSize: Pair<Int, Int>,
+            val material: String?
     )
 
     @Environment(value = EnvType.CLIENT)
@@ -197,19 +199,19 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
             val textureEndVY = textureOriginV + sizeZ + sizeY
 
             if (faceUV == null) {
-                sides[2] = Quad(arrayOf(vertexBottomSE, vertexBottomSW, vertexBottomNW, vertexBottomNE), textureEndUZ, textureOriginV, textureEndUX, textureEndVZ, textureWidth, textureHeight, mirror, Direction.DOWN)
-                sides[3] = Quad(arrayOf(vertexTopNE, vertexTopNW, vertexTopSW, vertexTopSE), textureEndUX, textureEndVZ, textureDoubleEndUX, textureOriginV, textureWidth, textureHeight, mirror, Direction.UP)
-                sides[1] = Quad(arrayOf(vertexBottomNW, vertexBottomSW, vertexTopSW, vertexTopNW), textureOriginU, textureEndVZ, textureEndUZ, textureEndVY, textureWidth, textureHeight, mirror, Direction.WEST)
-                sides[4] = Quad(arrayOf(vertexBottomNE, vertexBottomNW, vertexTopNW, vertexTopNE), textureEndUZ, textureEndVZ, textureEndUX, textureEndVY, textureWidth, textureHeight, mirror, Direction.NORTH)
-                sides[0] = Quad(arrayOf(vertexBottomSE, vertexBottomNE, vertexTopNE, vertexTopSE), textureEndUX, textureEndVZ, textureWrapU, textureEndVY, textureWidth, textureHeight, mirror, Direction.EAST)
-                sides[5] = Quad(arrayOf(vertexBottomSW, vertexBottomSE, vertexTopSE, vertexTopSW), textureWrapU, textureEndVZ, textureFullWrapU, textureEndVY, textureWidth, textureHeight, mirror, Direction.SOUTH)
+                sides[2] = Quad(arrayOf(vertexBottomSE, vertexBottomSW, vertexBottomNW, vertexBottomNE), null, textureEndUZ, textureOriginV, textureEndUX, textureEndVZ, textureWidth, textureHeight, mirror, Direction.DOWN)
+                sides[3] = Quad(arrayOf(vertexTopNE, vertexTopNW, vertexTopSW, vertexTopSE), null, textureEndUX, textureEndVZ, textureDoubleEndUX, textureOriginV, textureWidth, textureHeight, mirror, Direction.UP)
+                sides[1] = Quad(arrayOf(vertexBottomNW, vertexBottomSW, vertexTopSW, vertexTopNW), null, textureOriginU, textureEndVZ, textureEndUZ, textureEndVY, textureWidth, textureHeight, mirror, Direction.WEST)
+                sides[4] = Quad(arrayOf(vertexBottomNE, vertexBottomNW, vertexTopNW, vertexTopNE), null, textureEndUZ, textureEndVZ, textureEndUX, textureEndVY, textureWidth, textureHeight, mirror, Direction.NORTH)
+                sides[0] = Quad(arrayOf(vertexBottomSE, vertexBottomNE, vertexTopNE, vertexTopSE), null, textureEndUX, textureEndVZ, textureWrapU, textureEndVY, textureWidth, textureHeight, mirror, Direction.EAST)
+                sides[5] = Quad(arrayOf(vertexBottomSW, vertexBottomSE, vertexTopSE, vertexTopSW), null, textureWrapU, textureEndVZ, textureFullWrapU, textureEndVY, textureWidth, textureHeight, mirror, Direction.SOUTH)
             } else {
-                sides[2] = Quad(arrayOf(vertexBottomSE, vertexBottomSW, vertexBottomNW, vertexBottomNE), faceUV.down.uv.first.toFloat(), faceUV.down.uv.second.toFloat(), faceUV.down.uv.first.toFloat() + faceUV.down.uvSize.first.toFloat(), faceUV.down.uv.second.toFloat() + faceUV.down.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.DOWN)
-                sides[3] = Quad(arrayOf(vertexTopNE, vertexTopNW, vertexTopSW, vertexTopSE), faceUV.up.uv.first.toFloat(), faceUV.up.uv.second.toFloat(), faceUV.up.uv.first.toFloat() + faceUV.up.uvSize.first.toFloat(), faceUV.up.uv.second.toFloat() + faceUV.up.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.UP)
-                sides[1] = Quad(arrayOf(vertexBottomNW, vertexBottomSW, vertexTopSW, vertexTopNW), faceUV.west.uv.first.toFloat(), faceUV.west.uv.second.toFloat(), faceUV.west.uv.first.toFloat() + faceUV.west.uvSize.first.toFloat(), faceUV.west.uv.second.toFloat() + faceUV.west.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.WEST)
-                sides[4] = Quad(arrayOf(vertexBottomNE, vertexBottomNW, vertexTopNW, vertexTopNE), faceUV.north.uv.first.toFloat(), faceUV.north.uv.second.toFloat(), faceUV.north.uv.first.toFloat() + faceUV.north.uvSize.first.toFloat(), faceUV.north.uv.second.toFloat() + faceUV.north.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.NORTH)
-                sides[0] = Quad(arrayOf(vertexBottomSE, vertexBottomNE, vertexTopNE, vertexTopSE), faceUV.east.uv.first.toFloat(), faceUV.east.uv.second.toFloat(), faceUV.east.uv.first.toFloat() + faceUV.east.uvSize.first.toFloat(), faceUV.east.uv.second.toFloat() + faceUV.east.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.EAST)
-                sides[5] = Quad(arrayOf(vertexBottomSW, vertexBottomSE, vertexTopSE, vertexTopSW), faceUV.south.uv.first.toFloat(), faceUV.south.uv.second.toFloat(), faceUV.south.uv.first.toFloat() + faceUV.south.uvSize.first.toFloat(), faceUV.south.uv.second.toFloat() + faceUV.south.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.SOUTH)
+                sides[2] = Quad(arrayOf(vertexBottomSE, vertexBottomSW, vertexBottomNW, vertexBottomNE), faceUV.down.material, faceUV.down.uv.first.toFloat(), faceUV.down.uv.second.toFloat(), faceUV.down.uv.first.toFloat() + faceUV.down.uvSize.first.toFloat(), faceUV.down.uv.second.toFloat() + faceUV.down.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.DOWN)
+                sides[3] = Quad(arrayOf(vertexTopNE, vertexTopNW, vertexTopSW, vertexTopSE), faceUV.up.material, faceUV.up.uv.first.toFloat(), faceUV.up.uv.second.toFloat(), faceUV.up.uv.first.toFloat() + faceUV.up.uvSize.first.toFloat(), faceUV.up.uv.second.toFloat() + faceUV.up.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.UP)
+                sides[1] = Quad(arrayOf(vertexBottomNW, vertexBottomSW, vertexTopSW, vertexTopNW), faceUV.west.material, faceUV.west.uv.first.toFloat(), faceUV.west.uv.second.toFloat(), faceUV.west.uv.first.toFloat() + faceUV.west.uvSize.first.toFloat(), faceUV.west.uv.second.toFloat() + faceUV.west.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.WEST)
+                sides[4] = Quad(arrayOf(vertexBottomNE, vertexBottomNW, vertexTopNW, vertexTopNE), faceUV.north.material, faceUV.north.uv.first.toFloat(), faceUV.north.uv.second.toFloat(), faceUV.north.uv.first.toFloat() + faceUV.north.uvSize.first.toFloat(), faceUV.north.uv.second.toFloat() + faceUV.north.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.NORTH)
+                sides[0] = Quad(arrayOf(vertexBottomSE, vertexBottomNE, vertexTopNE, vertexTopSE), faceUV.east.material, faceUV.east.uv.first.toFloat(), faceUV.east.uv.second.toFloat(), faceUV.east.uv.first.toFloat() + faceUV.east.uvSize.first.toFloat(), faceUV.east.uv.second.toFloat() + faceUV.east.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.EAST)
+                sides[5] = Quad(arrayOf(vertexBottomSW, vertexBottomSE, vertexTopSE, vertexTopSW), faceUV.south.material, faceUV.south.uv.first.toFloat(), faceUV.south.uv.second.toFloat(), faceUV.south.uv.first.toFloat() + faceUV.south.uvSize.first.toFloat(), faceUV.south.uv.second.toFloat() + faceUV.south.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.SOUTH)
             }
         }
 
@@ -232,6 +234,8 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
                 val g = vector3f2.y()
                 val h = vector3f2.z()
 
+                if (vertexConsumer is MeshBuilderVertexConsumer) vertexConsumer.material(quad.material)
+
                 for (vertex in quad.vertices) {
                     val i = vertex.pos.x() / 16.0f
                     val j = vertex.pos.y() / 16.0f
@@ -253,7 +257,7 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
     }
 
     @Environment(value = EnvType.CLIENT)
-    internal class Quad(val vertices: Array<Vertex>, u1: Float, v1: Float, u2: Float, v2: Float, squishU: Float, squishV: Float, flip: Boolean, direction: Direction) {
+    internal class Quad(val vertices: Array<Vertex>, val material: String?, u1: Float, v1: Float, u2: Float, v2: Float, squishU: Float, squishV: Float, flip: Boolean, direction: Direction) {
         val direction: Vector3f
 
         init {

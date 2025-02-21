@@ -6,7 +6,7 @@ import java.util.*
 data class BedrockBooleanProperty(
     private val name: String,
     private val values: Set<Boolean>
-) : Property<Boolean>(name, Boolean::class.java) {
+) : Property<Boolean>(name, Boolean::class.javaObjectType) {
     companion object {
         fun of(name: String, values: Set<Boolean>): BedrockBooleanProperty {
             return BedrockBooleanProperty(name, values)
