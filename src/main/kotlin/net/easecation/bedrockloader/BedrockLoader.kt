@@ -1,14 +1,14 @@
 package net.easecation.bedrockloader
 
 import net.easecation.bedrockloader.loader.BedrockAddonsLoader
+import net.easecation.bedrockloader.loader.BedrockAddonsLoader.context
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
+import net.easecation.bedrockloader.loader.BedrockBehaviorPackLoader
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup
-import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroupEntries
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents.ModifyEntries
 import net.fabricmc.loader.api.FabricLoader
-import net.fabricmc.loader.api.ModContainer
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
 import net.minecraft.registry.Registries
@@ -25,9 +25,6 @@ object BedrockLoader : ModInitializer {
 
     val logger: Logger = LoggerFactory.getLogger("bedrock-loader")
 
-	const val NAMESPACE: String = "bedrock-loader"
-	val BEDROCK_LOADER_MOD: ModContainer = FabricLoader.getInstance().getModContainer(NAMESPACE).orElseThrow()
-
 	val ITEM_GROUP_KEY = RegistryKey.of(Registries.ITEM_GROUP.key, Identifier("bedrock-loader", "bedrock-loader"))
 	val ITEM_GROUP = FabricItemGroup.builder()
 		.icon { ItemStack(BedrockAddonsRegistry.items.values.firstOrNull() ?: Items.BONE_BLOCK) }
@@ -38,6 +35,7 @@ object BedrockLoader : ModInitializer {
 		logger.info("Initializing BedrockLoader...")
 
 		logger.info("Loading bedrock addons...")
+
 		BedrockAddonsLoader.load()
 
 		Registry.register(Registries.ITEM_GROUP, ITEM_GROUP_KEY, ITEM_GROUP);
@@ -49,14 +47,12 @@ object BedrockLoader : ModInitializer {
 				}
 			})
 
+		// load behaviour pack
+		logger.info("Loading behaviour pack...")
+		val behaviorPackLoader = BedrockBehaviorPackLoader(context)
+		behaviorPackLoader.load()
+
 		logger.info("BedrockLoader initialized!")
-
-		// 测试
-		test()
-	}
-
-	private fun test() {
-
 	}
 
 	fun getGameDir(): File {

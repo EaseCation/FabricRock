@@ -69,18 +69,6 @@ object BedrockAddonsLoader {
                 BedrockLoader.logger.warn("Failed to load pack " + file.name, e)
             }
         }
-
-        // load resource pack
-        BedrockLoader.logger.info("Loading resource pack...")
-        val resourcePackLoader = BedrockResourcePackLoader(BedrockLoader.getTmpResourceDir(), context)
-        resourcePackLoader.load()
-
-        // load behaviour pack
-        BedrockLoader.logger.info("Loading behaviour pack...")
-        val behaviorPackLoader = BedrockBehaviorPackLoader(context)
-        behaviorPackLoader.load()
-
-        BedrockLoader.logger.info("Loading pack finished! ${BedrockAddonsRegistry.blocks.size} blocks, ${BedrockAddonsRegistry.items.size} items, ${BedrockAddonsRegistry.entities.size} entities")
     }
 
     private fun loadDirectoryPack(directory: File): File? {

@@ -6,25 +6,19 @@ import net.easecation.bedrockloader.bedrock.block.component.ComponentGeometry
 import net.easecation.bedrockloader.bedrock.block.component.ComponentMaterialInstances
 import net.easecation.bedrockloader.bedrock.definition.BlockResourceDefinition
 import net.easecation.bedrockloader.bedrock.definition.EntityResourceDefinition
-import net.easecation.bedrockloader.loader.context.BedrockPackContext
 import net.easecation.bedrockloader.entity.EntityDataDriven
-import net.easecation.bedrockloader.render.renderer.EntityDataDrivenRenderer
 import net.easecation.bedrockloader.java.definition.JavaMCMeta
+import net.easecation.bedrockloader.loader.context.BedrockPackContext
 import net.easecation.bedrockloader.render.BedrockGeometryModel
 import net.easecation.bedrockloader.render.BedrockMaterialInstance
+import net.easecation.bedrockloader.render.renderer.EntityDataDrivenRenderer
 import net.easecation.bedrockloader.util.GsonUtil
-import net.fabricmc.api.EnvType
 import net.fabricmc.fabric.api.client.model.loading.v1.DelegatingUnbakedModel
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry
-import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.client.render.model.json.JsonUnbakedModel
 import net.minecraft.client.render.model.json.ModelTransformation
 import net.minecraft.client.util.SpriteIdentifier
 import net.minecraft.entity.EntityType
-import net.minecraft.item.Item
-import net.minecraft.item.SpawnEggItem
-import net.minecraft.registry.Registries
-import net.minecraft.registry.Registry
 import net.minecraft.screen.PlayerScreenHandler
 import net.minecraft.util.Identifier
 import java.io.File
@@ -39,13 +33,10 @@ class BedrockResourcePackLoader(
     private val initedNamespaces = mutableSetOf<String>()
 
     fun load() {
-        val env = FabricLoader.getInstance().environmentType
         this.init()
         // Geometry
-        if (env == EnvType.CLIENT) {
-            context.resource.geometries.forEach { (key, value) ->
-                BedrockAddonsRegistry.geometries[key] = BedrockGeometryModel.Factory(value)
-            }
+        context.resource.geometries.forEach { (key, value) ->
+            BedrockAddonsRegistry.geometries[key] = BedrockGeometryModel.Factory(value)
         }
         // Blocks
         for (block in context.resource.blocks) {
@@ -67,15 +58,13 @@ class BedrockResourcePackLoader(
         for (entity in context.resource.entities) {
             val identifier = entity.key
             val clientEntity = entity.value.description
-            val entityType = BedrockAddonsRegistry.getOrRegisterEntityType(identifier)
+            val entityType = BedrockAddonsRegistry.entities[identifier] ?: continue
             // textures
             createEntityTextures(identifier, clientEntity)
-            createSpawnEggTexture(identifier, clientEntity)
-            createSpawnEggItem(identifier, clientEntity)
+            createSpawnEggTextures(identifier, clientEntity)
+            createSpawnEggModel(identifier, clientEntity)
             // renderer
-            if (env == EnvType.CLIENT) {
-                registerRenderController(clientEntity, entityType)
-            }
+            registerRenderController(clientEntity, entityType)
         }
     }
 
@@ -119,24 +108,6 @@ class BedrockResourcePackLoader(
         }
         // init dirs
         if (!initedNamespaces.contains(namespace)) {
-            /*
-            val blockStates = namespaceDir.resolve("blockstates")
-            if (!blockStates.exists()) {
-                blockStates.mkdirs()
-            }
-            val models = namespaceDir.resolve("models")
-            if (!models.exists()) {
-                models.mkdirs()
-            }
-            val modelsBlock = models.resolve("block")
-            if (!modelsBlock.exists()) {
-                modelsBlock.mkdirs()
-            }
-            val modelsItem = models.resolve("item")
-            if (!modelsItem.exists()) {
-                modelsItem.mkdirs()
-            }
-            */
             val textures = namespaceDir.resolve("textures")
             if (!textures.exists()) {
                 textures.mkdirs()
@@ -346,7 +317,7 @@ class BedrockResourcePackLoader(
         }
     }
 
-    private fun createSpawnEggTexture(
+    private fun createSpawnEggTextures(
         identifier: Identifier,
         clientEntity: EntityResourceDefinition.ClientEntityDescription
     ) {
@@ -374,23 +345,13 @@ class BedrockResourcePackLoader(
     /**
      * 直接创建一个继承于对应实体的生物蛋物品
      */
-    @OptIn(ExperimentalStdlibApi::class)
-    private fun createSpawnEggItem(
+    private fun createSpawnEggModel(
         identifier: Identifier,
-        clientEntity: EntityResourceDefinition.ClientEntityDescription,
-        primaryColor: Int = 0xffffff,
-        secondaryColor: Int = 0xffffff
+        clientEntity: EntityResourceDefinition.ClientEntityDescription
     ) {
         context.behavior.entities[identifier]?.description?.is_spawnable?.let {
-            val entityType = BedrockAddonsRegistry.getOrRegisterEntityType(identifier)
-            val entityName = context.resource.entities[identifier]?.description?.identifier?.path
+            val entityName = identifier.path
             val itemIdentifier = Identifier(identifier.namespace, "${entityName}_spawn_egg")
-            val spawnEggItem = SpawnEggItem(
-                entityType,
-                clientEntity.spawn_egg?.base_color?.replace("#", "")?.hexToInt(HexFormat.Default) ?: primaryColor,
-                clientEntity.spawn_egg?.overlay_color?.replace("#", "")?.hexToInt(HexFormat.Default) ?: secondaryColor,
-                Item.Settings()
-            )
             val spawnEggTexture = clientEntity.spawn_egg?.texture
             if (spawnEggTexture != null) {
                 val textureMap = mutableMapOf<String, Either<SpriteIdentifier, String>>()
@@ -401,9 +362,6 @@ class BedrockResourcePackLoader(
             } else {
                 BedrockAddonsRegistry.itemModels[itemIdentifier] = DelegatingUnbakedModel(Identifier("item/template_spawn_egg"))
             }
-
-            Registry.register(Registries.ITEM, itemIdentifier, spawnEggItem)
-            BedrockAddonsRegistry.items[itemIdentifier] = spawnEggItem
         }
     }
 
