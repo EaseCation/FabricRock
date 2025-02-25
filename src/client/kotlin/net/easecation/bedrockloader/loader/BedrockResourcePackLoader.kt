@@ -13,8 +13,10 @@ import net.easecation.bedrockloader.render.BedrockGeometryModel
 import net.easecation.bedrockloader.render.BedrockMaterialInstance
 import net.easecation.bedrockloader.render.renderer.EntityDataDrivenRenderer
 import net.easecation.bedrockloader.util.GsonUtil
+import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap
 import net.fabricmc.fabric.api.client.model.loading.v1.DelegatingUnbakedModel
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry
+import net.minecraft.client.render.RenderLayer
 import net.minecraft.client.render.model.json.JsonUnbakedModel
 import net.minecraft.client.render.model.json.ModelTransformation
 import net.minecraft.client.util.SpriteIdentifier
@@ -36,12 +38,16 @@ class BedrockResourcePackLoader(
         this.init()
         // Geometry
         context.resource.geometries.forEach { (key, value) ->
-            BedrockAddonsRegistry.geometries[key] = BedrockGeometryModel.Factory(value)
+            BedrockAddonsRegistryClient.geometries[key] = BedrockGeometryModel.Factory(value)
         }
         // Blocks
         for (block in context.resource.blocks) {
             val identifier = block.key
-            createBlockTextures(identifier, block.value.textures, context.behavior.blocks[identifier]?.components?.minecraftMaterialInstances)
+            createBlockTextures(
+                identifier,
+                block.value.textures,
+                context.behavior.blocks[identifier]?.components?.minecraftMaterialInstances
+            )
             createBlockModel(
                 identifier,
                 block.value.textures,
@@ -52,6 +58,10 @@ class BedrockResourcePackLoader(
                 identifier,
                 context.behavior.blocks[identifier]?.components?.minecraftGeometry,
                 context.behavior.blocks[identifier]?.components?.minecraftMaterialInstances,
+            )
+            registerBlockRenderLayer(
+                identifier,
+                context.behavior.blocks[identifier]?.components?.minecraftMaterialInstances
             )
         }
         // Entity
@@ -222,7 +232,7 @@ class BedrockResourcePackLoader(
                 is ComponentGeometry.ComponentGeometrySimple -> geometry.identifier
                 is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
             }
-            val geometryFactory = BedrockAddonsRegistry.geometries[geometryIdentifier] ?: return
+            val geometryFactory = BedrockAddonsRegistryClient.geometries[geometryIdentifier] ?: return
             val materials = materialInstances?.mapNotNull { (key, material) ->
                 val textureKey = material.texture ?: return@mapNotNull null
                 val texture = context.resource.terrainTexture[textureKey]?.textures ?: return@mapNotNull null
@@ -233,7 +243,7 @@ class BedrockResourcePackLoader(
                 return@mapNotNull key to BedrockMaterialInstance(spriteId)
             }?.toMap() ?: emptyMap()
             val model = geometryFactory.create(materials)
-            BedrockAddonsRegistry.blockModels[identifier] = model
+            BedrockAddonsRegistryClient.blockModels[identifier] = model
         } else {
             val textureMap = mutableMapOf<String, Either<SpriteIdentifier, String>>()
 
@@ -282,7 +292,7 @@ class BedrockResourcePackLoader(
                 else -> BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block $identifier has no textures defined.")
             }
 
-            BedrockAddonsRegistry.blockModels[identifier] = JsonUnbakedModel(Identifier("block/cube_all"), emptyList(), textureMap, null, null, ModelTransformation.NONE, emptyList())
+            BedrockAddonsRegistryClient.blockModels[identifier] = JsonUnbakedModel(Identifier("block/cube_all"), emptyList(), textureMap, null, null, ModelTransformation.NONE, emptyList())
         }
     }
 
@@ -300,7 +310,7 @@ class BedrockResourcePackLoader(
                 is ComponentGeometry.ComponentGeometrySimple -> geometry.identifier
                 is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
             }
-            val geometryFactory = BedrockAddonsRegistry.geometries[geometryIdentifier] ?: return
+            val geometryFactory = BedrockAddonsRegistryClient.geometries[geometryIdentifier] ?: return
             val materials = materialInstances?.mapNotNull { (key, material) ->
                 val textureKey = material.texture ?: return@mapNotNull null
                 val texture = context.resource.terrainTexture[textureKey]?.textures ?: return@mapNotNull null
@@ -311,9 +321,22 @@ class BedrockResourcePackLoader(
                 return@mapNotNull key to BedrockMaterialInstance(spriteId)
             }?.toMap() ?: emptyMap()
             val model = geometryFactory.create(materials)
-            BedrockAddonsRegistry.itemModels[identifier] = model
+            BedrockAddonsRegistryClient.itemModels[identifier] = model
         } else {
-            BedrockAddonsRegistry.itemModels[identifier] = DelegatingUnbakedModel(Identifier(identifier.namespace, "block/${identifier.path}"))
+            BedrockAddonsRegistryClient.itemModels[identifier] = DelegatingUnbakedModel(Identifier(identifier.namespace, "block/${identifier.path}"))
+        }
+    }
+
+    private fun registerBlockRenderLayer(
+        identifier: Identifier,
+        materialInstances: ComponentMaterialInstances?
+    ) {
+        val block = BedrockAddonsRegistry.blocks[identifier] ?: return
+        val renderMethod = materialInstances?.get("*")?.render_method ?: return
+        if (renderMethod == ComponentMaterialInstances.RenderMethod.alpha_test) {
+            BlockRenderLayerMap.INSTANCE.putBlock(block, RenderLayer.getCutout())
+        } else if (renderMethod == ComponentMaterialInstances.RenderMethod.blend) {
+            BlockRenderLayerMap.INSTANCE.putBlock(block, RenderLayer.getTranslucent())
         }
     }
 
@@ -358,9 +381,9 @@ class BedrockResourcePackLoader(
                 context.resource.itemTextureToJava(itemIdentifier.namespace, spawnEggTexture)?.let {
                     textureMap["layer0"] = Either.left(SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, it))
                 }
-                BedrockAddonsRegistry.itemModels[itemIdentifier] = JsonUnbakedModel(Identifier("item/generated"), emptyList(), textureMap, null, null, ModelTransformation.NONE, emptyList())
+                BedrockAddonsRegistryClient.itemModels[itemIdentifier] = JsonUnbakedModel(Identifier("item/generated"), emptyList(), textureMap, null, null, ModelTransformation.NONE, emptyList())
             } else {
-                BedrockAddonsRegistry.itemModels[itemIdentifier] = DelegatingUnbakedModel(Identifier("item/template_spawn_egg"))
+                BedrockAddonsRegistryClient.itemModels[itemIdentifier] = DelegatingUnbakedModel(Identifier("item/template_spawn_egg"))
             }
         }
     }
@@ -399,7 +422,7 @@ class BedrockResourcePackLoader(
                 val geometryMolang = renderController?.geometry ?: return@let
                 val geometryAlias = geometryMolang.substringAfter("geometry.").substringAfter("Geometry.")
                 val geometryIdentifier = clientEntity.geometry?.get(geometryAlias) ?: return@let
-                val geometryFactory = BedrockAddonsRegistry.geometries[geometryIdentifier] ?: return@let
+                val geometryFactory = BedrockAddonsRegistryClient.geometries[geometryIdentifier] ?: return@let
                 val textureMolang = renderController.textures?.firstOrNull() ?: return@let
                 val textureAlias = textureMolang.substringAfter("texture.").substringAfter("Texture.")
                 val texture = clientEntity.textures?.get(textureAlias) ?: return@let
@@ -408,7 +431,7 @@ class BedrockResourcePackLoader(
                 val materials = mapOf("*" to BedrockMaterialInstance(spriteId))
                 EntityRendererRegistry.register(entityType) { context ->
                     val model = geometryFactory.create(materials)
-                    BedrockAddonsRegistry.entityModel[identifier] = model
+                    BedrockAddonsRegistryClient.entityModel[identifier] = model
                     EntityDataDrivenRenderer.create(context, model, 0.5f, spriteId.textureId)
                 }
                 BedrockLoader.logger.debug("[BedrockResourcePackLoader] Entity {} render controller registered: {}", clientEntity.identifier, controller)

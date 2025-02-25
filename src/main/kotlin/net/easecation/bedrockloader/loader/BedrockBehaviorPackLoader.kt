@@ -1,16 +1,11 @@
 package net.easecation.bedrockloader.loader
 
 import net.easecation.bedrockloader.BedrockLoader
-import net.easecation.bedrockloader.bedrock.block.component.ComponentMaterialInstances
 import net.easecation.bedrockloader.block.BlockContext
 import net.easecation.bedrockloader.loader.context.BedrockPackContext
 import net.easecation.bedrockloader.entity.EntityDataDriven
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry.entities
-import net.fabricmc.api.EnvType
-import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap
 import net.fabricmc.fabric.api.`object`.builder.v1.entity.FabricDefaultAttributeRegistry
-import net.fabricmc.loader.api.FabricLoader
-import net.minecraft.client.render.RenderLayer
 import net.minecraft.item.BlockItem
 import net.minecraft.item.Item
 import net.minecraft.item.SpawnEggItem
@@ -24,23 +19,12 @@ class BedrockBehaviorPackLoader(
 
     @OptIn(ExperimentalStdlibApi::class)
     fun load() {
-        val env = FabricLoader.getInstance().environmentType
         // Block
         context.behavior.blocks.forEach { (id, beh) ->
             BedrockLoader.logger.info("Registering block $id")
             val block = BlockContext.create(id, beh)
             Registry.register(Registries.BLOCK, id, block)
             BedrockAddonsRegistry.blocks[id] = block
-            if (env == EnvType.CLIENT) {
-                beh.components.minecraftMaterialInstances?.let { materialInstances ->
-                    val renderMethod = materialInstances["*"]?.render_method ?: return@let
-                    if (renderMethod == ComponentMaterialInstances.RenderMethod.alpha_test) {
-                        BlockRenderLayerMap.INSTANCE.putBlock(block, RenderLayer.getCutout())
-                    } else if (renderMethod == ComponentMaterialInstances.RenderMethod.blend) {
-                        BlockRenderLayerMap.INSTANCE.putBlock(block, RenderLayer.getTranslucent())
-                    }
-                }
-            }
             val item = BlockItem(block, Item.Settings())
             Registry.register(Registries.ITEM, id, item)
             BedrockAddonsRegistry.items[id] = item

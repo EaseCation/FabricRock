@@ -1,6 +1,7 @@
 package net.easecation.bedrockloader.render
 
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
+import net.easecation.bedrockloader.loader.BedrockAddonsRegistryClient
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin
 import net.minecraft.util.Identifier
 
@@ -11,11 +12,11 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
             when {
                 id.path.startsWith("block/") -> {
                     val identifier = Identifier(id.namespace, id.path.substring("block/".length))
-                    BedrockAddonsRegistry.blockModels[identifier]
+                    BedrockAddonsRegistryClient.blockModels[identifier]
                 }
                 id.path.startsWith("item/") -> {
                     val identifier = Identifier(id.namespace, id.path.substring("item/".length))
-                    BedrockAddonsRegistry.itemModels[identifier]
+                    BedrockAddonsRegistryClient.itemModels[identifier]
                 }
                 else -> null
             }

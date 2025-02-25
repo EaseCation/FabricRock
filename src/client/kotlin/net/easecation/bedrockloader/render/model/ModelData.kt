@@ -9,6 +9,6 @@ import net.fabricmc.api.Environment
 
 @Environment(value = EnvType.CLIENT)
 class ModelData {
-    val root: ModelPartData = ModelPartData(ImmutableList.of<ModelCuboidData?>(), ModelTransform.Companion.NONE)
+    val root: ModelPartData = ModelPartData(ImmutableList.of<ModelCuboidData?>(), ModelTransform.NONE)
 }
 

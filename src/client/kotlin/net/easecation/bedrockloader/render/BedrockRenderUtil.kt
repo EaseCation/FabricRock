@@ -29,7 +29,8 @@ object BedrockRenderUtil {
                     when (it) {
                         is GeometryDefinition.Uv.UvBox -> cubeBuilder.uv(it.uv?.get(0) ?: 0, it.uv?.get(1) ?: 0)
                         is GeometryDefinition.Uv.UvPerFace -> {
-                            cubeBuilder.uv(ModelPart.FaceUV(
+                            cubeBuilder.uv(
+                                ModelPart.FaceUV(
                                 north = ModelPart.UVMapping(uv = Pair(it.north?.uv?.get(0) ?: 0, it.north?.uv?.get(1) ?: 0), uvSize = Pair(it.north?.uv_size?.get(0) ?: 0, it.north?.uv_size?.get(1) ?: 0), material = it.north?.material_instance),
                                 east = ModelPart.UVMapping(uv = Pair(it.west?.uv?.get(0) ?: 0, it.west?.uv?.get(1) ?: 0), uvSize = Pair(it.west?.uv_size?.get(0) ?: 0, it.west?.uv_size?.get(1) ?: 0), material = it.west?.material_instance),
                                 south = ModelPart.UVMapping(uv = Pair(it.south?.uv?.get(0) ?: 0, it.south?.uv?.get(1) ?: 0), uvSize = Pair(it.south?.uv_size?.get(0) ?: 0, it.south?.uv_size?.get(1) ?: 0), material = it.south?.material_instance),

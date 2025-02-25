@@ -52,8 +52,12 @@ class BedrockGeometryModel(
     private fun getTexturedModelData(): TexturedModelData {
         if (bedrockModel.description.texture_width == null || bedrockModel.description.texture_height == null) throw IllegalStateException("[BedrockGeometryModel] Model has no texture size")
         if (bedrockModel.bones == null) throw IllegalStateException("[BedrockGeometryModel] Model has no bones")
-        BedrockRenderUtil.bedrockBonesToJavaModelData(bedrockModel.bones).let { modelData ->
-            return TexturedModelData.of(modelData, bedrockModel.description.texture_width, bedrockModel.description.texture_height)
+        BedrockRenderUtil.bedrockBonesToJavaModelData(bedrockModel.bones!!).let { modelData ->
+            return TexturedModelData.of(
+                modelData,
+                bedrockModel.description.texture_width!!,
+                bedrockModel.description.texture_height!!
+            )
         }
     }
 

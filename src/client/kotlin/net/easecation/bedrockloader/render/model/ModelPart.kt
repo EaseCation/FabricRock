@@ -26,7 +26,15 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
     var visible: Boolean = true
 
     var transform: ModelTransform
-        get() = ModelTransform.of(this.pivotX, this.pivotY, this.pivotZ, this.pitch, this.yaw, this.roll, this.detachPivot)
+        get() = ModelTransform.of(
+            this.pivotX,
+            this.pivotY,
+            this.pivotZ,
+            this.pitch,
+            this.yaw,
+            this.roll,
+            this.detachPivot
+        )
         set(rotationData) {
             this.pivotX = rotationData.pivotX
             this.pivotY = rotationData.pivotY
@@ -135,12 +143,12 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
 
     @Environment(value = EnvType.CLIENT)
     data class FaceUV(
-            val north: UVMapping,
-            val east: UVMapping,
-            val south: UVMapping,
-            val west: UVMapping,
-            val up: UVMapping,
-            val down: UVMapping
+        val north: UVMapping,
+        val east: UVMapping,
+        val south: UVMapping,
+        val west: UVMapping,
+        val up: UVMapping,
+        val down: UVMapping
     )
 
     @Environment(value = EnvType.CLIENT)
