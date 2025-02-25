@@ -2,6 +2,7 @@ package net.easecation.bedrockloader.loader
 
 import com.mojang.datafixers.util.Either
 import net.easecation.bedrockloader.BedrockLoader
+import net.easecation.bedrockloader.bedrock.block.component.BlockComponents
 import net.easecation.bedrockloader.bedrock.block.component.ComponentGeometry
 import net.easecation.bedrockloader.bedrock.block.component.ComponentMaterialInstances
 import net.easecation.bedrockloader.bedrock.definition.BlockResourceDefinition
@@ -41,40 +42,27 @@ class BedrockResourcePackLoader(
             BedrockAddonsRegistryClient.geometries[key] = BedrockGeometryModel.Factory(value)
         }
         // Blocks
-        for (block in context.resource.blocks) {
-            val identifier = block.key
-            createBlockTextures(
-                identifier,
-                block.value.textures,
-                context.behavior.blocks[identifier]?.components?.minecraftMaterialInstances
-            )
-            createBlockModel(
-                identifier,
-                block.value.textures,
-                context.behavior.blocks[identifier]?.components?.minecraftGeometry,
-                context.behavior.blocks[identifier]?.components?.minecraftMaterialInstances,
-            )
-            createBlockItemModel(
-                identifier,
-                context.behavior.blocks[identifier]?.components?.minecraftGeometry,
-                context.behavior.blocks[identifier]?.components?.minecraftMaterialInstances,
-            )
-            registerBlockRenderLayer(
-                identifier,
-                context.behavior.blocks[identifier]?.components?.minecraftMaterialInstances
-            )
+        for ((identifier, block) in context.resource.blocks) {
+            val blockComponents = context.behavior.blocks[identifier]?.components
+            // textures
+            createBlockTextures(identifier, block, blockComponents)
+            // models
+            createBlockModel(identifier, block, blockComponents)
+            createBlockItemModel(identifier, block, blockComponents)
+            // renderer
+            registerBlockRenderLayer(identifier, blockComponents)
         }
         // Entity
-        for (entity in context.resource.entities) {
-            val identifier = entity.key
-            val clientEntity = entity.value.description
-            val entityType = BedrockAddonsRegistry.entities[identifier] ?: continue
+        for ((identifier, entity) in context.resource.entities) {
+            val clientEntity = entity.description
+            val entityType = BedrockAddonsRegistry.entities[identifier]
             // textures
             createEntityTextures(identifier, clientEntity)
             createSpawnEggTextures(identifier, clientEntity)
+            // models
             createSpawnEggModel(identifier, clientEntity)
             // renderer
-            registerRenderController(clientEntity, entityType)
+            registerRenderController(identifier, clientEntity, entityType)
         }
     }
 
@@ -144,76 +132,62 @@ class BedrockResourcePackLoader(
      */
     private fun createBlockTextures(
         identifier: Identifier,
-        textures: BlockResourceDefinition.Textures?,
-        materialInstances: ComponentMaterialInstances?
+        block: BlockResourceDefinition.Block,
+        blockComponents: BlockComponents?
     ) {
-        val namespaceDir = this.namespaceDir(identifier.namespace)
+        block.textures?.let { createTextures(identifier, it) }
+        block.carried_textures?.let { createTextures(identifier, it) }
+        blockComponents?.minecraftMaterialInstances?.values?.forEach { instance ->
+            instance.texture?.let { createBlockTexture(identifier, it) }
+        }
+    }
+
+    private fun createTextures(
+        identifier: Identifier,
+        textures: BlockResourceDefinition.Textures
+    ) {
         when (textures) {
             is BlockResourceDefinition.Textures.TexturesAllFace -> {
-                val texture = context.resource.terrainTexture[textures.all]?.textures
-                if (texture == null) {
-                    BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: ${textures.all}")
-                    return
-                }
-                val path = "textures/block/${texture.substringAfterLast("/")}"
-                val bedrockTexture = context.resource.textureImages[texture]
-                if (bedrockTexture == null) {
-                    BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: ${textures.all}")
-                    return
-                }
-                val file = namespaceDir.resolve(path + "." + bedrockTexture.type.getExtension())
-                bedrockTexture.image.let { image ->
-                    ImageIO.write(image, file.extension, file)
-                }
+                createBlockTexture(identifier, textures.all)
             }
             is BlockResourceDefinition.Textures.TexturesMultiFace -> {
                 val directions = mapOf(
-                        "up" to textures.up,
-                        "down" to textures.down,
-                        "north" to textures.north,
-                        "south" to textures.south,
-                        "east" to textures.east,
-                        "west" to textures.west
+                    "up" to textures.up,
+                    "down" to textures.down,
+                    "north" to textures.north,
+                    "south" to textures.south,
+                    "east" to textures.east,
+                    "west" to textures.west
                 )
                 for ((_, textureKey) in directions) {
-                    textureKey?.let {
-                        val texture = context.resource.terrainTexture[it]?.textures
-                        if (texture == null) {
-                            BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: $it")
-                            return
-                        }
-                        val path = "textures/block/${texture.substringAfterLast("/")}"
-                        val bedrockTexture = context.resource.textureImages[texture]
-                        if (bedrockTexture == null) {
-                            BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: $it")
-                            return
-                        }
-                        val file = namespaceDir.resolve(path + "." + bedrockTexture.type.getExtension())
-                        bedrockTexture.image.let { image ->
-                            ImageIO.write(image, file.extension, file)
-                        }
-                    }
+                    textureKey?.let { createBlockTexture(identifier, it) }
                 }
             }
-            else -> {}
         }
-        materialInstances?.forEach { name, instance ->
-            val texture = context.resource.terrainTexture[instance.texture]?.textures
-            if (texture == null) {
-                BedrockLoader.logger.warn("[BedrockResourcePackLoader] Material instance texture not found: ${instance.texture}")
-                return@forEach
-            }
-            val path = "textures/block/${texture.substringAfterLast("/")}"
-            val bedrockTexture = context.resource.textureImages[texture]
-            if (bedrockTexture == null) {
-                BedrockLoader.logger.warn("[BedrockResourcePackLoader] Material instance texture not found: ${instance.texture}")
-                return@forEach
-            }
-            val file = namespaceDir.resolve(path + "." + bedrockTexture.type.getExtension())
-            bedrockTexture.image.let { image ->
-                ImageIO.write(image, file.extension, file)
-            }
+    }
 
+    /**
+     * 根据方块材质包中的定义，创建一个方块贴图文件（附带命名空间）
+     */
+    private fun createBlockTexture(
+        identifier: Identifier,
+        textureKey: String
+    ) {
+        val namespaceDir = this.namespaceDir(identifier.namespace)
+        val texture = context.resource.terrainTexture[textureKey]?.textures
+        if (texture == null) {
+            BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: $textureKey")
+            return
+        }
+        val path = "textures/block/${texture.substringAfterLast("/")}"
+        val bedrockTexture = context.resource.textureImages[texture]
+        if (bedrockTexture == null) {
+            BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: $textureKey")
+            return
+        }
+        val file = namespaceDir.resolve(path + "." + bedrockTexture.type.getExtension())
+        bedrockTexture.image.let { image ->
+            ImageIO.write(image, file.extension, file)
         }
     }
 
@@ -222,77 +196,19 @@ class BedrockResourcePackLoader(
      */
     private fun createBlockModel(
         identifier: Identifier,
-        textures: BlockResourceDefinition.Textures?,
-        geometry: ComponentGeometry?,
-        materialInstances: ComponentMaterialInstances?
+        block: BlockResourceDefinition.Block,
+        blockComponents: BlockComponents?
     ) {
+        val geometry = blockComponents?.minecraftGeometry
+        val materialInstances = blockComponents?.minecraftMaterialInstances
         if (geometry != null) {
             // 带有模型的方块情况：通过行为包定义模型和贴图
-            val geometryIdentifier = when (geometry) {
-                is ComponentGeometry.ComponentGeometrySimple -> geometry.identifier
-                is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
-            }
-            val geometryFactory = BedrockAddonsRegistryClient.geometries[geometryIdentifier] ?: return
-            val materials = materialInstances?.mapNotNull { (key, material) ->
-                val textureKey = material.texture ?: return@mapNotNull null
-                val texture = context.resource.terrainTexture[textureKey]?.textures ?: return@mapNotNull null
-                val spriteId = SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, Identifier(
-                    identifier.namespace,
-                    "block/${texture.substringAfterLast("/")}"
-                ))
-                return@mapNotNull key to BedrockMaterialInstance(spriteId)
-            }?.toMap() ?: emptyMap()
-            val model = geometryFactory.create(materials)
+            val model = createGeometryModel(identifier, geometry, materialInstances) ?: return
             BedrockAddonsRegistryClient.blockModels[identifier] = model
         } else {
-            val textureMap = mutableMapOf<String, Either<SpriteIdentifier, String>>()
-
-            when {
-                // 通过行为包定义了贴图
-                materialInstances != null -> materialInstances.forEach { (key, value) ->
-                    if (key == "*") {
-                        value.texture?.let { texture ->
-                            context.resource.terrainTextureToJava(identifier.namespace, texture)?.let {
-                                textureMap["all"] = Either.left(SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, it))
-                            }
-                        }
-                    } else {
-                        BedrockLoader.logger.info("[BedrockResourcePackLoader] Material instance $key -> $value is not supported yet.")
-                    }
-                }
-                // 普通方块情况：通过材质包的blocks.json定义贴图
-                textures is BlockResourceDefinition.Textures.TexturesAllFace -> {
-                    val texture = context.resource.terrainTexture[textures.all]?.textures
-                    if (texture == null) {
-                        BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: ${textures.all}")
-                        return
-                    }
-                    context.resource.terrainTextureToJava(identifier.namespace, textures.all)?.let {
-                        textureMap["all"] = Either.left(SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, it))
-                    }
-                }
-                textures is BlockResourceDefinition.Textures.TexturesMultiFace -> {
-                    val directions = mapOf(
-                        "up" to textures.up,
-                        "down" to textures.down,
-                        "north" to textures.north,
-                        "south" to textures.south,
-                        "east" to textures.east,
-                        "west" to textures.west
-                    )
-
-                    for ((direction, textureKey) in directions) {
-                        textureKey?.let {
-                            context.resource.terrainTextureToJava(identifier.namespace, it)?.let { texture ->
-                                textureMap[direction] = Either.left(SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, texture))
-                            }
-                        }
-                    }
-                }
-                else -> BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block $identifier has no textures defined.")
-            }
-
-            BedrockAddonsRegistryClient.blockModels[identifier] = JsonUnbakedModel(Identifier("block/cube_all"), emptyList(), textureMap, null, null, ModelTransformation.NONE, emptyList())
+            val textures = block.textures
+            val model = createCubeModel(identifier, textures, materialInstances)
+            BedrockAddonsRegistryClient.blockModels[identifier] = model
         }
     }
 
@@ -301,36 +217,100 @@ class BedrockResourcePackLoader(
      */
     private fun createBlockItemModel(
         identifier: Identifier,
-        geometry: ComponentGeometry?,
-        materialInstances: ComponentMaterialInstances?
+        block: BlockResourceDefinition.Block,
+        blockComponents: BlockComponents?
     ) {
+        val geometry = blockComponents?.minecraftGeometry
+        val materialInstances = blockComponents?.minecraftMaterialInstances
         if (geometry != null) {
             // 带有模型的方块情况：通过行为包定义模型和贴图
-            val geometryIdentifier = when (geometry) {
-                is ComponentGeometry.ComponentGeometrySimple -> geometry.identifier
-                is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
-            }
-            val geometryFactory = BedrockAddonsRegistryClient.geometries[geometryIdentifier] ?: return
-            val materials = materialInstances?.mapNotNull { (key, material) ->
-                val textureKey = material.texture ?: return@mapNotNull null
-                val texture = context.resource.terrainTexture[textureKey]?.textures ?: return@mapNotNull null
-                val spriteId = SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, Identifier(
-                    identifier.namespace,
-                    "block/${texture.substringAfterLast("/")}"
-                ))
-                return@mapNotNull key to BedrockMaterialInstance(spriteId)
-            }?.toMap() ?: emptyMap()
-            val model = geometryFactory.create(materials)
+            val model = createGeometryModel(identifier, geometry, materialInstances) ?: return
             BedrockAddonsRegistryClient.itemModels[identifier] = model
         } else {
-            BedrockAddonsRegistryClient.itemModels[identifier] = DelegatingUnbakedModel(Identifier(identifier.namespace, "block/${identifier.path}"))
+            val textures = block.carried_textures ?: block.textures
+            val model = createCubeModel(identifier, textures, materialInstances)
+            BedrockAddonsRegistryClient.itemModels[identifier] = model
         }
+    }
+
+    private fun createCubeModel(
+        identifier: Identifier,
+        textures: BlockResourceDefinition.Textures?,
+        materialInstances: ComponentMaterialInstances?
+    ): JsonUnbakedModel {
+        val textureMap = mutableMapOf<String, Either<SpriteIdentifier, String>>()
+        // 通过行为包定义了贴图
+        materialInstances?.forEach { (key, value) ->
+            if (key == "*") {
+                value.texture?.let { texture ->
+                    context.resource.terrainTextureToJava(identifier.namespace, texture)?.let {
+                        textureMap["all"] = Either.left(SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, it))
+                    }
+                }
+            } else {
+                BedrockLoader.logger.info("[BedrockResourcePackLoader] Material instance $key -> $value is not supported yet.")
+            }
+        }
+        // 普通方块情况：通过材质包的blocks.json定义贴图
+        when (textures) {
+            is BlockResourceDefinition.Textures.TexturesAllFace -> {
+                val texture = context.resource.terrainTexture[textures.all]?.textures
+                if (texture == null) {
+                    BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: ${textures.all}")
+                } else {
+                    context.resource.terrainTextureToJava(identifier.namespace, textures.all)?.let {
+                        textureMap["all"] = Either.left(SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, it))
+                    }
+                }
+            }
+            is BlockResourceDefinition.Textures.TexturesMultiFace -> {
+                val directions = mapOf(
+                    "up" to textures.up,
+                    "down" to textures.down,
+                    "north" to textures.north,
+                    "south" to textures.south,
+                    "east" to textures.east,
+                    "west" to textures.west
+                )
+                for ((direction, textureKey) in directions) {
+                    textureKey?.let {
+                        context.resource.terrainTextureToJava(identifier.namespace, it)?.let { texture ->
+                            textureMap[direction] = Either.left(SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, texture))
+                        }
+                    }
+                }
+            }
+            else -> BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block $identifier has no textures defined.")
+        }
+        return JsonUnbakedModel(Identifier("block/cube_all"), emptyList(), textureMap, null, null, ModelTransformation.NONE, emptyList())
+    }
+
+    private fun createGeometryModel(
+        identifier: Identifier,
+        geometry: ComponentGeometry,
+        materialInstances: ComponentMaterialInstances?
+    ): BedrockGeometryModel? {
+        val geometryIdentifier = when (geometry) {
+            is ComponentGeometry.ComponentGeometrySimple -> geometry.identifier
+            is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
+        }
+        val geometryFactory = BedrockAddonsRegistryClient.geometries[geometryIdentifier]
+        val materials = materialInstances?.mapNotNull { (key, material) ->
+            val textureKey = material.texture ?: return@mapNotNull null
+            val texture = context.resource.terrainTexture[textureKey]?.textures ?: return@mapNotNull null
+            val spriteId = SpriteIdentifier(
+                PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, Identifier(identifier.namespace, "block/${texture.substringAfterLast("/")}")
+            )
+            return@mapNotNull key to BedrockMaterialInstance(spriteId)
+        }?.toMap() ?: emptyMap()
+        return geometryFactory?.create(materials)
     }
 
     private fun registerBlockRenderLayer(
         identifier: Identifier,
-        materialInstances: ComponentMaterialInstances?
+        blockComponents: BlockComponents?
     ) {
+        val materialInstances = blockComponents?.minecraftMaterialInstances
         val block = BedrockAddonsRegistry.blocks[identifier] ?: return
         val renderMethod = materialInstances?.get("*")?.render_method ?: return
         if (renderMethod == ComponentMaterialInstances.RenderMethod.alpha_test) {
@@ -410,7 +390,12 @@ class BedrockResourcePackLoader(
     /**
      * 从ClientEntity读取需要的渲染控制器，然后注册到Java版的渲染控制器中
      */
-    private fun registerRenderController(clientEntity: EntityResourceDefinition.ClientEntityDescription, entityType: EntityType<EntityDataDriven>) {
+    private fun registerRenderController(
+        identifier: Identifier,
+        clientEntity: EntityResourceDefinition.ClientEntityDescription,
+        entityType: EntityType<EntityDataDriven>?
+    ) {
+        if (entityType == null) return
         clientEntity.render_controllers?.let { controllers ->
             if (controllers.isNotEmpty()) {
                 if (controllers.size > 1) {
@@ -418,7 +403,6 @@ class BedrockResourcePackLoader(
                 }
                 val controller = controllers[0]
                 val renderController = context.resource.renderControllers[controller]
-                val identifier = clientEntity.identifier
                 val geometryMolang = renderController?.geometry ?: return@let
                 val geometryAlias = geometryMolang.substringAfter("geometry.").substringAfter("Geometry.")
                 val geometryIdentifier = clientEntity.geometry?.get(geometryAlias) ?: return@let

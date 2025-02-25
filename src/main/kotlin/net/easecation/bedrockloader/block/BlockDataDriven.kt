@@ -1,6 +1,7 @@
 package net.easecation.bedrockloader.block
 
 import net.easecation.bedrockloader.bedrock.block.component.ComponentCollisionBox
+import net.easecation.bedrockloader.bedrock.block.component.ComponentSelectionBox
 import net.easecation.bedrockloader.bedrock.block.state.StateBoolean
 import net.easecation.bedrockloader.bedrock.block.state.StateInt
 import net.easecation.bedrockloader.bedrock.block.state.StateRange
@@ -88,7 +89,6 @@ data class BlockContext(
                 }
 
             }
-            // TODO SelectionBox
             behaviour.components.minecraftLightEmission?.let {
                 settings.luminance { _ -> it }
             }
@@ -135,33 +135,43 @@ data class BlockContext(
             states.values.forEach { builder.add(it) }
         }
 
-        override fun getOutlineShape(
-            state: BlockState?,
-            view: BlockView?,
-            pos: BlockPos?,
-            context: ShapeContext?
-        ): VoxelShape {
-            if (behaviour.components.minecraftCollisionBox != null) {
-                val it = behaviour.components.minecraftCollisionBox
-                when (it) {
-                    is ComponentCollisionBox.ComponentCollisionBoxBoolean -> {
-                        return super.getOutlineShape(state, view, pos, context)
-                    }
-
-                    is ComponentCollisionBox.ComponentCollisionBoxCustom -> {
-                        return VoxelShapes.cuboid(
-                            (it.origin[0].toDouble() + 8) / 16,
-                            it.origin[1].toDouble() / 16,
-                            (it.origin[2].toDouble() + 8) / 16,
-                            (it.origin[0].toDouble() + 8) / 16 + it.size[0].toDouble() / 16,
-                            it.origin[1].toDouble() / 16 + it.size[1].toDouble() / 16,
-                            (it.origin[2].toDouble() + 8) / 16 + it.size[2].toDouble() / 16
-                        )
-                    }
-                }
-            } else {
-                return super.getOutlineShape(state, view, pos, context)
+        override fun getCollisionShape(
+            state: BlockState,
+            world: BlockView,
+            pos: BlockPos,
+            context: ShapeContext
+        ): VoxelShape = when {
+            this.collidable -> when (val box = behaviour.components.minecraftCollisionBox) {
+                is ComponentCollisionBox.ComponentCollisionBoxBoolean -> getOutlineShape(state, world, pos, context)
+                is ComponentCollisionBox.ComponentCollisionBoxCustom -> VoxelShapes.cuboid(
+                    (box.origin[0].toDouble() + 8) / 16,
+                    box.origin[1].toDouble() / 16,
+                    (box.origin[2].toDouble() + 8) / 16,
+                    (box.origin[0].toDouble() + 8) / 16 + box.size[0].toDouble() / 16,
+                    box.origin[1].toDouble() / 16 + box.size[1].toDouble() / 16,
+                    (box.origin[2].toDouble() + 8) / 16 + box.size[2].toDouble() / 16
+                )
+                else -> getOutlineShape(state, world, pos, context)
             }
+            else -> VoxelShapes.empty()
+        }
+
+        override fun getOutlineShape(
+            state: BlockState,
+            world: BlockView,
+            pos: BlockPos,
+            context: ShapeContext
+        ): VoxelShape = when (val box = behaviour.components.minecraftSelectionBox) {
+            is ComponentSelectionBox.ComponentSelectionBoxBoolean -> super.getOutlineShape(state, world, pos, context)
+            is ComponentSelectionBox.ComponentSelectionBoxCustom -> VoxelShapes.cuboid(
+                (box.origin[0].toDouble() + 8) / 16,
+                box.origin[1].toDouble() / 16,
+                (box.origin[2].toDouble() + 8) / 16,
+                (box.origin[0].toDouble() + 8) / 16 + box.size[0].toDouble() / 16,
+                box.origin[1].toDouble() / 16 + box.size[1].toDouble() / 16,
+                (box.origin[2].toDouble() + 8) / 16 + box.size[2].toDouble() / 16
+            )
+            else -> super.getOutlineShape(state, world, pos, context)
         }
     }
 }

@@ -10,14 +10,14 @@ import net.minecraft.util.Identifier
 import java.lang.reflect.Type
 
 data class BlockResourceDefinition(
-        @SerializedName("format_version") val formatVersion: SemVersion,
-        val blocks: Map<Identifier, Block>
+    @SerializedName("format_version") val formatVersion: SemVersion,
+    val blocks: Map<Identifier, Block>
 ) {
 
     data class Block(
-            val textures: Textures?,
-            val carried_textures: String?,
-            val sound: String?
+        val textures: Textures?,
+        val carried_textures: Textures?,
+        val sound: String?
     )
 
     class Deserializer : JsonDeserializer<BlockResourceDefinition> {
