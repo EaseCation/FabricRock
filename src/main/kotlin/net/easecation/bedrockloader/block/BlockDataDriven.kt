@@ -9,10 +9,13 @@ import net.easecation.bedrockloader.bedrock.block.state.StateString
 import net.easecation.bedrockloader.bedrock.block.traits.TraitPlacementDirection
 import net.easecation.bedrockloader.bedrock.block.traits.TraitPlacementPosition
 import net.easecation.bedrockloader.bedrock.definition.BlockBehaviourDefinition
+import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.minecraft.block.AbstractBlock.Settings
 import net.minecraft.block.Block
+import net.minecraft.block.BlockEntityProvider
 import net.minecraft.block.BlockState
 import net.minecraft.block.ShapeContext
+import net.minecraft.block.entity.BlockEntity
 import net.minecraft.block.enums.BlockHalf
 import net.minecraft.item.ItemPlacementContext
 import net.minecraft.state.StateManager
@@ -96,13 +99,17 @@ data class BlockContext(
         }
     }
 
-    inner class BlockDataDriven(settings: Settings) : Block(settings) {
+    inner class BlockDataDriven(settings: Settings) : Block(settings), BlockEntityProvider {
         init {
             defaultState = stateManager.defaultState
                 .withIfExists(MINECRAFT_CARDINAL_DIRECTION, Direction.SOUTH)
                 .withIfExists(MINECRAFT_FACING_DIRECTION, Direction.DOWN)
                 .withIfExists(MINECRAFT_BLOCK_FACE, Direction.DOWN)
                 .withIfExists(MINECRAFT_VERTICAL_HALF, BlockHalf.BOTTOM)
+        }
+
+        override fun createBlockEntity(pos: BlockPos, state: BlockState): BlockEntity? {
+            return BedrockAddonsRegistry.blockEntities[identifier]?.let { return it.instantiate(pos, state) }
         }
 
         private fun rotateDirection(direction: Direction, yRotationOffset: Int): Direction {

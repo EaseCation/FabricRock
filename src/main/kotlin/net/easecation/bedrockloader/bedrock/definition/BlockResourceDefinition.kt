@@ -17,7 +17,8 @@ data class BlockResourceDefinition(
     data class Block(
         val textures: Textures?,
         val carried_textures: Textures?,
-        val sound: String?
+        val sound: String?,
+        val client_entity: ClientEntity?
     )
 
     class Deserializer : JsonDeserializer<BlockResourceDefinition> {
@@ -36,6 +37,13 @@ data class BlockResourceDefinition(
             )
         }
     }
+
+    data class ClientEntity(
+        val identifier: Identifier,
+        val hand_model_use_client_entity: Boolean?,
+        val block_icon: String?,
+        val destroyed_textures: String?
+    )
 
     sealed class Textures {
 

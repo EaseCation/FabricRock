@@ -12,4 +12,5 @@ data class BlockComponents(
         @SerializedName("minecraft:light_emission") val minecraftLightEmission: Int?,
         @SerializedName("minecraft:light_dampening") val minecraftLightDampening: Int?,
         @SerializedName("minecraft:destructible_by_mining") val minecraftDestructibleByMining: ComponentDestructibleByMining?,
+        @SerializedName("netease:block_entity") val neteaseBlockEntity: ComponentBlockEntity?,
 )

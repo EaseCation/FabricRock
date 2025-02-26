@@ -16,8 +16,8 @@ import net.minecraft.world.World
 class EntityDataDriven(
         val identifier: Identifier,
         val components: EntityComponents,
-        entityType: EntityType<out MobEntity>?,
-        world: World?
+        entityType: EntityType<EntityDataDriven>,
+        world: World
 ) : MobEntity(entityType, world) {
 
     companion object {
