@@ -1,9 +1,6 @@
 package net.easecation.bedrockloader.render.renderer
 
-import net.easecation.bedrockloader.bedrock.definition.EntityResourceDefinition
 import net.easecation.bedrockloader.entity.EntityDataDriven
-import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
-import net.easecation.bedrockloader.render.BedrockGeometryModel
 import net.minecraft.client.render.entity.EntityRendererFactory
 import net.minecraft.client.render.entity.MobEntityRenderer
 import net.minecraft.client.render.entity.model.EntityModel

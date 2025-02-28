@@ -93,11 +93,27 @@ data class GeometryDefinition(
         }
     }
 
-    data class Locator(
-            val offset: List<Int>?,
-            val rotation: List<Int>?,
+    sealed class Locator {
+        data class LocatorSimple(
+            val offset: List<Float>?
+        ) : Locator()
+
+        data class LocatorFull(
+            val offset: List<Float>?,
+            val rotation: List<Float>?,
             val ignore_inherited_scale: Boolean?
-    )
+        ) : Locator()
+
+        class Deserializer : JsonDeserializer<Locator> {
+            override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): Locator {
+                if (json.isJsonObject) {
+                    return context.deserialize(json, LocatorFull::class.java)
+                } else {
+                    return LocatorSimple(json.asJsonArray.map { it.asFloat })
+                }
+            }
+        }
+    }
 
     data class PolyMesh(
             val normalized_uvs: Boolean?,

@@ -33,6 +33,7 @@ object GsonUtil {
             .registerTypeAdapter(ComponentRideable::class.java, ComponentRideable.Deserializer())
             // geometry
             .registerTypeAdapter(GeometryDefinition.Uv::class.java, GeometryDefinition.Uv.Deserializer())
+            .registerTypeAdapter(GeometryDefinition.Locator::class.java, GeometryDefinition.Locator.Deserializer())
             .create()
 
     class UUIDSerializer : JsonSerializer<UUID>, JsonDeserializer<UUID> {

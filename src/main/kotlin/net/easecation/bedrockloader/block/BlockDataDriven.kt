@@ -1,5 +1,6 @@
 package net.easecation.bedrockloader.block
 
+import com.mojang.serialization.MapCodec
 import net.easecation.bedrockloader.bedrock.block.component.ComponentCollisionBox
 import net.easecation.bedrockloader.bedrock.block.component.ComponentSelectionBox
 import net.easecation.bedrockloader.bedrock.block.state.StateBoolean
@@ -10,11 +11,8 @@ import net.easecation.bedrockloader.bedrock.block.traits.TraitPlacementDirection
 import net.easecation.bedrockloader.bedrock.block.traits.TraitPlacementPosition
 import net.easecation.bedrockloader.bedrock.definition.BlockBehaviourDefinition
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
+import net.minecraft.block.*
 import net.minecraft.block.AbstractBlock.Settings
-import net.minecraft.block.Block
-import net.minecraft.block.BlockEntityProvider
-import net.minecraft.block.BlockState
-import net.minecraft.block.ShapeContext
 import net.minecraft.block.entity.BlockEntity
 import net.minecraft.block.enums.BlockHalf
 import net.minecraft.item.ItemPlacementContext
@@ -99,7 +97,7 @@ data class BlockContext(
         }
     }
 
-    inner class BlockDataDriven(settings: Settings) : Block(settings), BlockEntityProvider {
+    inner class BlockDataDriven(settings: Settings) : BlockWithEntity(settings) {
         init {
             defaultState = stateManager.defaultState
                 .withIfExists(MINECRAFT_CARDINAL_DIRECTION, Direction.SOUTH)
@@ -108,8 +106,20 @@ data class BlockContext(
                 .withIfExists(MINECRAFT_VERTICAL_HALF, BlockHalf.BOTTOM)
         }
 
+        override fun getCodec(): MapCodec<out BlockWithEntity> {
+            return createCodec(::BlockDataDriven)
+        }
+
         override fun createBlockEntity(pos: BlockPos, state: BlockState): BlockEntity? {
             return BedrockAddonsRegistry.blockEntities[identifier]?.let { return it.instantiate(pos, state) }
+        }
+
+        override fun getRenderType(state: BlockState?): BlockRenderType {
+            if (BedrockAddonsRegistry.blockEntities[identifier] != null) {
+                return BlockRenderType.INVISIBLE
+            } else {
+                return BlockRenderType.MODEL
+            }
         }
 
         private fun rotateDirection(direction: Direction, yRotationOffset: Int): Direction {
