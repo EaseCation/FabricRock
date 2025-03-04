@@ -161,12 +161,12 @@ data class BlockContext(
             this.collidable -> when (val box = behaviour.components.minecraftCollisionBox) {
                 is ComponentCollisionBox.ComponentCollisionBoxBoolean -> getOutlineShape(state, world, pos, context)
                 is ComponentCollisionBox.ComponentCollisionBoxCustom -> VoxelShapes.cuboid(
-                    (box.origin[0].toDouble() + 8) / 16,
-                    box.origin[1].toDouble() / 16,
-                    (box.origin[2].toDouble() + 8) / 16,
-                    (box.origin[0].toDouble() + 8) / 16 + box.size[0].toDouble() / 16,
-                    box.origin[1].toDouble() / 16 + box.size[1].toDouble() / 16,
-                    (box.origin[2].toDouble() + 8) / 16 + box.size[2].toDouble() / 16
+                    (1.0 / 16) * (16 - (box.origin[0] + 8 + box.size[0])),
+                    (1.0 / 16) * (box.origin[1]),
+                    (1.0 / 16) * (box.origin[2] + 8),
+                    (1.0 / 16) * (16 - (box.origin[0] + 8)),
+                    (1.0 / 16) * (box.origin[1] + box.size[1]),
+                    (1.0 / 16) * (box.origin[2] + 8 + box.size[2])
                 )
                 else -> getOutlineShape(state, world, pos, context)
             }
@@ -180,14 +180,16 @@ data class BlockContext(
             context: ShapeContext
         ): VoxelShape = when (val box = behaviour.components.minecraftSelectionBox) {
             is ComponentSelectionBox.ComponentSelectionBoxBoolean -> super.getOutlineShape(state, world, pos, context)
-            is ComponentSelectionBox.ComponentSelectionBoxCustom -> VoxelShapes.cuboid(
-                (box.origin[0].toDouble() + 8) / 16,
-                box.origin[1].toDouble() / 16,
-                (box.origin[2].toDouble() + 8) / 16,
-                (box.origin[0].toDouble() + 8) / 16 + box.size[0].toDouble() / 16,
-                box.origin[1].toDouble() / 16 + box.size[1].toDouble() / 16,
-                (box.origin[2].toDouble() + 8) / 16 + box.size[2].toDouble() / 16
-            )
+            is ComponentSelectionBox.ComponentSelectionBoxCustom -> {
+                VoxelShapes.cuboid(
+                    (1.0 / 16) * (16 - (box.origin[0] + 8 + box.size[0])),
+                    (1.0 / 16) * (box.origin[1]),
+                    (1.0 / 16) * (box.origin[2] + 8),
+                    (1.0 / 16) * (16 - (box.origin[0] + 8)),
+                    (1.0 / 16) * (box.origin[1] + box.size[1]),
+                    (1.0 / 16) * (box.origin[2] + 8 + box.size[2])
+                )
+            }
             else -> super.getOutlineShape(state, world, pos, context)
         }
     }

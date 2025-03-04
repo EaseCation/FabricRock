@@ -9,14 +9,15 @@ import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.fabricmc.fabric.api.renderer.v1.mesh.Mesh
 import net.fabricmc.fabric.api.renderer.v1.model.FabricBakedModel
+import net.fabricmc.fabric.api.renderer.v1.model.ModelHelper
 import net.fabricmc.fabric.api.renderer.v1.render.RenderContext
 import net.minecraft.block.BlockState
 import net.minecraft.client.render.VertexConsumer
 import net.minecraft.client.render.entity.model.EntityModel
 import net.minecraft.client.render.model.*
-import net.minecraft.client.render.model.json.JsonUnbakedModel
 import net.minecraft.client.render.model.json.ModelOverrideList
 import net.minecraft.client.render.model.json.ModelTransformation
+import net.minecraft.client.render.model.json.Transformation
 import net.minecraft.client.texture.Sprite
 import net.minecraft.client.util.SpriteIdentifier
 import net.minecraft.client.util.math.MatrixStack
@@ -32,20 +33,34 @@ import java.util.function.Supplier
 
 @Environment(EnvType.CLIENT)
 class BedrockGeometryModel(
-        private val bedrockModel: GeometryDefinition.Model,
-        val materials: Map<String, BedrockMaterialInstance>
+    private val bedrockModel: GeometryDefinition.Model,
+    val materials: Map<String, BedrockMaterialInstance>,
+    private val transformation: ModelTransformation
 ) : EntityModel<EntityDataDriven>(), UnbakedModel, BakedModel, FabricBakedModel {
+    companion object {
+        val MODEL_TRANSFORM_BLOCK: ModelTransformation = ModelTransformation(
+            ModelHelper.TRANSFORM_BLOCK_3RD_PERSON_RIGHT,
+            ModelHelper.TRANSFORM_BLOCK_3RD_PERSON_RIGHT,
+            ModelHelper.TRANSFORM_BLOCK_1ST_PERSON_LEFT,
+            ModelHelper.TRANSFORM_BLOCK_1ST_PERSON_LEFT,
+            Transformation.IDENTITY,
+            ModelHelper.TRANSFORM_BLOCK_GUI,
+            ModelHelper.TRANSFORM_BLOCK_GROUND,
+            ModelHelper.TRANSFORM_BLOCK_FIXED
+        )
+    }
 
     class Factory(private val bedrockModel: GeometryDefinition.Model) {
-        fun create(materials: Map<String, BedrockMaterialInstance>): BedrockGeometryModel {
-            return BedrockGeometryModel(bedrockModel, materials)
+        fun create(
+            materials: Map<String, BedrockMaterialInstance>,
+            transformation: ModelTransformation = MODEL_TRANSFORM_BLOCK
+        ): BedrockGeometryModel {
+            return BedrockGeometryModel(bedrockModel, materials, transformation)
         }
     }
 
-    private val defaultBlockModel = Identifier("minecraft:block/block")
     private var defaultSprite: Sprite? = null
     private var sprites: MutableMap<String, Sprite> = mutableMapOf()
-    private var transformation: ModelTransformation? = null
     private val modelPart: ModelPart = getTexturedModelData().createModel()
     private var mesh: Mesh? = null
 
@@ -76,10 +91,6 @@ class BedrockGeometryModel(
         modelId: Identifier?
     ): BakedModel {
         BedrockLoader.logger.info("Baking model... $modelId ${bedrockModel.description.identifier}")
-        // 加载默认方块模型
-        val defaultBlockModel = baker.getOrLoadModel(defaultBlockModel) as JsonUnbakedModel
-        // 获取 ModelTransformation
-        transformation = defaultBlockModel.transformations
         // 获得sprites
         materials.forEach { (key, material) ->
             sprites[key] = textureGetter.apply(material.spriteId)
@@ -126,7 +137,7 @@ class BedrockGeometryModel(
     }
 
     override fun getTransformation(): ModelTransformation {
-        return transformation!!
+        return transformation
     }
 
     override fun getOverrides(): ModelOverrideList {

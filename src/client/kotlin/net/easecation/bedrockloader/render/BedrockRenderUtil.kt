@@ -92,7 +92,7 @@ object BedrockRenderUtil {
     fun bakeModelPartToMesh(modelPart: ModelPart, defaultSprite: Sprite, sprites: Map<String, Sprite>): Mesh {
         val matrixStack = MatrixStack()
         matrixStack.translate(0.5, 0.0, 0.5)
-        matrixStack.multiply(Quaternionf().rotateX(180f * (Math.PI.toFloat() * 2 / 360F)))
+        matrixStack.multiply(Quaternionf().rotateXYZ(180F * (Math.PI.toFloat() * 2 / 360F), 180F * (Math.PI.toFloat() * 2 / 360F), 0F))
         val vertices = MeshBuilderVertexConsumer(defaultSprite, sprites)
         modelPart.render(matrixStack, vertices, 1, 1)
         return vertices.build()
