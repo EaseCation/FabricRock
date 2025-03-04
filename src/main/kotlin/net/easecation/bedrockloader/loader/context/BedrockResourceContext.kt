@@ -9,8 +9,8 @@ import net.minecraft.util.Identifier
 
 class BedrockResourceContext {
 
-    val terrainTexture: MutableMap<String, TerrainTextureDefinition.TextureData> = mutableMapOf()
-    val itemTexture: MutableMap<String, ItemTextureDefinition.TextureData> = mutableMapOf()
+    val terrainTexture: MutableMap<String, TextureDataDefinition> = mutableMapOf()
+    val itemTexture: MutableMap<String, TextureDataDefinition> = mutableMapOf()
     val blocks: MutableMap<Identifier, BlockResourceDefinition.Block> = mutableMapOf()
     val entities: MutableMap<Identifier, EntityResourceDefinition.ClientEntity> = mutableMapOf()
     val geometries: MutableMap<String, GeometryDefinition.Model> = mutableMapOf()
@@ -28,7 +28,8 @@ class BedrockResourceContext {
     }
 
     fun terrainTextureToJava(namespace: String, textureKey: String) : JavaTexturePath? {
-        val texture = terrainTexture[textureKey]?.textures
+        val textures = terrainTexture[textureKey]?.textures
+        val texture = textures?.firstOrNull()?.path
         if (texture == null) {
             BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: $textureKey")
             return null
@@ -40,7 +41,8 @@ class BedrockResourceContext {
     }
 
     fun itemTextureToJava(namespace: String, textureKey: String) : JavaTexturePath? {
-        val texture = itemTexture[textureKey]?.textures
+        val textures = itemTexture[textureKey]?.textures
+        val texture = textures?.firstOrNull()?.path
         if (texture == null) {
             BedrockLoader.logger.warn("[BedrockResourcePackLoader] Item texture not found: $textureKey")
             return null

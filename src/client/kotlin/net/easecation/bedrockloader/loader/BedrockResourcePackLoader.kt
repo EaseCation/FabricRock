@@ -22,6 +22,7 @@ import net.minecraft.client.render.RenderLayer
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactories
 import net.minecraft.client.render.model.json.JsonUnbakedModel
 import net.minecraft.client.render.model.json.ModelTransformation
+import net.minecraft.client.texture.MissingSprite
 import net.minecraft.client.util.SpriteIdentifier
 import net.minecraft.screen.PlayerScreenHandler
 import net.minecraft.util.Identifier
@@ -43,8 +44,10 @@ class BedrockResourcePackLoader(
             BedrockAddonsRegistryClient.geometries[key] = BedrockGeometryModel.Factory(value)
         }
         // Blocks
-        for ((identifier, block) in context.resource.blocks) {
-            val blockComponents = context.behavior.blocks[identifier]?.components
+        for ((identifier, blockBehaviour) in context.behavior.blocks) {
+            val block = context.resource.blocks[identifier]
+            val blockComponents = blockBehaviour.components
+
             // textures
             createBlockTextures(identifier, block, blockComponents)
             // models
@@ -54,7 +57,7 @@ class BedrockResourcePackLoader(
             registerBlockRenderLayer(identifier, blockComponents)
 
             // Block Entity
-            if (block.client_entity != null) {
+            if (block?.client_entity != null) {
                 // models
                 createBlockEntityModel(identifier, block)
                 // renderer
@@ -62,8 +65,9 @@ class BedrockResourcePackLoader(
             }
         }
         // Entity
-        for ((identifier, entity) in context.resource.entities) {
-            val clientEntity = entity.description
+        for ((identifier, entityBehaviour) in context.behavior.entities) {
+            val clientEntity = context.resource.entities[identifier]?.description
+
             // textures
             createEntityTextures(identifier, clientEntity)
             createSpawnEggTextures(identifier, clientEntity)
@@ -156,12 +160,12 @@ class BedrockResourcePackLoader(
      */
     private fun createBlockTextures(
         identifier: Identifier,
-        block: BlockResourceDefinition.Block,
+        block: BlockResourceDefinition.Block?,
         blockComponents: BlockComponents?
     ) {
-        block.client_entity?.block_icon?.let { createBlockTexture(identifier, it) }
-        block.textures?.let { createTextures(identifier, it) }
-        block.carried_textures?.let { createTextures(identifier, it) }
+        block?.client_entity?.block_icon?.let { createBlockTexture(identifier, it) }
+        block?.textures?.let { createTextures(identifier, it) }
+        block?.carried_textures?.let { createTextures(identifier, it) }
         blockComponents?.minecraftMaterialInstances?.values?.forEach { instance ->
             instance.texture?.let { createBlockTexture(identifier, it) }
         }
@@ -199,7 +203,8 @@ class BedrockResourcePackLoader(
         textureKey: String
     ) {
         val namespaceDir = this.namespaceDir(identifier.namespace)
-        val texture = context.resource.terrainTexture[textureKey]?.textures
+        val textures = context.resource.terrainTexture[textureKey]?.textures
+        val texture = textures?.firstOrNull()?.path
         if (texture == null) {
             BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: $textureKey")
             return
@@ -221,7 +226,7 @@ class BedrockResourcePackLoader(
      */
     private fun createBlockModel(
         identifier: Identifier,
-        block: BlockResourceDefinition.Block,
+        block: BlockResourceDefinition.Block?,
         blockComponents: BlockComponents?
     ) {
         val geometry = blockComponents?.minecraftGeometry
@@ -231,7 +236,7 @@ class BedrockResourcePackLoader(
             val model = createGeometryModel(identifier, geometry, materialInstances) ?: return
             BedrockAddonsRegistryClient.blockModels[identifier] = model
         } else {
-            val textures = block.textures
+            val textures = block?.textures
             val model = createCubeModel(identifier, textures, materialInstances)
             BedrockAddonsRegistryClient.blockModels[identifier] = model
         }
@@ -242,10 +247,10 @@ class BedrockResourcePackLoader(
      */
     private fun createBlockItemModel(
         identifier: Identifier,
-        block: BlockResourceDefinition.Block,
+        block: BlockResourceDefinition.Block?,
         blockComponents: BlockComponents?
     ) {
-        val bedrockClientEntity = block.client_entity
+        val bedrockClientEntity = block?.client_entity
         if (bedrockClientEntity != null) {
             val blockIcon = bedrockClientEntity.block_icon ?: return
             val textureMap = mutableMapOf<String, Either<SpriteIdentifier, String>>()
@@ -261,7 +266,7 @@ class BedrockResourcePackLoader(
                 val model = createGeometryModel(identifier, geometry, materialInstances) ?: return
                 BedrockAddonsRegistryClient.itemModels[identifier] = model
             } else {
-                val textures = block.carried_textures ?: block.textures
+                val textures = block?.carried_textures ?: block?.textures
                 val model = createCubeModel(identifier, textures, materialInstances)
                 BedrockAddonsRegistryClient.itemModels[identifier] = model
             }
@@ -330,14 +335,23 @@ class BedrockResourcePackLoader(
             is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
         }
         val geometryFactory = BedrockAddonsRegistryClient.geometries[geometryIdentifier]
-        val materials = materialInstances?.mapNotNull { (key, material) ->
-            val textureKey = material.texture ?: return@mapNotNull null
-            val texture = context.resource.terrainTexture[textureKey]?.textures ?: return@mapNotNull null
+        val materials = materialInstances?.mapValues { (_, material) ->
+            val textureKey = material.texture ?: return@mapValues null
+            val textures = context.resource.terrainTexture[textureKey]?.textures ?: return@mapValues null
+            val texture = textures.firstOrNull()?.path ?: return@mapValues null
             val spriteId = SpriteIdentifier(
-                PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, Identifier(identifier.namespace, "block/${texture.substringAfterLast("/")}")
+                PlayerScreenHandler.BLOCK_ATLAS_TEXTURE,
+                Identifier(identifier.namespace, "block/${texture.substringAfterLast("/")}")
             )
-            return@mapNotNull key to BedrockMaterialInstance(spriteId)
-        }?.toMap() ?: emptyMap()
+            return@mapValues BedrockMaterialInstance(spriteId)
+        }?.mapValues {
+            it.value ?: BedrockMaterialInstance(
+                SpriteIdentifier(
+                    PlayerScreenHandler.BLOCK_ATLAS_TEXTURE,
+                    MissingSprite.getMissingSpriteId()
+                )
+            )
+        } ?: emptyMap()
         return geometryFactory?.create(materials)
     }
 
@@ -357,12 +371,13 @@ class BedrockResourcePackLoader(
 
     private fun createSpawnEggTextures(
         identifier: Identifier,
-        clientEntity: EntityResourceDefinition.ClientEntityDescription
+        clientEntity: EntityResourceDefinition.ClientEntityDescription?
     ) {
         val namespaceDir = this.namespaceDir(identifier.namespace)
-        val spawnEggTexture = clientEntity.spawn_egg?.texture
+        val spawnEggTexture = clientEntity?.spawn_egg?.texture
         if (spawnEggTexture != null) {
-            val texture = context.resource.itemTexture[spawnEggTexture]?.textures
+            val textures = context.resource.itemTexture[spawnEggTexture]?.textures
+            val texture = textures?.firstOrNull()?.path
             if (texture == null) {
                 BedrockLoader.logger.warn("[BedrockResourcePackLoader] Entity spawn egg texture not found: $spawnEggTexture")
                 return
@@ -385,12 +400,12 @@ class BedrockResourcePackLoader(
      */
     private fun createSpawnEggModel(
         identifier: Identifier,
-        clientEntity: EntityResourceDefinition.ClientEntityDescription
+        clientEntity: EntityResourceDefinition.ClientEntityDescription?
     ) {
         context.behavior.entities[identifier]?.description?.is_spawnable?.let {
             val entityName = identifier.path
             val itemIdentifier = Identifier(identifier.namespace, "${entityName}_spawn_egg")
-            val spawnEggTexture = clientEntity.spawn_egg?.texture
+            val spawnEggTexture = clientEntity?.spawn_egg?.texture
             if (spawnEggTexture != null) {
                 val textureMap = mutableMapOf<String, Either<SpriteIdentifier, String>>()
                 context.resource.itemTextureToJava(itemIdentifier.namespace, spawnEggTexture)?.let {
@@ -408,7 +423,7 @@ class BedrockResourcePackLoader(
      */
     private fun createEntityModel(
         identifier: Identifier,
-        clientEntity: EntityResourceDefinition.ClientEntityDescription
+        clientEntity: EntityResourceDefinition.ClientEntityDescription?
     ) {
         val model = createClientEntityModel(identifier, clientEntity) ?: return
         BedrockAddonsRegistryClient.entityModel[identifier] = model
@@ -419,9 +434,9 @@ class BedrockResourcePackLoader(
      */
     private fun createClientEntityModel(
         identifier: Identifier,
-        clientEntity: EntityResourceDefinition.ClientEntityDescription
+        clientEntity: EntityResourceDefinition.ClientEntityDescription?
     ): BedrockGeometryModel? {
-        val controllers = clientEntity.render_controllers ?: return null
+        val controllers = clientEntity?.render_controllers ?: return null
         if (controllers.isEmpty()) return null
         if (controllers.size > 1) {
             BedrockLoader.logger.warn("[BedrockResourcePackLoader] Entity {} has more than one render controller, only the first one will be used.", clientEntity.identifier)
@@ -459,9 +474,12 @@ class BedrockResourcePackLoader(
     /**
      * 从ClientEntity读取需要的贴图，然后将对应的贴图文件保存到java材质包中（对应命名空间）
      */
-    private fun createEntityTextures(identifier: Identifier, clientEntity: EntityResourceDefinition.ClientEntityDescription) {
+    private fun createEntityTextures(
+        identifier: Identifier,
+        clientEntity: EntityResourceDefinition.ClientEntityDescription?
+    ) {
         val namespaceDir = this.namespaceDir(identifier.namespace)
-        clientEntity.textures?.forEach { (_, texture) ->
+        clientEntity?.textures?.forEach { (_, texture) ->
             val bedrockTexture = context.resource.textureImages[texture]
             if (bedrockTexture == null) {
                 BedrockLoader.logger.warn("[BedrockResourcePackLoader] Entity texture not found: $texture")

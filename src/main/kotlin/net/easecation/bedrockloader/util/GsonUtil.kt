@@ -6,6 +6,7 @@ import net.easecation.bedrockloader.bedrock.block.state.IBlockState
 import net.easecation.bedrockloader.bedrock.pack.SemVersion
 import net.easecation.bedrockloader.bedrock.definition.BlockResourceDefinition
 import net.easecation.bedrockloader.bedrock.definition.GeometryDefinition
+import net.easecation.bedrockloader.bedrock.definition.TextureDataDefinition
 import net.easecation.bedrockloader.bedrock.entity.components.ComponentRideable
 import net.minecraft.util.Identifier
 import java.lang.reflect.Type
@@ -22,6 +23,7 @@ object GsonUtil {
             // file
             .registerTypeAdapter(BlockResourceDefinition::class.java, BlockResourceDefinition.Deserializer())
             .registerTypeAdapter(BlockResourceDefinition.Textures::class.java, BlockResourceDefinition.Textures.Deserializer())
+            .registerTypeAdapter(TextureDataDefinition::class.java, TextureDataDefinition.Deserializer())
             // block state
             .registerTypeAdapter(IBlockState::class.java, IBlockState.Deserializer())
             // block component

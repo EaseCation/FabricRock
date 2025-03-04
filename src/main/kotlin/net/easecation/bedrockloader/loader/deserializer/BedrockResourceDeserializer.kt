@@ -5,6 +5,7 @@ import net.easecation.bedrockloader.bedrock.data.TextureImage
 import net.easecation.bedrockloader.bedrock.definition.*
 import net.easecation.bedrockloader.loader.context.BedrockResourceContext
 import net.easecation.bedrockloader.util.GsonUtil
+import net.easecation.bedrockloader.util.TargaReader
 import java.io.InputStreamReader
 import java.util.zip.ZipFile
 import javax.imageio.ImageIO
@@ -41,7 +42,11 @@ object BedrockResourceDeserializer : PackDeserializer<BedrockResourceContext> {
                     try {
                         val ext = name.substring(name.lastIndexOf('.') + 1)
                         val withoutExt = name.substring(0, name.lastIndexOf('.'))
-                        context.textureImages[withoutExt] = TextureImage(ImageIO.read(zip.getInputStream(entry)), ext)
+                        val image = when(ext.lowercase()) {
+                            "tga" -> TargaReader.read(zip.getInputStream(entry))
+                            else -> ImageIO.read(zip.getInputStream(entry))
+                        }
+                        context.textureImages[withoutExt] = TextureImage(image, ext)
                     } catch (e: Exception) {
                         BedrockLoader.logger.error("Error parsing texture: $name", e)
                     }
