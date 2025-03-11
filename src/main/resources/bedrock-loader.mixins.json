@@ -3,7 +3,7 @@
 	"package": "net.easecation.bedrockloader.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
-		"VanillaResourcePackProviderMixin"
+		"ResourcePackManagerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
