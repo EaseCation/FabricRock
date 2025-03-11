@@ -27,7 +27,7 @@ class EntityDataDriven(
                     ?: throw IllegalStateException("[EntityDataDriven] Entity $identifier has no components")
                 EntityDataDriven(identifier, components, type, world)
             }, SpawnGroup.CREATURE).apply {
-                dimensions(1f, 1f)
+                setDimensions(1f, 1f)
             }.build()
         }
         fun buildEntityAttributes(components: EntityComponents): DefaultAttributeContainer.Builder {

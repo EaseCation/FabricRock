@@ -7,7 +7,6 @@ import net.minecraft.resource.DirectoryResourcePack.DirectoryBackedFactory
 import net.minecraft.resource.ZipResourcePack.ZipBackedFactory
 import net.minecraft.text.Text
 import java.io.File
-import java.util.*
 import java.util.function.Consumer
 
 class BedrockLoaderResourcePackProvider : ResourcePackProvider {
@@ -19,17 +18,14 @@ class BedrockLoaderResourcePackProvider : ResourcePackProvider {
             packsFolder.mkdir()
         }
 
-        val metadata = ResourcePackInfo(
+        ResourcePackProfile.create(
             "bedrock-loader-resource",
             Text.translatable("pack.name.bedrock-loader"),
-            ModResourcePackCreator.RESOURCE_PACK_SOURCE,
-            Optional.empty()
-        )
-        ResourcePackProfile.create(
-            metadata,
-            if (packsFolder.isDirectory) DirectoryBackedFactory(packsFolder.toPath()) else ZipBackedFactory(packsFolder),
+            true,
+            if (packsFolder.isDirectory) DirectoryBackedFactory(packsFolder.toPath(), false) else ZipBackedFactory(packsFolder, false),
             ResourceType.CLIENT_RESOURCES,
-            ResourcePackPosition(true, ResourcePackProfile.InsertionPosition.TOP, false)
+            ResourcePackProfile.InsertionPosition.TOP,
+            ModResourcePackCreator.RESOURCE_PACK_SOURCE
         )?.let { consumer.accept(it) }
     }
 }

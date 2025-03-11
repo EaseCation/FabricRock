@@ -237,7 +237,7 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
             val vector3f = Vector3f()
 
             for (quad in this.sides) {
-                val vector3f2 = entry.transformNormal(quad!!.direction, vector3f)
+                val vector3f2 = entry.normalMatrix.transform(quad!!.direction, vector3f)
                 val f = vector3f2.x()
                 val g = vector3f2.y()
                 val h = vector3f2.z()

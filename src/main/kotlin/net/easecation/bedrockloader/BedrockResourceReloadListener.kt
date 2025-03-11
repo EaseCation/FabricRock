@@ -21,7 +21,7 @@ class BedrockResourceReloadListener : SimpleSynchronousResourceReloadListener {
         // 打印manager的class名称
         BedrockLoader.logger.info("Resource manager class: ${manager.javaClass.name}")
         manager.streamResourcePacks().forEach { pack ->
-            BedrockLoader.logger.info("Found resource pack: ${pack.id}, class: ${pack.javaClass.name}")
+            BedrockLoader.logger.info("Found resource pack: ${pack.name}, class: ${pack.javaClass.name}")
         }
         manager.getResource(Identifier("bedrock-loader", "textures/block/test_block.png")).ifPresent {
             resource -> BedrockLoader.logger.info("Found resource: $resource")
