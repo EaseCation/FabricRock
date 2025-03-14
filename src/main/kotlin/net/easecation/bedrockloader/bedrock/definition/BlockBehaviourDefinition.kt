@@ -3,6 +3,7 @@ package net.easecation.bedrockloader.bedrock.definition
 import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 import net.easecation.bedrockloader.bedrock.block.component.BlockComponents
+import net.easecation.bedrockloader.bedrock.block.permutation.BlockPermutation
 import net.easecation.bedrockloader.bedrock.block.state.IBlockState
 import net.easecation.bedrockloader.bedrock.block.traits.BlockTraits
 import net.minecraft.util.Identifier
@@ -13,10 +14,11 @@ data class BlockBehaviourDefinition(
 ) {
 
     data class BlockBehaviour(
-            val description: Description,
-            val components: BlockComponents,
-            val component_groups: Map<String, JsonElement>,
-            val events: Map<String, JsonElement>
+        val description: Description,
+        val components: BlockComponents,
+        val component_groups: Map<String, JsonElement>,
+        val events: Map<String, JsonElement>?,
+        val permutations: List<BlockPermutation>?
     )
 
     data class Description(
@@ -27,8 +29,8 @@ data class BlockBehaviourDefinition(
     )
 
     data class MenuCategory(
-            val category: String?,
-            val group: String?,
-            val is_hidden_in_commands: Boolean?
+        val category: String?,
+        val group: String?,
+        val is_hidden_in_commands: Boolean?
     )
 }
