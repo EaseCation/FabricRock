@@ -10,18 +10,19 @@ import net.minecraft.client.render.VertexConsumer
 import net.minecraft.client.util.math.MatrixStack
 import net.minecraft.util.math.Direction
 import org.joml.Quaternionf
+import org.joml.Vector3d
 import org.joml.Vector3f
 import java.util.*
 import java.util.stream.Stream
 
 @Environment(value = EnvType.CLIENT)
 class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<String, ModelPart>) {
-    var pivotX: Float = 0f
-    var pivotY: Float = 0f
-    var pivotZ: Float = 0f
-    var pitch: Float = 0f
-    var yaw: Float = 0f
-    var roll: Float = 0f
+    var pivotX: Double = 0.0
+    var pivotY: Double = 0.0
+    var pivotZ: Double = 0.0
+    var pitch: Double = 0.0
+    var yaw: Double = 0.0
+    var roll: Double = 0.0
     var detachPivot: Boolean = false
     var visible: Boolean = true
 
@@ -60,13 +61,13 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
         return modelPart
     }
 
-    fun setPivot(x: Float, y: Float, z: Float) {
+    fun setPivot(x: Double, y: Double, z: Double) {
         this.pivotX = x
         this.pivotY = y
         this.pivotZ = z
     }
 
-    fun setAngles(pitch: Float, yaw: Float, roll: Float) {
+    fun setAngles(pitch: Double, yaw: Double, roll: Double) {
         this.pitch = pitch
         this.yaw = yaw
         this.roll = roll
@@ -110,11 +111,16 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
 
     fun rotate(matrices: MatrixStack) {
         if (detachPivot) {
-            matrices.multiply(Quaternionf().rotationZYX(this.roll, this.yaw, this.pitch), this.pivotX / 16.0f, this.pivotY / 16.0f, this.pivotZ / 16.0f)
+            matrices.multiply(
+                Quaternionf().rotationZYX(this.roll.toFloat(), this.yaw.toFloat(), this.pitch.toFloat()),
+                (this.pivotX / 16.0f).toFloat(),
+                (this.pivotY / 16.0f).toFloat(),
+                (this.pivotZ / 16.0f).toFloat()
+            )
         } else {
-            matrices.translate((this.pivotX / 16.0f).toDouble(), (this.pivotY / 16.0f).toDouble(), (this.pivotZ / 16.0f).toDouble())
-            if (this.pitch != 0.0f || (this.yaw != 0.0f) || (this.roll != 0.0f)) {
-                matrices.multiply(Quaternionf().rotationZYX(this.roll, this.yaw, this.pitch))
+            matrices.translate(this.pivotX / 16.0f, this.pivotY / 16.0f, this.pivotZ / 16.0f)
+            if (this.pitch != 0.0 || (this.yaw != 0.0) || (this.roll != 0.0)) {
+                matrices.multiply(Quaternionf().rotationZYX(this.roll.toFloat(), this.yaw.toFloat(), this.pitch.toFloat()))
             }
         }
     }
@@ -159,14 +165,14 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
     )
 
     @Environment(value = EnvType.CLIENT)
-    class Cuboid(u: Int, v: Int, faceUV: FaceUV?, x: Float, y: Float, z: Float, sizeX: Float, sizeY: Float, sizeZ: Float, extraX: Float, extraY: Float, extraZ: Float, mirror: Boolean, textureWidth: Float, textureHeight: Float) {
+    class Cuboid(u: Int, v: Int, faceUV: FaceUV?, x: Double, y: Double, z: Double, sizeX: Double, sizeY: Double, sizeZ: Double, extraX: Double, extraY: Double, extraZ: Double, mirror: Boolean, textureWidth: Double, textureHeight: Double) {
         private val sides: Array<Quad?>
-        val minX: Float
-        val minY: Float
-        val minZ: Float
-        val maxX: Float
-        val maxY: Float
-        val maxZ: Float
+        val minX: Double
+        val minY: Double
+        val minZ: Double
+        val maxX: Double
+        val maxY: Double
+        val maxZ: Double
 
         init {
             this.minX = x - sizeX / 2
@@ -187,22 +193,22 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
                 adjustedMaxX = adjustedMinX
                 adjustedMinX = tempX
             }
-            val vertexBottomNW = Vertex(adjustedMinX, adjustedMinY, adjustedMinZ, 0.0f, 0.0f)
-            val vertexBottomNE = Vertex(adjustedMaxX, adjustedMinY, adjustedMinZ, 0.0f, 8.0f)
-            val vertexTopNE = Vertex(adjustedMaxX, adjustedMaxY, adjustedMinZ, 8.0f, 8.0f)
-            val vertexTopNW = Vertex(adjustedMinX, adjustedMaxY, adjustedMinZ, 8.0f, 0.0f)
-            val vertexBottomSW = Vertex(adjustedMinX, adjustedMinY, adjustedMaxZ, 0.0f, 0.0f)
-            val vertexBottomSE = Vertex(adjustedMaxX, adjustedMinY, adjustedMaxZ, 0.0f, 8.0f)
-            val vertexTopSE = Vertex(adjustedMaxX, adjustedMaxY, adjustedMaxZ, 8.0f, 8.0f)
-            val vertexTopSW = Vertex(adjustedMinX, adjustedMaxY, adjustedMaxZ, 8.0f, 0.0f)
+            val vertexBottomNW = Vertex(adjustedMinX, adjustedMinY, adjustedMinZ, 0.0, 0.0)
+            val vertexBottomNE = Vertex(adjustedMaxX, adjustedMinY, adjustedMinZ, 0.0, 8.0)
+            val vertexTopNE = Vertex(adjustedMaxX, adjustedMaxY, adjustedMinZ, 8.0, 8.0)
+            val vertexTopNW = Vertex(adjustedMinX, adjustedMaxY, adjustedMinZ, 8.0, 0.0)
+            val vertexBottomSW = Vertex(adjustedMinX, adjustedMinY, adjustedMaxZ, 0.0, 0.0)
+            val vertexBottomSE = Vertex(adjustedMaxX, adjustedMinY, adjustedMaxZ, 0.0, 8.0)
+            val vertexTopSE = Vertex(adjustedMaxX, adjustedMaxY, adjustedMaxZ, 8.0, 8.0)
+            val vertexTopSW = Vertex(adjustedMinX, adjustedMaxY, adjustedMaxZ, 8.0, 0.0)
 
-            val textureOriginU = u.toFloat()
+            val textureOriginU = u.toDouble()
             val textureEndUZ = textureOriginU + sizeZ
             val textureEndUX = textureOriginU + sizeZ + sizeX
             val textureDoubleEndUX = textureOriginU + sizeZ + sizeX + sizeX
             val textureWrapU = textureOriginU + sizeZ + sizeX + sizeZ
             val textureFullWrapU = textureOriginU + sizeZ + sizeX + sizeZ + sizeX
-            val textureOriginV = v.toFloat()
+            val textureOriginV = v.toDouble()
             val textureEndVZ = textureOriginV + sizeZ
             val textureEndVY = textureOriginV + sizeZ + sizeY
 
@@ -214,12 +220,12 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
                 sides[0] = Quad(arrayOf(vertexBottomSE, vertexBottomNE, vertexTopNE, vertexTopSE), null, textureEndUX, textureEndVZ, textureWrapU, textureEndVY, textureWidth, textureHeight, mirror, Direction.EAST)
                 sides[5] = Quad(arrayOf(vertexBottomSW, vertexBottomSE, vertexTopSE, vertexTopSW), null, textureWrapU, textureEndVZ, textureFullWrapU, textureEndVY, textureWidth, textureHeight, mirror, Direction.SOUTH)
             } else {
-                sides[2] = Quad(arrayOf(vertexBottomSE, vertexBottomSW, vertexBottomNW, vertexBottomNE), faceUV.down.material, faceUV.down.uv.first.toFloat(), faceUV.down.uv.second.toFloat(), faceUV.down.uv.first.toFloat() + faceUV.down.uvSize.first.toFloat(), faceUV.down.uv.second.toFloat() + faceUV.down.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.DOWN)
-                sides[3] = Quad(arrayOf(vertexTopNE, vertexTopNW, vertexTopSW, vertexTopSE), faceUV.up.material, faceUV.up.uv.first.toFloat(), faceUV.up.uv.second.toFloat(), faceUV.up.uv.first.toFloat() + faceUV.up.uvSize.first.toFloat(), faceUV.up.uv.second.toFloat() + faceUV.up.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.UP)
-                sides[1] = Quad(arrayOf(vertexBottomNW, vertexBottomSW, vertexTopSW, vertexTopNW), faceUV.west.material, faceUV.west.uv.first.toFloat(), faceUV.west.uv.second.toFloat(), faceUV.west.uv.first.toFloat() + faceUV.west.uvSize.first.toFloat(), faceUV.west.uv.second.toFloat() + faceUV.west.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.WEST)
-                sides[4] = Quad(arrayOf(vertexBottomNE, vertexBottomNW, vertexTopNW, vertexTopNE), faceUV.north.material, faceUV.north.uv.first.toFloat(), faceUV.north.uv.second.toFloat(), faceUV.north.uv.first.toFloat() + faceUV.north.uvSize.first.toFloat(), faceUV.north.uv.second.toFloat() + faceUV.north.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.NORTH)
-                sides[0] = Quad(arrayOf(vertexBottomSE, vertexBottomNE, vertexTopNE, vertexTopSE), faceUV.east.material, faceUV.east.uv.first.toFloat(), faceUV.east.uv.second.toFloat(), faceUV.east.uv.first.toFloat() + faceUV.east.uvSize.first.toFloat(), faceUV.east.uv.second.toFloat() + faceUV.east.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.EAST)
-                sides[5] = Quad(arrayOf(vertexBottomSW, vertexBottomSE, vertexTopSE, vertexTopSW), faceUV.south.material, faceUV.south.uv.first.toFloat(), faceUV.south.uv.second.toFloat(), faceUV.south.uv.first.toFloat() + faceUV.south.uvSize.first.toFloat(), faceUV.south.uv.second.toFloat() + faceUV.south.uvSize.second.toFloat(), textureWidth, textureHeight, mirror, Direction.SOUTH)
+                sides[2] = Quad(arrayOf(vertexBottomSE, vertexBottomSW, vertexBottomNW, vertexBottomNE), faceUV.down.material, faceUV.down.uv.first.toDouble(), faceUV.down.uv.second.toDouble(), faceUV.down.uv.first.toDouble() + faceUV.down.uvSize.first.toDouble(), faceUV.down.uv.second.toDouble() + faceUV.down.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.DOWN)
+                sides[3] = Quad(arrayOf(vertexTopNE, vertexTopNW, vertexTopSW, vertexTopSE), faceUV.up.material, faceUV.up.uv.first.toDouble(), faceUV.up.uv.second.toDouble(), faceUV.up.uv.first.toDouble() + faceUV.up.uvSize.first.toDouble(), faceUV.up.uv.second.toDouble() + faceUV.up.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.UP)
+                sides[1] = Quad(arrayOf(vertexBottomNW, vertexBottomSW, vertexTopSW, vertexTopNW), faceUV.west.material, faceUV.west.uv.first.toDouble(), faceUV.west.uv.second.toDouble(), faceUV.west.uv.first.toDouble() + faceUV.west.uvSize.first.toDouble(), faceUV.west.uv.second.toDouble() + faceUV.west.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.WEST)
+                sides[4] = Quad(arrayOf(vertexBottomNE, vertexBottomNW, vertexTopNW, vertexTopNE), faceUV.north.material, faceUV.north.uv.first.toDouble(), faceUV.north.uv.second.toDouble(), faceUV.north.uv.first.toDouble() + faceUV.north.uvSize.first.toDouble(), faceUV.north.uv.second.toDouble() + faceUV.north.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.NORTH)
+                sides[0] = Quad(arrayOf(vertexBottomSE, vertexBottomNE, vertexTopNE, vertexTopSE), faceUV.east.material, faceUV.east.uv.first.toDouble(), faceUV.east.uv.second.toDouble(), faceUV.east.uv.first.toDouble() + faceUV.east.uvSize.first.toDouble(), faceUV.east.uv.second.toDouble() + faceUV.east.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.EAST)
+                sides[5] = Quad(arrayOf(vertexBottomSW, vertexBottomSE, vertexTopSE, vertexTopSW), faceUV.south.material, faceUV.south.uv.first.toDouble(), faceUV.south.uv.second.toDouble(), faceUV.south.uv.first.toDouble() + faceUV.south.uvSize.first.toDouble(), faceUV.south.uv.second.toDouble() + faceUV.south.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.SOUTH)
             }
         }
 
@@ -248,24 +254,24 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
                     val i = vertex.pos.x() / 16.0f
                     val j = vertex.pos.y() / 16.0f
                     val k = vertex.pos.z() / 16.0f
-                    val vector3f3 = matrix4f.transformPosition(i, j, k, vector3f)
-                    vertexConsumer.vertex(vector3f3.x(), vector3f3.y(), vector3f3.z(), red, green, blue, alpha, vertex.u, vertex.v, overlay, light, f, g, h)
+                    val vector3f3 = matrix4f.transformPosition(i.toFloat(), j.toFloat(), k.toFloat(), vector3f)
+                    vertexConsumer.vertex(vector3f3.x(), vector3f3.y(), vector3f3.z(), red, green, blue, alpha, vertex.u.toFloat(), vertex.v.toFloat(), overlay, light, f, g, h)
                 }
             }
         }
     }
 
     @Environment(value = EnvType.CLIENT)
-    internal class Vertex(val pos: Vector3f, val u: Float, val v: Float) {
-        constructor(x: Float, y: Float, z: Float, u: Float, v: Float) : this(Vector3f(x, y, z), u, v)
+    internal class Vertex(val pos: Vector3d, val u: Double, val v: Double) {
+        constructor(x: Double, y: Double, z: Double, u: Double, v: Double) : this(Vector3d(x, y, z), u, v)
 
-        fun remap(u: Float, v: Float): Vertex {
+        fun remap(u: Double, v: Double): Vertex {
             return Vertex(this.pos, u, v)
         }
     }
 
     @Environment(value = EnvType.CLIENT)
-    internal class Quad(val vertices: Array<Vertex>, val material: String?, u1: Float, v1: Float, u2: Float, v2: Float, squishU: Float, squishV: Float, flip: Boolean, direction: Direction) {
+    internal class Quad(val vertices: Array<Vertex>, val material: String?, u1: Double, v1: Double, u2: Double, v2: Double, squishU: Double, squishV: Double, flip: Boolean, direction: Direction) {
         val direction: Vector3f
 
         init {

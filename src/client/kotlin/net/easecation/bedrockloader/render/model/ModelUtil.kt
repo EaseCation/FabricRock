@@ -8,13 +8,13 @@ import net.fabricmc.api.Environment
 
 @Environment(value = EnvType.CLIENT)
 object ModelUtil {
-    fun interpolateAngle(angle1: Float, angle2: Float, progress: Float): Float {
+    fun interpolateAngle(angle1: Double, angle2: Double, progress: Double): Double {
         var f = angle2 - angle1
-        while (f < (-Math.PI).toFloat()) {
-            f += Math.PI.toFloat() * 2
+        while (f < (-Math.PI)) {
+            f += Math.PI * 2
         }
-        while (f >= Math.PI.toFloat()) {
-            f -= Math.PI.toFloat() * 2
+        while (f >= Math.PI) {
+            f -= Math.PI * 2
         }
         return angle1 + progress * f
     }

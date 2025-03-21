@@ -22,35 +22,35 @@ data class GeometryDefinition(
             val identifier: String,
             val texture_width: Int?,
             val texture_height: Int?,
-            val visible_bounds_offset: List<Float>?,
-            val visible_bounds_width: Float?,
-            val visible_bounds_height: Float?
+            val visible_bounds_offset: List<Double>?,
+            val visible_bounds_width: Double?,
+            val visible_bounds_height: Double?
     )
 
     data class Bone(
             val binding: String?,
             val cubes: List<Cube>?,
             val debug: Boolean?,
-            val inflate: Float?,
+            val inflate: Double?,
             val locators: Map<String, Locator>?,
             val mirror: Boolean?,
             val name: String,
             val parent: String?,
-            val pivot: List<Float>?,
+            val pivot: List<Double>?,
             val poly_mesh: PolyMesh?,
             val render_group_id: Int?,
-            val rotation: List<Float>?,
+            val rotation: List<Double>?,
             val texture_meshes: List<TextureMeshes>?
     )
 
     data class Cube(
-            val inflate: Float?,
+            val inflate: Double?,
             val mirror: Boolean?,
-            val origin: List<Float>?,
-            val pivot: List<Float>?,
+            val origin: List<Double>?,
+            val pivot: List<Double>?,
             val reset: Boolean?,
-            val rotation: List<Float>?,
-            val size: List<Float>?,
+            val rotation: List<Double>?,
+            val size: List<Double>?,
             val uv: Uv?
     )
 
@@ -95,12 +95,12 @@ data class GeometryDefinition(
 
     sealed class Locator {
         data class LocatorSimple(
-            val offset: List<Float>?
+            val offset: List<Double>?
         ) : Locator()
 
         data class LocatorFull(
-            val offset: List<Float>?,
-            val rotation: List<Float>?,
+            val offset: List<Double>?,
+            val rotation: List<Double>?,
             val ignore_inherited_scale: Boolean?
         ) : Locator()
 
@@ -109,7 +109,7 @@ data class GeometryDefinition(
                 if (json.isJsonObject) {
                     return context.deserialize(json, LocatorFull::class.java)
                 } else {
-                    return LocatorSimple(json.asJsonArray.map { it.asFloat })
+                    return LocatorSimple(json.asJsonArray.map { it.asDouble })
                 }
             }
         }
@@ -117,17 +117,17 @@ data class GeometryDefinition(
 
     data class PolyMesh(
             val normalized_uvs: Boolean?,
-            val normals: List<List<Float>>?,
-            val polys: List<List<Float>>?,
-            val positions: List<List<Float>>?,
+            val normals: List<List<Double>>?,
+            val polys: List<List<Double>>?,
+            val positions: List<List<Double>>?,
             val uvs: List<List<Int>>?
     )
 
     data class TextureMeshes(
-            val local_pivot: List<Float>?,
-            val position: List<Float>?,
-            val rotation: List<Float>?,
-            val scale: List<Float>?,
+            val local_pivot: List<Double>?,
+            val position: List<Double>?,
+            val rotation: List<Double>?,
+            val scale: List<Double>?,
             val texture: String
     )
 

@@ -11,19 +11,19 @@ import net.fabricmc.api.Environment
  * its package private static fields are accessed by it.
  */
 @Environment(value = EnvType.CLIENT)
-class Dilation(val radiusX: Float, val radiusY: Float, val radiusZ: Float) {
-    constructor(radius: Float) : this(radius, radius, radius)
+class Dilation(val radiusX: Double, val radiusY: Double, val radiusZ: Double) {
+    constructor(radius: Double) : this(radius, radius, radius)
 
-    fun add(radius: Float): Dilation {
+    fun add(radius: Double): Dilation {
         return Dilation(this.radiusX + radius, this.radiusY + radius, this.radiusZ + radius)
     }
 
-    fun add(radiusX: Float, radiusY: Float, radiusZ: Float): Dilation {
+    fun add(radiusX: Double, radiusY: Double, radiusZ: Double): Dilation {
         return Dilation(this.radiusX + radiusX, this.radiusY + radiusY, this.radiusZ + radiusZ)
     }
 
     companion object {
-        val NONE: Dilation = Dilation(0.0f)
+        val NONE: Dilation = Dilation(0.0)
     }
 }
 

@@ -36,45 +36,45 @@ class ModelPartBuilder {
         return this
     }
 
-    fun cuboid(name: String?, offsetX: Float, offsetY: Float, offsetZ: Float, sizeX: Int, sizeY: Int, sizeZ: Int, extra: Dilation, textureX: Int, textureY: Int): ModelPartBuilder {
+    fun cuboid(name: String?, offsetX: Double, offsetY: Double, offsetZ: Double, sizeX: Int, sizeY: Int, sizeZ: Int, extra: Dilation, textureX: Int, textureY: Int): ModelPartBuilder {
         this.uv(textureX, textureY)
-        cuboidData.add(ModelCuboidData(name, this.textureX.toFloat(), this.textureY.toFloat(), faceUV, offsetX, offsetY, offsetZ, sizeX.toFloat(), sizeY.toFloat(), sizeZ.toFloat(), extra, this.mirror, 1.0f, 1.0f))
+        cuboidData.add(ModelCuboidData(name, this.textureX.toDouble(), this.textureY.toDouble(), faceUV, offsetX, offsetY, offsetZ, sizeX.toDouble(), sizeY.toDouble(), sizeZ.toDouble(), extra, this.mirror, 1.0, 1.0))
         return this
     }
 
-    fun cuboid(name: String?, offsetX: Float, offsetY: Float, offsetZ: Float, sizeX: Int, sizeY: Int, sizeZ: Int, textureX: Int, textureY: Int): ModelPartBuilder {
+    fun cuboid(name: String?, offsetX: Double, offsetY: Double, offsetZ: Double, sizeX: Int, sizeY: Int, sizeZ: Int, textureX: Int, textureY: Int): ModelPartBuilder {
         this.uv(textureX, textureY)
-        cuboidData.add(ModelCuboidData(name, this.textureX.toFloat(), this.textureY.toFloat(), faceUV, offsetX, offsetY, offsetZ, sizeX.toFloat(), sizeY.toFloat(), sizeZ.toFloat(), Dilation.NONE, this.mirror, 1.0f, 1.0f))
+        cuboidData.add(ModelCuboidData(name, this.textureX.toDouble(), this.textureY.toDouble(), faceUV, offsetX, offsetY, offsetZ, sizeX.toDouble(), sizeY.toDouble(), sizeZ.toDouble(), Dilation.NONE, this.mirror, 1.0, 1.0))
         return this
     }
 
-    fun cuboid(offsetX: Float, offsetY: Float, offsetZ: Float, sizeX: Float, sizeY: Float, sizeZ: Float): ModelPartBuilder {
-        cuboidData.add(ModelCuboidData(null, textureX.toFloat(), textureY.toFloat(), faceUV, offsetX, offsetY, offsetZ, sizeX, sizeY, sizeZ, Dilation.NONE, this.mirror, 1.0f, 1.0f))
+    fun cuboid(offsetX: Double, offsetY: Double, offsetZ: Double, sizeX: Double, sizeY: Double, sizeZ: Double): ModelPartBuilder {
+        cuboidData.add(ModelCuboidData(null, textureX.toDouble(), textureY.toDouble(), faceUV, offsetX, offsetY, offsetZ, sizeX, sizeY, sizeZ, Dilation.NONE, this.mirror, 1.0, 1.0))
         return this
     }
 
-    fun cuboid(name: String?, offsetX: Float, offsetY: Float, offsetZ: Float, sizeX: Float, sizeY: Float, sizeZ: Float): ModelPartBuilder {
-        cuboidData.add(ModelCuboidData(name, textureX.toFloat(), textureY.toFloat(), faceUV, offsetX, offsetY, offsetZ, sizeX, sizeY, sizeZ, Dilation.NONE, this.mirror, 1.0f, 1.0f))
+    fun cuboid(name: String?, offsetX: Double, offsetY: Double, offsetZ: Double, sizeX: Double, sizeY: Double, sizeZ: Double): ModelPartBuilder {
+        cuboidData.add(ModelCuboidData(name, textureX.toDouble(), textureY.toDouble(), faceUV, offsetX, offsetY, offsetZ, sizeX, sizeY, sizeZ, Dilation.NONE, this.mirror, 1.0, 1.0))
         return this
     }
 
-    fun cuboid(name: String?, offsetX: Float, offsetY: Float, offsetZ: Float, sizeX: Float, sizeY: Float, sizeZ: Float, extra: Dilation): ModelPartBuilder {
-        cuboidData.add(ModelCuboidData(name, textureX.toFloat(), textureY.toFloat(), faceUV, offsetX, offsetY, offsetZ, sizeX, sizeY, sizeZ, extra, this.mirror, 1.0f, 1.0f))
+    fun cuboid(name: String?, offsetX: Double, offsetY: Double, offsetZ: Double, sizeX: Double, sizeY: Double, sizeZ: Double, extra: Dilation): ModelPartBuilder {
+        cuboidData.add(ModelCuboidData(name, textureX.toDouble(), textureY.toDouble(), faceUV, offsetX, offsetY, offsetZ, sizeX, sizeY, sizeZ, extra, this.mirror, 1.0, 1.0))
         return this
     }
 
-    fun cuboid(offsetX: Float, offsetY: Float, offsetZ: Float, sizeX: Float, sizeY: Float, sizeZ: Float, mirror: Boolean): ModelPartBuilder {
-        cuboidData.add(ModelCuboidData(null, textureX.toFloat(), textureY.toFloat(), faceUV, offsetX, offsetY, offsetZ, sizeX, sizeY, sizeZ, Dilation.NONE, mirror, 1.0f, 1.0f))
+    fun cuboid(offsetX: Double, offsetY: Double, offsetZ: Double, sizeX: Double, sizeY: Double, sizeZ: Double, mirror: Boolean): ModelPartBuilder {
+        cuboidData.add(ModelCuboidData(null, textureX.toDouble(), textureY.toDouble(), faceUV, offsetX, offsetY, offsetZ, sizeX, sizeY, sizeZ, Dilation.NONE, mirror, 1.0, 1.0))
         return this
     }
 
-    fun cuboid(offsetX: Float, offsetY: Float, offsetZ: Float, sizeX: Float, sizeY: Float, sizeZ: Float, extra: Dilation, textureScaleX: Float, textureScaleY: Float): ModelPartBuilder {
-        cuboidData.add(ModelCuboidData(null, textureX.toFloat(), textureY.toFloat(), faceUV, offsetX, offsetY, offsetZ, sizeX, sizeY, sizeZ, extra, this.mirror, textureScaleX, textureScaleY))
+    fun cuboid(offsetX: Double, offsetY: Double, offsetZ: Double, sizeX: Double, sizeY: Double, sizeZ: Double, extra: Dilation, textureScaleX: Double, textureScaleY: Double): ModelPartBuilder {
+        cuboidData.add(ModelCuboidData(null, textureX.toDouble(), textureY.toDouble(), faceUV, offsetX, offsetY, offsetZ, sizeX, sizeY, sizeZ, extra, this.mirror, textureScaleX, textureScaleY))
         return this
     }
 
-    fun cuboid(offsetX: Float, offsetY: Float, offsetZ: Float, sizeX: Float, sizeY: Float, sizeZ: Float, extra: Dilation): ModelPartBuilder {
-        cuboidData.add(ModelCuboidData(null, textureX.toFloat(), textureY.toFloat(), faceUV, offsetX, offsetY, offsetZ, sizeX, sizeY, sizeZ, extra, this.mirror, 1.0f, 1.0f))
+    fun cuboid(offsetX: Double, offsetY: Double, offsetZ: Double, sizeX: Double, sizeY: Double, sizeZ: Double, extra: Dilation): ModelPartBuilder {
+        cuboidData.add(ModelCuboidData(null, textureX.toDouble(), textureY.toDouble(), faceUV, offsetX, offsetY, offsetZ, sizeX, sizeY, sizeZ, extra, this.mirror, 1.0, 1.0))
         return this
     }
 

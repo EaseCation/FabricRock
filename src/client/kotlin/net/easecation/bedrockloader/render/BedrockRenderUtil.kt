@@ -13,12 +13,12 @@ object BedrockRenderUtil {
         var boneCount = 0
         fun addBoneToModelData(bone: GeometryDefinition.Bone, parentPartData: ModelPartData) {
             val pivotTransform = ModelTransform.of(
-                    (bone.pivot?.get(0) ?: 0f),
-                    -(bone.pivot?.get(1) ?: 0f),
-                    (bone.pivot?.get(2) ?: 0f),
-                    (bone.rotation?.get(0) ?: 0f) * (Math.PI.toFloat() * 2 / 360F),
-                    (bone.rotation?.get(1) ?: 0f) * (Math.PI.toFloat() * 2 / 360F),
-                    (bone.rotation?.get(2) ?: 0f) * (Math.PI.toFloat() * 2 / 360F),
+                    (bone.pivot?.get(0) ?: 0.0),
+                    -(bone.pivot?.get(1) ?: 0.0),
+                    (bone.pivot?.get(2) ?: 0.0),
+                    (bone.rotation?.get(0) ?: 0.0) * (Math.PI * 2 / 360.0),
+                    (bone.rotation?.get(1) ?: 0.0) * (Math.PI * 2 / 360.0),
+                    (bone.rotation?.get(2) ?: 0.0) * (Math.PI * 2 / 360.0),
                     detachPivot = true
             )
             val bonePartData = parentPartData.addChild(bone.name, ModelPartBuilder.create(), pivotTransform)
@@ -42,7 +42,7 @@ object BedrockRenderUtil {
                     }
                 }
                 cube.origin?.let {
-                        val size = cube.size ?: listOf(0f, 0f, 0f)
+                        val size = cube.size ?: listOf(0.0, 0.0, 0.0)
                         val offset = listOf(
                             it[0] + size[0] / 2,
                             -it[1] - size[1],
@@ -58,12 +58,12 @@ object BedrockRenderUtil {
                         )
                 }
                 val rotationData = ModelTransform.of(
-                    (cube.pivot?.get(0) ?: 0f),
-                    -(cube.pivot?.get(1) ?: 0f),
-                    (cube.pivot?.get(2) ?: 0f),
-                    (cube.rotation?.get(0) ?: 0f) * (Math.PI.toFloat() * 2 / 360F),
-                    (cube.rotation?.get(1) ?: 0f) * (Math.PI.toFloat() * 2 / 360F),
-                    (cube.rotation?.get(2) ?: 0f) * (Math.PI.toFloat() * 2 / 360F),
+                    (cube.pivot?.get(0) ?: 0.0),
+                    -(cube.pivot?.get(1) ?: 0.0),
+                    (cube.pivot?.get(2) ?: 0.0),
+                    (cube.rotation?.get(0) ?: 0.0) * (Math.PI * 2 / 360.0),
+                    (cube.rotation?.get(1) ?: 0.0) * (Math.PI * 2 / 360.0),
+                    (cube.rotation?.get(2) ?: 0.0) * (Math.PI * 2 / 360.0),
                     detachPivot = true
                 )
                 bonePartData.addChild("cube${boneCount++}", cubeBuilder, rotationData)
@@ -92,7 +92,7 @@ object BedrockRenderUtil {
     fun bakeModelPartToMesh(modelPart: ModelPart, defaultSprite: Sprite, sprites: Map<String, Sprite>): Mesh {
         val matrixStack = MatrixStack()
         matrixStack.translate(0.5, 0.0, 0.5)
-        matrixStack.multiply(Quaternionf().rotateXYZ(180F * (Math.PI.toFloat() * 2 / 360F), 180F * (Math.PI.toFloat() * 2 / 360F), 0F))
+        matrixStack.multiply(Quaternionf().rotateXYZ((180.0 * (Math.PI * 2 / 360.0)).toFloat(), (180.0 * (Math.PI * 2 / 360.0)).toFloat(), 0.0F))
         val vertices = MeshBuilderVertexConsumer(defaultSprite, sprites)
         modelPart.render(matrixStack, vertices, 1, 1)
         return vertices.build()
