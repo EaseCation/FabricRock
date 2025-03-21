@@ -23,6 +23,7 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
     var pitch: Double = 0.0
     var yaw: Double = 0.0
     var roll: Double = 0.0
+    var inflate: Double = 0.0
     var detachPivot: Boolean = false
     var visible: Boolean = true
 
@@ -34,6 +35,7 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
             this.pitch,
             this.yaw,
             this.roll,
+            this.inflate,
             this.detachPivot
         )
         set(rotationData) {
@@ -43,6 +45,7 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
             this.pitch = rotationData.pitch
             this.yaw = rotationData.yaw
             this.roll = rotationData.roll
+            this.inflate = rotationData.inflate
             this.detachPivot = rotationData.detachPivot
         }
 
@@ -53,6 +56,7 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
         this.pivotX = part.pivotX
         this.pivotY = part.pivotY
         this.pivotZ = part.pivotZ
+        this.inflate = part.inflate
         this.detachPivot = part.detachPivot
     }
 
@@ -82,6 +86,8 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
             return
         }
         matrices.push()
+        val scale = (1.0f + (this.inflate / 16.0f)).toFloat()
+        matrices.scale(scale, scale, scale)
         this.rotate(matrices)
         this.renderCuboids(matrices.peek(), vertices, light, overlay, red, green, blue, alpha)
         for (modelPart in children.values) {
@@ -99,6 +105,8 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
             return
         }
         matrices.push()
+        val scale = (1.0f + (this.inflate / 16.0f)).toFloat()
+        matrices.scale(scale, scale, scale)
         this.rotate(matrices)
         val entry = matrices.peek()
         for (i in cuboids.indices) {

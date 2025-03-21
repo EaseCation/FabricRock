@@ -19,6 +19,7 @@ object BedrockRenderUtil {
                     (bone.rotation?.get(0) ?: 0.0) * (Math.PI * 2 / 360.0),
                     (bone.rotation?.get(1) ?: 0.0) * (Math.PI * 2 / 360.0),
                     (bone.rotation?.get(2) ?: 0.0) * (Math.PI * 2 / 360.0),
+                    bone.inflate ?: 0.0,
                     detachPivot = true
             )
             val bonePartData = parentPartData.addChild(bone.name, ModelPartBuilder.create(), pivotTransform)
@@ -64,6 +65,7 @@ object BedrockRenderUtil {
                     (cube.rotation?.get(0) ?: 0.0) * (Math.PI * 2 / 360.0),
                     (cube.rotation?.get(1) ?: 0.0) * (Math.PI * 2 / 360.0),
                     (cube.rotation?.get(2) ?: 0.0) * (Math.PI * 2 / 360.0),
+                    cube.inflate ?: 0.0,
                     detachPivot = true
                 )
                 bonePartData.addChild("cube${boneCount++}", cubeBuilder, rotationData)
