@@ -58,6 +58,8 @@ class BedrockResourcePackLoader(
 
             // Block Entity
             if (block?.client_entity != null) {
+                // textures
+                createBlockEntityTextures(identifier, block)
                 // models
                 createBlockEntityModel(identifier, block)
                 // renderer
@@ -77,6 +79,11 @@ class BedrockResourcePackLoader(
             // renderer
             registerEntityRenderController(identifier)
         }
+    }
+
+    private fun createBlockEntityTextures(identifier: Identifier, block: BlockResourceDefinition.Block) {
+        val clientEntity = block.client_entity?.let { context.resource.entities[it.identifier]?.description } ?: return
+        createEntityTextures(identifier, clientEntity)
     }
 
     private fun createBlockEntityModel(identifier: Identifier, block: BlockResourceDefinition.Block) {

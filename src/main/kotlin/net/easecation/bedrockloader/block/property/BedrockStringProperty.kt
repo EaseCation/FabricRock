@@ -10,7 +10,7 @@ data class BedrockStringProperty(
 ) : Property<String>(bedrockName, String::class.javaObjectType), BedrockProperty<String, BedrockStringProperty> {
     companion object {
         fun of(bedrockName: String, values: Set<String>): BedrockStringProperty {
-            val name = bedrockName.replace(':', '_').lowercase()
+            val name = bedrockName
             return BedrockStringProperty(bedrockName, name, values)
         }
     }
@@ -25,5 +25,5 @@ data class BedrockStringProperty(
 
     override fun parse(name: String): Optional<String> = Optional.ofNullable(values.find { it == name })
 
-    override fun name(value: String): String = value.replace(':', '_').lowercase()
+    override fun name(value: String): String = value
 }

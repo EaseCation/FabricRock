@@ -11,7 +11,7 @@ class BedrockEnumProperty<T>(
 ) : EnumProperty<T>(name, type, values), BedrockProperty<T, BedrockEnumProperty<T>> where T : Enum<T>, T : StringIdentifiable {
     companion object {
         inline fun <reified T> of(bedrockName: String, values: Set<T> = enumValues<T>().toSet()): BedrockEnumProperty<T> where T : Enum<T>, T : StringIdentifiable {
-            val name = bedrockName.replace(':', '_').lowercase()
+            val name = bedrockName
             return BedrockEnumProperty(bedrockName, name, T::class.java, values)
         }
     }

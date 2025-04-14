@@ -10,7 +10,7 @@ class BedrockDirectionProperty(
 ) : DirectionProperty(name, values), BedrockProperty<Direction, BedrockDirectionProperty> {
     companion object {
         fun of(bedrockName: String, values: Set<Direction> = enumValues<Direction>().toSet()): BedrockDirectionProperty {
-            val name = bedrockName.replace(':', '_').lowercase()
+            val name = bedrockName
             return BedrockDirectionProperty(bedrockName, name, values)
         }
     }

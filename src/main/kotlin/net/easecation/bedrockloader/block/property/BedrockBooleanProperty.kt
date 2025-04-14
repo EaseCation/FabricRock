@@ -11,7 +11,7 @@ data class BedrockBooleanProperty(
 ) : Property<Boolean>(bedrockName, Boolean::class.javaObjectType), BedrockProperty<Boolean, BedrockBooleanProperty> {
     companion object {
         fun of(bedrockName: String, values: Set<Boolean>): BedrockBooleanProperty {
-            val name = bedrockName.replace(':', '_').lowercase()
+            val name = bedrockName
             return BedrockBooleanProperty(bedrockName, name, values)
         }
     }

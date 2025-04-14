@@ -10,7 +10,7 @@ data class BedrockIntProperty(
 ) : Property<Int>(bedrockName, Int::class.javaObjectType), BedrockProperty<Int, BedrockIntProperty> {
     companion object {
         fun of(bedrockName: String, values: Set<Int>): BedrockIntProperty {
-            val name = bedrockName.replace(':', '_').lowercase()
+            val name = bedrockName
             return BedrockIntProperty(bedrockName, name, values)
         }
     }
