@@ -38,7 +38,7 @@ data class BlockContext(
         val MINECRAFT_FACING_DIRECTION = BedrockDirectionProperty.of("minecraft:facing_direction")
         // minecraft:placement_position
         val MINECRAFT_BLOCK_FACE = BedrockDirectionProperty.of("minecraft:block_face")
-        val MINECRAFT_VERTICAL_HALF = BedrockEnumProperty.of<BlockHalf>("minecraft_vertical_half")
+        val MINECRAFT_VERTICAL_HALF = BedrockEnumProperty.of<BlockHalf>("minecraft:vertical_half")
 
         fun create(identifier: Identifier, behaviour: BlockBehaviourDefinition.BlockBehaviour): BlockDataDriven {
             val components = behaviour.components
