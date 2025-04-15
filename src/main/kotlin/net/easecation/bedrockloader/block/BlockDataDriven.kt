@@ -5,6 +5,7 @@ import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.bedrock.block.component.BlockComponents
 import net.easecation.bedrockloader.bedrock.block.component.ComponentCollisionBox
 import net.easecation.bedrockloader.bedrock.block.component.ComponentSelectionBox
+import net.easecation.bedrockloader.bedrock.block.component.FaceDirectionalType
 import net.easecation.bedrockloader.bedrock.block.state.StateBoolean
 import net.easecation.bedrockloader.bedrock.block.state.StateInt
 import net.easecation.bedrockloader.bedrock.block.state.StateRange
@@ -39,24 +40,33 @@ data class BlockContext(
         // minecraft:placement_position
         val MINECRAFT_BLOCK_FACE = BedrockDirectionProperty.of("minecraft:block_face")
         val MINECRAFT_VERTICAL_HALF = BedrockEnumProperty.of<BlockHalf>("minecraft:vertical_half")
+        // netease:face_directional
+        val DIRECTION = BedrockIntProperty.of("direction", (0..3).toSet())
+        val FACING_DIRECTION = BedrockIntProperty.of("facing_direction", (0..5).toSet())
 
         fun create(identifier: Identifier, behaviour: BlockBehaviourDefinition.BlockBehaviour): BlockDataDriven {
             val components = behaviour.components
 
             fun calculateProperties(): Map<String, BedrockProperty<*, *>> {
-                val placementDirection = behaviour.description.traits?.minecraftPlacementDirection?.enabled_states?.map { state ->
+                val placementDirection: Map<String, BedrockProperty<*, *>> = behaviour.description.traits?.minecraftPlacementDirection?.enabled_states?.map { state ->
                     when (state) {
                         TraitPlacementDirection.State.MINECRAFT_CARDINAL_DIRECTION -> MINECRAFT_CARDINAL_DIRECTION
                         TraitPlacementDirection.State.MINECRAFT_FACING_DIRECTION -> MINECRAFT_FACING_DIRECTION
                     }
                 }?.associateBy { it.getBedrockName() } ?: emptyMap()
-                val placementPosition = behaviour.description.traits?.minecraftPlacementPosition?.enabled_states?.map { state ->
+                val placementPosition: Map<String, BedrockProperty<*, *>> = behaviour.description.traits?.minecraftPlacementPosition?.enabled_states?.map { state ->
                     when (state) {
                         TraitPlacementPosition.State.MINECRAFT_BLOCK_FACE -> MINECRAFT_BLOCK_FACE
                         TraitPlacementPosition.State.MINECRAFT_VERTICAL_HALF -> MINECRAFT_VERTICAL_HALF
                     }
                 }?.associateBy { it.getBedrockName() } ?: emptyMap()
-                val properties = behaviour.description.states?.mapValues { (key, state) ->
+                val faceDirectional: Map<String, BedrockProperty<*, *>> = behaviour.components.neteaseFaceDirectional?.type?.let { type ->
+                    mapOf(type.name to when (type) {
+                        FaceDirectionalType.direction -> DIRECTION
+                        FaceDirectionalType.facing_direction -> FACING_DIRECTION
+                    })
+                } ?: emptyMap()
+                val properties: Map<String, BedrockProperty<*, *>> = behaviour.description.states?.mapValues { (key, state) ->
                     when (state) {
                         is StateBoolean -> BedrockBooleanProperty.of(key, state.toSet())
                         is StateInt -> BedrockIntProperty.of(key, state.toSet())
@@ -64,7 +74,7 @@ data class BlockContext(
                         is StateRange -> BedrockIntProperty.of(key, (state.values.min..state.values.max).toSet())
                     }
                 } ?: emptyMap()
-                return placementDirection + placementPosition + properties
+                return placementDirection + placementPosition + faceDirectional + properties
             }
 
             fun calculateSettings(): Settings {
