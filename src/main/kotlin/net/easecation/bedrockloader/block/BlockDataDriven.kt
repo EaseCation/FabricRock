@@ -120,6 +120,8 @@ data class BlockContext(
                 .withIfExists(MINECRAFT_FACING_DIRECTION, Direction.DOWN)
                 .withIfExists(MINECRAFT_BLOCK_FACE, Direction.DOWN)
                 .withIfExists(MINECRAFT_VERTICAL_HALF, BlockHalf.BOTTOM)
+                .withIfExists(DIRECTION, 0)
+                .withIfExists(FACING_DIRECTION, 0)
             componentsByState = stateManager.states.associateWith { bakeComponents(it) }
         }
 
@@ -201,6 +203,8 @@ data class BlockContext(
                         else -> BlockHalf.BOTTOM
                     }
                 )
+                .withIfExists(DIRECTION, rotateDirection(ctx.horizontalPlayerFacing, yRotationOffset).horizontal)
+                .withIfExists(FACING_DIRECTION, rotateDirection(ctx.playerLookDirection, yRotationOffset).id)
         }
 
         override fun appendProperties(builder: StateManager.Builder<Block, BlockState>) {
