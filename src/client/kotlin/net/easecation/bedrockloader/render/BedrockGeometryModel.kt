@@ -147,7 +147,6 @@ class BedrockGeometryModel(
     // EntityModel methods
 
     override fun render(matrices: MatrixStack, vertices: VertexConsumer, light: Int, overlay: Int, red: Float, green: Float, blue: Float, alpha: Float) {
-        matrices.translate(0.0, 1.5, 0.0)
         modelPart.render(matrices, vertices, light, overlay, red, green, blue, alpha)
     }
 

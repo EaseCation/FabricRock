@@ -12,6 +12,7 @@ data class BlockComponents(
     @SerializedName("minecraft:light_emission") val minecraftLightEmission: Int?,
     @SerializedName("minecraft:light_dampening") val minecraftLightDampening: Int?,
     @SerializedName("minecraft:destructible_by_mining") val minecraftDestructibleByMining: ComponentDestructibleByMining?,
+    @SerializedName("minecraft:transformation") val minecraftTransformation: ComponentTransformation?,
     @SerializedName("netease:block_entity") val neteaseBlockEntity: ComponentBlockEntity?,
     @SerializedName("netease:face_directional") val neteaseFaceDirectional: ComponentFaceDirectional?,
 ) {
@@ -26,6 +27,7 @@ data class BlockComponents(
             minecraftLightEmission = components.minecraftLightEmission ?: minecraftLightEmission,
             minecraftLightDampening = components.minecraftLightDampening ?: minecraftLightDampening,
             minecraftDestructibleByMining = components.minecraftDestructibleByMining ?: minecraftDestructibleByMining,
+            minecraftTransformation = components.minecraftTransformation ?: minecraftTransformation,
             neteaseBlockEntity = components.neteaseBlockEntity ?: neteaseBlockEntity,
             neteaseFaceDirectional = components.neteaseFaceDirectional ?: neteaseFaceDirectional,
         )

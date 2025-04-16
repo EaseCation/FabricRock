@@ -23,10 +23,14 @@ import net.minecraft.item.ItemPlacementContext
 import net.minecraft.state.StateManager
 import net.minecraft.util.Identifier
 import net.minecraft.util.math.BlockPos
+import net.minecraft.util.math.Box
 import net.minecraft.util.math.Direction
 import net.minecraft.util.shape.VoxelShape
 import net.minecraft.util.shape.VoxelShapes
 import net.minecraft.world.BlockView
+import org.joml.Matrix3f
+import org.joml.Matrix4f
+import org.joml.Quaternionf
 
 data class BlockContext(
     val identifier: Identifier,
@@ -159,6 +163,33 @@ data class BlockContext(
             }
         }
 
+        fun applyTransformation(state: BlockState, box: Box): Box {
+            val transformation = getComponents(state).minecraftTransformation ?: return box
+            return transformation.apply(box)
+        }
+
+        fun getFaceQuaternion(direction: Direction): Quaternionf {
+            return when (direction) {
+                Direction.DOWN -> Quaternionf().rotationX((-Math.PI / 2).toFloat())
+                Direction.UP -> Quaternionf().rotationX((Math.PI / 2).toFloat())
+                Direction.NORTH -> Quaternionf().rotationY(Math.PI.toFloat())
+                Direction.SOUTH -> Quaternionf()
+                Direction.WEST -> Quaternionf().rotationY((-Math.PI / 2).toFloat())
+                Direction.EAST -> Quaternionf().rotationY((Math.PI / 2).toFloat())
+            }
+        }
+
+        fun applyFaceDirectional(state: BlockState, position: Matrix4f, normal: Matrix3f) {
+            val faceDirectional = getComponents(state).neteaseFaceDirectional ?: return
+            val direction = when (faceDirectional.type) {
+                FaceDirectionalType.direction -> Direction.fromHorizontal(state[DIRECTION])
+                FaceDirectionalType.facing_direction -> Direction.byId(state[FACING_DIRECTION])
+            }
+            val faceQuaternion = getFaceQuaternion(direction)
+            position.rotateAround(faceQuaternion, 0.5f, 0.5f, 0.5f)
+            normal.rotate(faceQuaternion)
+        }
+
         fun getComponents(state: BlockState): BlockComponents {
             return componentsByState[state] ?: behaviour.components
         }
@@ -219,14 +250,14 @@ data class BlockContext(
         ): VoxelShape = when {
             this.collidable -> when (val box = getComponents(state).minecraftCollisionBox) {
                 is ComponentCollisionBox.ComponentCollisionBoxBoolean -> getOutlineShape(state, world, pos, context)
-                is ComponentCollisionBox.ComponentCollisionBoxCustom -> VoxelShapes.cuboid(
+                is ComponentCollisionBox.ComponentCollisionBoxCustom -> VoxelShapes.cuboid(applyTransformation(state, Box(
                     (1.0 / 16) * (16 - (box.origin[0] + 8 + box.size[0])),
                     (1.0 / 16) * (box.origin[1]),
                     (1.0 / 16) * (box.origin[2] + 8),
                     (1.0 / 16) * (16 - (box.origin[0] + 8)),
                     (1.0 / 16) * (box.origin[1] + box.size[1]),
                     (1.0 / 16) * (box.origin[2] + 8 + box.size[2])
-                )
+                )))
                 else -> getOutlineShape(state, world, pos, context)
             }
             else -> VoxelShapes.empty()
@@ -240,14 +271,14 @@ data class BlockContext(
         ): VoxelShape = when (val box = getComponents(state).minecraftSelectionBox) {
             is ComponentSelectionBox.ComponentSelectionBoxBoolean -> super.getOutlineShape(state, world, pos, context)
             is ComponentSelectionBox.ComponentSelectionBoxCustom -> {
-                VoxelShapes.cuboid(
+                VoxelShapes.cuboid(applyTransformation(state, Box(
                     (1.0 / 16) * (16 - (box.origin[0] + 8 + box.size[0])),
                     (1.0 / 16) * (box.origin[1]),
                     (1.0 / 16) * (box.origin[2] + 8),
                     (1.0 / 16) * (16 - (box.origin[0] + 8)),
                     (1.0 / 16) * (box.origin[1] + box.size[1]),
                     (1.0 / 16) * (box.origin[2] + 8 + box.size[2])
-                )
+                )))
             }
             else -> super.getOutlineShape(state, world, pos, context)
         }

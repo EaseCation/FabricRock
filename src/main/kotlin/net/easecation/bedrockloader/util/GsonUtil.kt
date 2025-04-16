@@ -31,6 +31,7 @@ object GsonUtil {
             .registerTypeAdapter(ComponentSelectionBox::class.java, ComponentSelectionBox.Deserializer())
             .registerTypeAdapter(ComponentCollisionBox::class.java, ComponentCollisionBox.Deserializer())
             .registerTypeAdapter(ComponentPlacementFilter::class.java, ComponentPlacementFilter.Deserializer())
+            .registerTypeAdapter(ComponentTransformation::class.java, ComponentTransformation.Deserializer())
             // entity component
             .registerTypeAdapter(ComponentRideable::class.java, ComponentRideable.Deserializer())
             // geometry

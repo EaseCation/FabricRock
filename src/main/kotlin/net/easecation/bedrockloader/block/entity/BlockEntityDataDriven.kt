@@ -13,6 +13,7 @@ class BlockEntityDataDriven(
     pos: BlockPos,
     state: BlockState
 ) : BlockEntity(type, pos, state) {
+
     companion object {
         fun buildBlockEntityType(identifier: Identifier): BlockEntityType<BlockEntityDataDriven> {
             val block = BedrockAddonsRegistry.blocks[identifier]!!
