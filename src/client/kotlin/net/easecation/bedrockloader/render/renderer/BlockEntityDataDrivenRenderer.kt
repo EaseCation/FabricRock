@@ -3,7 +3,6 @@ package net.easecation.bedrockloader.render.renderer
 import net.easecation.bedrockloader.block.BlockContext
 import net.easecation.bedrockloader.block.entity.BlockEntityDataDriven
 import net.easecation.bedrockloader.render.BedrockGeometryModel
-import net.minecraft.block.BlockState
 import net.minecraft.client.render.VertexConsumerProvider
 import net.minecraft.client.render.block.entity.BlockEntityRenderer
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactory

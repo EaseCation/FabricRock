@@ -172,10 +172,10 @@ data class BlockContext(
             return when (direction) {
                 Direction.DOWN -> Quaternionf().rotationX((-Math.PI / 2).toFloat())
                 Direction.UP -> Quaternionf().rotationX((Math.PI / 2).toFloat())
-                Direction.NORTH -> Quaternionf().rotationY(Math.PI.toFloat())
-                Direction.SOUTH -> Quaternionf()
-                Direction.WEST -> Quaternionf().rotationY((-Math.PI / 2).toFloat())
-                Direction.EAST -> Quaternionf().rotationY((Math.PI / 2).toFloat())
+                Direction.NORTH -> Quaternionf()
+                Direction.SOUTH -> Quaternionf().rotationY(Math.PI.toFloat())
+                Direction.WEST -> Quaternionf().rotationY((Math.PI / 2).toFloat())
+                Direction.EAST -> Quaternionf().rotationY((-Math.PI / 2).toFloat())
             }
         }
 
@@ -234,8 +234,8 @@ data class BlockContext(
                         else -> BlockHalf.BOTTOM
                     }
                 )
-                .withIfExists(DIRECTION, rotateDirection(ctx.horizontalPlayerFacing, yRotationOffset).horizontal)
-                .withIfExists(FACING_DIRECTION, rotateDirection(ctx.playerLookDirection, yRotationOffset).id)
+                .withIfExists(DIRECTION, ctx.horizontalPlayerFacing.opposite.horizontal)
+                .withIfExists(FACING_DIRECTION, ctx.playerLookDirection.opposite.id)
         }
 
         override fun appendProperties(builder: StateManager.Builder<Block, BlockState>) {
