@@ -1,5 +1,6 @@
 package net.easecation.bedrockloader.render
 
+import net.easecation.bedrockloader.bedrock.block.component.ComponentTransformation
 import net.easecation.bedrockloader.bedrock.definition.GeometryDefinition
 import net.easecation.bedrockloader.render.model.*
 import net.fabricmc.fabric.api.renderer.v1.mesh.Mesh
@@ -91,8 +92,15 @@ object BedrockRenderUtil {
      * @param modelPart The ModelPart to convert.
      * @return The created Mesh.
      */
-    fun bakeModelPartToMesh(modelPart: ModelPart, defaultSprite: Sprite, sprites: Map<String, Sprite>): Mesh {
+    fun bakeModelPartToMesh(
+        modelPart: ModelPart,
+        defaultSprite: Sprite,
+        sprites: Map<String, Sprite>,
+        blockTransformation: ComponentTransformation?
+    ): Mesh {
         val matrixStack = MatrixStack()
+        val entry = matrixStack.peek()
+        blockTransformation?.apply(entry.positionMatrix, entry.normalMatrix)
         matrixStack.translate(0.5, 0.0, 0.5)
         matrixStack.multiply(Quaternionf().rotateXYZ((180.0 * (Math.PI * 2 / 360.0)).toFloat(), (180.0 * (Math.PI * 2 / 360.0)).toFloat(), 0.0F))
         val vertices = MeshBuilderVertexConsumer(defaultSprite, sprites)

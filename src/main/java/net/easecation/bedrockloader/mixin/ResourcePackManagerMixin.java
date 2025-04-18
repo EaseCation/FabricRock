@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 @Mixin(ResourcePackManager.class)
@@ -25,9 +26,7 @@ public class ResourcePackManagerMixin {
 	@Inject(method = "<init>", at = @At("RETURN"))
 	public void register(CallbackInfo ci) {
 		BedrockLoader.INSTANCE.getLogger().info("ResourcePackManagerMixin init");
-		this.providers = ImmutableSet.<ResourcePackProvider>builder()
-				.addAll(this.providers)
-				.add(new BedrockLoaderResourcePackProvider())
-				.build();
+		this.providers = new LinkedHashSet<>(this.providers);
+		this.providers.add(new BedrockLoaderResourcePackProvider());
 	}
 }

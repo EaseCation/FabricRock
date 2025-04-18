@@ -1,5 +1,6 @@
 package net.easecation.bedrockloader.render
 
+import net.easecation.bedrockloader.block.BlockContext
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistryClient
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin
@@ -22,10 +23,12 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
             }
         }
 
-        BedrockAddonsRegistry.blocks.forEach { (id, block) ->
+        BedrockAddonsRegistry.blocks.forEach { (id, v) ->
+            val block = v as? BlockContext.BlockDataDriven ?: return@forEach
             pluginContext.registerBlockStateResolver(block) { context ->
-                val model = context.getOrLoadModel(id.withPath { "block/${it}" })
-                context.block().stateManager.states.forEach {
+                val loadedUnbakedModel = context.getOrLoadModel(id.withPath { "block/${it}" })
+                block.stateManager.states.forEach {
+                    val model = (loadedUnbakedModel as? BedrockGeometryModel)?.getModelVariant(block, it) ?: loadedUnbakedModel
                     context.setModel(it, model)
                 }
             }

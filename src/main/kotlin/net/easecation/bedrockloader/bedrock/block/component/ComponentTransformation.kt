@@ -68,7 +68,7 @@ data class ComponentTransformation(
         translation: Vector3d
     ): Matrix4d = Matrix4d()
         .scaleAround(scale.x, scale.y, scale.z, scalePivot.x + 0.5, scalePivot.y + 0.5, scalePivot.z + 0.5)
-        .rotateAround(Quaterniond().rotateXYZ(rotation.x, rotation.y, rotation.z), rotationPivot.x + 0.5, rotationPivot.y + 0.5, rotationPivot.z + 0.5)
+        .rotateAround(Quaterniond().rotateZYX(rotation.z, rotation.y, rotation.x), rotationPivot.x + 0.5, rotationPivot.y + 0.5, rotationPivot.z + 0.5)
         .translate(translation)
 
     fun apply(position: Matrix4f, normal: Matrix3f) {
@@ -79,14 +79,14 @@ data class ComponentTransformation(
         val translation = Vector3f(translation[0], translation[1], translation[2])
 
         position.scaleAround(scale.x, scale.y, scale.z, scalePivot.x + 0.5f, scalePivot.y + 0.5f, scalePivot.z + 0.5f)
-        position.rotateAround(Quaternionf().rotateXYZ(rotation.x, rotation.y, rotation.z), rotationPivot.x + 0.5f, rotationPivot.y + 0.5f, rotationPivot.z + 0.5f)
+        position.rotateAround(Quaternionf().rotateZYX(rotation.z, rotation.y, rotation.x), rotationPivot.x + 0.5f, rotationPivot.y + 0.5f, rotationPivot.z + 0.5f)
         position.translate(translation)
         val invScaleX: Float = 1.0f / scale.x
         val invScaleY: Float = 1.0f / scale.y
         val invScaleZ: Float = 1.0f / scale.z
         val invCbrt = MathHelper.fastInverseCbrt(invScaleX * invScaleY * invScaleZ)
         normal.scale(invScaleX * invCbrt, invScaleY * invCbrt, invScaleZ * invCbrt)
-        normal.rotate(Quaternionf().rotateXYZ(rotation.x, rotation.y, rotation.z))
+        normal.rotate(Quaternionf().rotateZYX(rotation.z, rotation.y, rotation.x))
     }
 
     class Deserializer : JsonDeserializer<ComponentTransformation> {

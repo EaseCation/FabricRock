@@ -1,7 +1,9 @@
 package net.easecation.bedrockloader.render
 
 import net.easecation.bedrockloader.BedrockLoader
+import net.easecation.bedrockloader.bedrock.block.component.ComponentTransformation
 import net.easecation.bedrockloader.bedrock.definition.GeometryDefinition
+import net.easecation.bedrockloader.block.BlockContext
 import net.easecation.bedrockloader.entity.EntityDataDriven
 import net.easecation.bedrockloader.render.model.ModelPart
 import net.easecation.bedrockloader.render.model.TexturedModelData
@@ -32,11 +34,14 @@ import java.util.function.Supplier
 
 
 @Environment(EnvType.CLIENT)
-class BedrockGeometryModel(
+class BedrockGeometryModel private constructor(
     private val bedrockModel: GeometryDefinition.Model,
     val materials: Map<String, BedrockMaterialInstance>,
-    private val transformation: ModelTransformation
+    private val transformation: ModelTransformation,
+    private val modelPart: ModelPart,
+    private val blockTransformation: ComponentTransformation?
 ) : EntityModel<EntityDataDriven>(), UnbakedModel, BakedModel, FabricBakedModel {
+
     companion object {
         val MODEL_TRANSFORM_BLOCK: ModelTransformation = ModelTransformation(
             ModelHelper.TRANSFORM_BLOCK_3RD_PERSON_RIGHT,
@@ -51,29 +56,34 @@ class BedrockGeometryModel(
     }
 
     class Factory(private val bedrockModel: GeometryDefinition.Model) {
+        private fun getTexturedModelData(bedrockModel: GeometryDefinition.Model): TexturedModelData {
+            if (bedrockModel.description.texture_width == null || bedrockModel.description.texture_height == null) throw IllegalStateException("[BedrockGeometryModel] Model has no texture size")
+            if (bedrockModel.bones == null) throw IllegalStateException("[BedrockGeometryModel] Model has no bones")
+            BedrockRenderUtil.bedrockBonesToJavaModelData(bedrockModel.bones!!).let { modelData ->
+                return TexturedModelData.of(
+                    modelData,
+                    bedrockModel.description.texture_width!!,
+                    bedrockModel.description.texture_height!!
+                )
+            }
+        }
+
         fun create(
             materials: Map<String, BedrockMaterialInstance>,
             transformation: ModelTransformation = MODEL_TRANSFORM_BLOCK
         ): BedrockGeometryModel {
-            return BedrockGeometryModel(bedrockModel, materials, transformation)
+            val modelPart = getTexturedModelData(bedrockModel).createModel()
+            return BedrockGeometryModel(bedrockModel, materials, transformation, modelPart, null)
         }
     }
 
     private var defaultSprite: Sprite? = null
     private var sprites: MutableMap<String, Sprite> = mutableMapOf()
-    private val modelPart: ModelPart = getTexturedModelData().createModel()
     private var mesh: Mesh? = null
 
-    private fun getTexturedModelData(): TexturedModelData {
-        if (bedrockModel.description.texture_width == null || bedrockModel.description.texture_height == null) throw IllegalStateException("[BedrockGeometryModel] Model has no texture size")
-        if (bedrockModel.bones == null) throw IllegalStateException("[BedrockGeometryModel] Model has no bones")
-        BedrockRenderUtil.bedrockBonesToJavaModelData(bedrockModel.bones!!).let { modelData ->
-            return TexturedModelData.of(
-                modelData,
-                bedrockModel.description.texture_width!!,
-                bedrockModel.description.texture_height!!
-            )
-        }
+    fun getModelVariant(block: BlockContext.BlockDataDriven, state: BlockState): UnbakedModel {
+        val blockTransformation = block.getComponents(state).minecraftTransformation ?: return this
+        return BedrockGeometryModel(bedrockModel, materials, transformation, modelPart, blockTransformation)
     }
 
     override fun getModelDependencies(): Collection<Identifier> {
@@ -96,7 +106,7 @@ class BedrockGeometryModel(
             sprites[key] = textureGetter.apply(material.spriteId)
         }
         defaultSprite = sprites["*"] ?: sprites.values.firstOrNull()
-        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites)
+        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites, blockTransformation)
         return this
     }
 
