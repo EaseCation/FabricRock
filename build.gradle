@@ -54,6 +54,33 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 	modImplementation "net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}"
+
+	// Remote Pack Sync - HTTP Server
+	implementation "io.javalin:javalin:6.3.0"
+	include "io.javalin:javalin:6.3.0"
+
+	// Javalin传递依赖 - 显式include以确保打包到生产JAR
+	include "org.eclipse.jetty:jetty-server:11.0.23"
+	include "org.eclipse.jetty:jetty-servlet:11.0.23"
+	include "org.eclipse.jetty:jetty-security:11.0.23"
+	include "org.eclipse.jetty:jetty-webapp:11.0.23"
+	include "org.eclipse.jetty:jetty-http:11.0.23"
+	include "org.eclipse.jetty:jetty-io:11.0.23"
+	include "org.eclipse.jetty:jetty-util:11.0.23"
+	include "org.eclipse.jetty:jetty-xml:11.0.23"
+	include "org.eclipse.jetty.toolchain:jetty-jakarta-servlet-api:5.0.2"
+	include "org.eclipse.jetty.websocket:websocket-jetty-server:11.0.23"
+	include "org.eclipse.jetty.websocket:websocket-jetty-api:11.0.23"
+	include "org.eclipse.jetty.websocket:websocket-jetty-common:11.0.23"
+	include "org.eclipse.jetty.websocket:websocket-servlet:11.0.23"
+	include "org.eclipse.jetty.websocket:websocket-core-server:11.0.23"
+	include "org.eclipse.jetty.websocket:websocket-core-common:11.0.23"
+
+	// Remote Pack Sync - YAML Configuration
+	implementation "org.yaml:snakeyaml:2.0"
+	include "org.yaml:snakeyaml:2.0"
+
+	// 注意：不需要单独添加SLF4J实现，Minecraft已经通过Log4j2提供了SLF4J支持
 }
 
 processResources {

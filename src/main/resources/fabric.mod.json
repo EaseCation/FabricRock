@@ -15,6 +15,12 @@
   "icon": "assets/bedrock-loader/icon.png",
   "environment": "*",
   "entrypoints": {
+    "preLaunch": [
+      {
+        "value": "net.easecation.bedrockloader.sync.client.RemotePackSyncPreLaunch",
+        "adapter": "kotlin"
+      }
+    ],
     "main": [
       {
         "value": "net.easecation.bedrockloader.BedrockLoader",
@@ -29,7 +35,8 @@
     ]
   },
   "mixins": [
-    "bedrock-loader.mixins.json"
+    "bedrock-loader.mixins.json",
+    "bedrock-loader.client.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.16.10",

@@ -4,6 +4,9 @@ import net.easecation.bedrockloader.loader.BedrockAddonsLoader
 import net.easecation.bedrockloader.loader.BedrockAddonsLoader.context
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.easecation.bedrockloader.loader.BedrockBehaviorPackLoader
+import net.easecation.bedrockloader.sync.server.ConfigLoader
+import net.easecation.bedrockloader.sync.server.EmbeddedHttpServer
+import net.fabricmc.api.EnvType
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents
@@ -31,6 +34,9 @@ object BedrockLoader : ModInitializer {
 		.displayName(Text.translatable("itemGroup.bedrock-loader.bedrock-loader"))
 		.build()
 
+	// Remote Pack Sync HTTP Server
+	private var httpServer: EmbeddedHttpServer? = null
+
 	override fun onInitialize() {
 		logger.info("Initializing BedrockLoader...")
 
@@ -52,7 +58,52 @@ object BedrockLoader : ModInitializer {
 		val behaviorPackLoader = BedrockBehaviorPackLoader(context)
 		behaviorPackLoader.load()
 
+		// 启动HTTP服务器（仅在专用服务器上）
+		startHttpServerIfNeeded()
+
 		logger.info("BedrockLoader initialized!")
+	}
+
+	/**
+	 * 启动HTTP服务器（如果需要）
+	 *
+	 * 仅在专用服务器(Dedicated Server)环境下启动HTTP服务器
+	 * 客户端和集成服务器不启动
+	 */
+	private fun startHttpServerIfNeeded() {
+		// 检查是否为服务端环境
+		val envType = FabricLoader.getInstance().environmentType
+		if (envType != EnvType.SERVER) {
+			logger.debug("当前环境为客户端，不启动HTTP服务器")
+			return
+		}
+
+		try {
+			// 加载配置文件
+			val configDir = File(getGameDir(), "config/bedrock-loader")
+			val configFile = File(configDir, "server.yml")
+			val config = ConfigLoader.loadServerConfig(configFile)
+
+			// 检查是否启用
+			if (!config.enabled) {
+				logger.info("HTTP服务器已禁用（配置文件: enabled=false）")
+				return
+			}
+
+			// 创建并启动HTTP服务器
+			val packDirectory = File(getGameDir(), "config/bedrock-loader")
+			httpServer = EmbeddedHttpServer(config, packDirectory)
+			httpServer?.start()
+
+			// 注册shutdown hook以实现优雅关闭
+			Runtime.getRuntime().addShutdownHook(Thread {
+				logger.info("正在关闭HTTP服务器...")
+				httpServer?.stop()
+			})
+
+		} catch (e: Exception) {
+			logger.error("启动HTTP服务器失败", e)
+		}
 	}
 
 	fun getGameDir(): File {
