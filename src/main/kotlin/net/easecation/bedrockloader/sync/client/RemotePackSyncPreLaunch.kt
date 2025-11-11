@@ -57,6 +57,7 @@ class RemotePackSyncPreLaunch : PreLaunchEntrypoint {
 
             // Show UI window if enabled
             window?.isVisible = true
+            window?.bringToFront()
 
             // Execute sync check
             val checkResult = syncManager.checkForUpdates()

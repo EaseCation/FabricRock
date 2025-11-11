@@ -2,6 +2,8 @@ package net.easecation.bedrockloader.sync.client.ui
 
 import java.awt.Component
 import java.awt.Window
+import javax.swing.JFrame
+import javax.swing.SwingUtilities
 import kotlin.math.max
 
 /**
@@ -77,6 +79,29 @@ object UIUtil {
     fun ensureMacOSCompatibility() {
         if (System.getProperty("os.name").contains("Mac", ignoreCase = true)) {
             System.setProperty("apple.awt.UIElement", "false")
+        }
+    }
+
+    /**
+     * 将窗口置于顶层并获取焦点
+     * 使用增强型方法确保跨平台兼容性
+     *
+     * @param window 要置顶的窗口
+     */
+    fun bringToFront(window: Window) {
+        SwingUtilities.invokeLater {
+            // 如果窗口被最小化，先恢复
+            if (window is JFrame) {
+                if (window.extendedState and JFrame.ICONIFIED != 0) {
+                    window.extendedState = window.extendedState and JFrame.ICONIFIED.inv()
+                }
+            }
+
+            // 临时置顶 → 置前 → 请求焦点 → 取消置顶
+            window.isAlwaysOnTop = true
+            window.toFront()
+            window.requestFocus()
+            window.isAlwaysOnTop = false
         }
     }
 

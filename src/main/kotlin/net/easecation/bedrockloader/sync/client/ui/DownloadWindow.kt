@@ -205,6 +205,13 @@ class DownloadWindow(
     }
 
     /**
+     * 将窗口置于顶层并获取焦点
+     */
+    fun bringToFront() {
+        UIUtil.bringToFront(this)
+    }
+
+    /**
      * 处理取消按钮点击
      */
     private fun handleCancel() {

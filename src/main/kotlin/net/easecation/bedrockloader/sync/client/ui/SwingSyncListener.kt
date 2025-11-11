@@ -51,6 +51,13 @@ class SwingSyncListener(
             if (plan.isUpToDate) {
                 window.updateStatus("所有资源包已是最新")
                 window.updateProgress(100)
+                window.bringToFront()
+
+                // 延迟1.5秒后自动关闭窗口
+                Thread {
+                    Thread.sleep(1500)
+                    window.close()
+                }.start()
             } else {
                 window.updateStatus("发现 ${plan.totalToDownload} 个需要下载的文件")
                 val totalSize = UIUtil.formatBytes(plan.totalBytes)
@@ -135,6 +142,7 @@ class SwingSyncListener(
                 window.updateStatus("下载完成！")
                 window.updateProgress(100)
                 window.showSuccess()
+                window.bringToFront()
 
                 // 延迟3秒后关闭窗口
                 Thread {

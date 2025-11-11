@@ -25,6 +25,13 @@ repositories {
 	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
 	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
 	// for more information about repositories.
+
+	// YACL配置界面库
+	maven { url "https://maven.isxander.dev/releases" }
+	// ModMenu前置模组
+	maven { url "https://maven.terraformersmc.com/releases/" }
+	// Placeholder API (ModMenu依赖)
+	maven { url "https://maven.nucleoid.xyz/" }
 }
 
 loom {
@@ -79,6 +86,12 @@ dependencies {
 	// Remote Pack Sync - YAML Configuration
 	implementation "org.yaml:snakeyaml:2.0"
 	include "org.yaml:snakeyaml:2.0"
+
+	// Config UI - YACL (Yet Another Config Lib)
+	modImplementation "dev.isxander:yet-another-config-lib:3.4.2+1.20.4-fabric"
+
+	// ModMenu - 提供模组列表和配置入口
+	modImplementation "com.terraformersmc:modmenu:9.2.0"
 
 	// 注意：不需要单独添加SLF4J实现，Minecraft已经通过Log4j2提供了SLF4J支持
 }

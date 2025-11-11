@@ -7,7 +7,7 @@ data class ClientConfig(
     /**
      * 是否启用远程同步
      */
-    val enabled: Boolean = true,
+    val enabled: Boolean = false,
 
     /**
      * 服务器地址（包含协议和端口）

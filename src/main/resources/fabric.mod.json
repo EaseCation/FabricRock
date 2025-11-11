@@ -32,6 +32,12 @@
         "value": "net.easecation.bedrockloader.BedrockLoaderClient",
         "adapter": "kotlin"
       }
+    ],
+    "modmenu": [
+      {
+        "value": "net.easecation.bedrockloader.config.ModMenuIntegration",
+        "adapter": "kotlin"
+      }
     ]
   },
   "mixins": [
