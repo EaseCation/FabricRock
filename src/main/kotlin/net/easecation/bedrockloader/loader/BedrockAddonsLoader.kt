@@ -9,6 +9,7 @@ import net.easecation.bedrockloader.bedrock.pack.ZippedBedrockPack
 import net.easecation.bedrockloader.loader.deserializer.BedrockBehaviorDeserializer
 import net.easecation.bedrockloader.loader.context.BedrockPackContext
 import net.easecation.bedrockloader.loader.deserializer.BedrockResourceDeserializer
+import net.easecation.bedrockloader.sync.client.ClientConfigLoader
 import net.easecation.bedrockloader.sync.common.MD5Util
 import net.fabricmc.api.EnvType
 import net.fabricmc.loader.api.FabricLoader
@@ -51,12 +52,17 @@ object BedrockAddonsLoader {
             cacheDir.mkdirs()
         }
 
-        // 仅在客户端创建remote目录（用于存储远程下载的包）
+        // 仅在客户端且启用远程同步时创建remote目录（用于存储远程下载的包）
         val envType = FabricLoader.getInstance().environmentType
         if (envType == EnvType.CLIENT) {
-            val remoteDir = File(dataFolder, "remote")
-            if (!remoteDir.exists()) {
-                remoteDir.mkdirs()
+            val configFile = File(dataFolder, "client.yml")
+            val config = ClientConfigLoader.loadClientConfig(configFile)
+
+            if (config.enabled) {
+                val remoteDir = File(dataFolder, "remote")
+                if (!remoteDir.exists()) {
+                    remoteDir.mkdirs()
+                }
             }
         }
 
@@ -67,13 +73,24 @@ object BedrockAddonsLoader {
             name.endsWith(".zip") || name.endsWith(".mcpack")
         } ?: emptyArray()
 
-        // 从remote/目录读取远程下载的包（仅在客户端且目录存在时）
+        // 从remote/目录读取远程下载的包（仅在客户端、启用远程同步且目录存在时）
         val remoteDir = File(dataFolder, "remote")
         val remoteFiles = if (envType == EnvType.CLIENT && remoteDir.exists() && remoteDir.isDirectory) {
-            remoteDir.listFiles { file: File, name: String ->
-                val child = File(file, name)
-                (child.isDirectory && name != ".DS_Store") || name.endsWith(".zip") || name.endsWith(".mcpack")
-            } ?: emptyArray()
+            // 检查远程同步是否启用
+            val configFile = File(dataFolder, "client.yml")
+            val config = ClientConfigLoader.loadClientConfig(configFile)
+
+            if (config.enabled) {
+                // 远程同步启用，加载remote目录
+                remoteDir.listFiles { file: File, name: String ->
+                    val child = File(file, name)
+                    (child.isDirectory && name != ".DS_Store") || name.endsWith(".zip") || name.endsWith(".mcpack")
+                } ?: emptyArray()
+            } else {
+                // 远程同步禁用，跳过remote目录
+                BedrockLoader.logger.info("远程同步已禁用，跳过remote/目录的包加载")
+                emptyArray()
+            }
         } else {
             emptyArray()
         }
