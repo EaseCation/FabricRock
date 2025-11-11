@@ -15,8 +15,8 @@ import java.net.http.HttpResponse
 import java.time.Duration
 
 /**
- * 资源包下载器
- * 负责从HTTP服务器下载资源包文件到remote/子目录
+ * Resource Pack Downloader
+ * Downloads resource pack files from HTTP server to remote/ subdirectory
  */
 class PackDownloader(
     private val config: ClientConfig,
@@ -25,11 +25,10 @@ class PackDownloader(
     private val logger = LoggerFactory.getLogger("BedrockLoader/PackDownloader")
 
     /**
-     * 远程包存储目录（packDirectory/remote）
+     * Remote pack storage directory (packDirectory/remote)
      */
     private val remoteDirectory = File(packDirectory, "remote").apply {
         if (!exists()) {
-            logger.info("创建remote目录: $absolutePath")
             mkdirs()
         }
     }
@@ -39,7 +38,7 @@ class PackDownloader(
         .build()
 
     /**
-     * 下载单个文件结果
+     * Download single file result
      */
     sealed class DownloadFileResult {
         data class Success(val file: File) : DownloadFileResult()
@@ -47,7 +46,7 @@ class PackDownloader(
     }
 
     /**
-     * 批量下载结果
+     * Batch download result
      */
     data class BatchDownloadResult(
         val successFiles: List<String>,
@@ -57,39 +56,35 @@ class PackDownloader(
     )
 
     /**
-     * 清理remote/目录中的临时文件
-     * 清理所有.downloading和.backup后缀的文件
+     * Cleanup temporary files in remote/ directory
+     * Removes all .downloading and .backup suffix files
      */
     fun cleanupTempFiles() {
-        logger.debug("清理remote/目录中的临时文件...")
         var cleanedCount = 0
 
         remoteDirectory.listFiles()?.forEach { file ->
             if (file.name.endsWith(".downloading") || file.name.endsWith(".backup")) {
-                logger.info("清理临时文件: ${file.name}")
                 if (file.delete()) {
                     cleanedCount++
                 } else {
-                    logger.warn("无法删除临时文件: ${file.name}")
+                    logger.warn("Cannot delete temp file: ${file.name}")
                 }
             }
         }
 
         if (cleanedCount > 0) {
-            logger.info("已清理 $cleanedCount 个临时文件")
-        } else {
-            logger.debug("没有需要清理的临时文件")
+            logger.info("Cleaned up $cleanedCount temp file(s)")
         }
     }
 
     /**
-     * 下载单个文件（带重试机制）
+     * Download single file (with retry mechanism)
      *
-     * @param pack 资源包信息
-     * @param onProgress 进度回调 (bytesDownloaded, totalBytes)
-     * @param isCancelled 检查是否取消的函数
-     * @param maxRetries 最大重试次数
-     * @return 下载结果
+     * @param pack Resource pack info
+     * @param onProgress Progress callback (bytesDownloaded, totalBytes)
+     * @param isCancelled Function to check if cancelled
+     * @param maxRetries Maximum retry attempts
+     * @return Download result
      */
     fun downloadFile(
         pack: RemotePackInfo,
@@ -97,38 +92,34 @@ class PackDownloader(
         isCancelled: () -> Boolean,
         maxRetries: Int = 3
     ): DownloadFileResult {
-        logger.info("准备下载: ${pack.name} (${formatBytes(pack.size)})")
-
         var lastError: Exception? = null
 
         repeat(maxRetries) { attempt ->
             try {
-                // 1. 下载到临时文件
+                // 1. Download to temp file
                 val tempFile = downloadToTempFile(pack, onProgress, isCancelled)
 
-                // 2. 验证MD5并替换
+                // 2. Verify MD5 and replace
                 verifyMD5AndReplace(tempFile, pack)
 
-                logger.info("文件下载成功: ${pack.name}")
                 return DownloadFileResult.Success(File(remoteDirectory, pack.name))
 
             } catch (e: CancelledException) {
-                // 用户取消，不重试
-                logger.warn("下载已取消: ${pack.name}")
+                // User cancelled, don't retry
+                logger.warn("Download cancelled: ${pack.name}")
                 throw e
             } catch (e: Exception) {
                 lastError = e
-                logger.warn("下载失败 (尝试 ${attempt + 1}/$maxRetries): ${pack.name} - ${e.message}")
+                logger.warn("Download failed (attempt ${attempt + 1}/$maxRetries): ${pack.name} - ${e.message}")
 
                 if (attempt < maxRetries - 1) {
-                    logger.debug("等待1秒后重试...")
                     Thread.sleep(1000)
                 }
             }
         }
 
-        // 所有重试都失败
-        val errorMessage = "下载失败，已重试${maxRetries}次: ${lastError?.message}"
+        // All retries failed
+        val errorMessage = "Download failed after $maxRetries retries: ${lastError?.message}"
         logger.error(errorMessage)
         return DownloadFileResult.Failed(
             SyncError.FileError(pack.name, errorMessage, lastError)
@@ -136,15 +127,15 @@ class PackDownloader(
     }
 
     /**
-     * 批量下载所有文件
+     * Batch download all files
      *
-     * @param packs 要下载的资源包列表
-     * @param onProgress 总体进度回调 (currentIndex, total)
-     * @param onFileStart 文件开始下载回调 (file, index, total)
-     * @param onFileProgress 单个文件进度回调 (file, bytesDownloaded, totalBytes)
-     * @param onFileComplete 单个文件完成回调 (file)
-     * @param isCancelled 检查是否取消的函数
-     * @return 批量下载结果
+     * @param packs List of resource packs to download
+     * @param onProgress Overall progress callback (currentIndex, total)
+     * @param onFileStart File download start callback (file, index, total)
+     * @param onFileProgress Single file progress callback (file, bytesDownloaded, totalBytes)
+     * @param onFileComplete Single file complete callback (file)
+     * @param isCancelled Function to check if cancelled
+     * @return Batch download result
      */
     fun downloadAll(
         packs: List<RemotePackInfo>,
@@ -154,25 +145,23 @@ class PackDownloader(
         onFileComplete: (RemotePackInfo) -> Unit,
         isCancelled: () -> Boolean
     ): BatchDownloadResult {
-        logger.info("开始批量下载 ${packs.size} 个文件")
-
         val successFiles = mutableListOf<String>()
         val failedFiles = mutableListOf<String>()
 
         packs.forEachIndexed { index, pack ->
-            // 检查取消状态
+            // Check cancelled status
             if (isCancelled()) {
-                logger.warn("批量下载已取消")
-                throw CancelledException("用户取消了下载")
+                logger.warn("Batch download cancelled")
+                throw CancelledException("User cancelled download")
             }
 
-            // 通知总体进度
+            // Notify overall progress
             onProgress(index + 1, packs.size)
 
-            // 通知文件开始下载
+            // Notify file download start
             onFileStart(pack, index + 1, packs.size)
 
-            // 下载单个文件
+            // Download single file
             val result = downloadFile(
                 pack = pack,
                 onProgress = { downloaded, total ->
@@ -181,18 +170,16 @@ class PackDownloader(
                 isCancelled = isCancelled
             )
 
-            // 处理结果
+            // Process result
             when (result) {
                 is DownloadFileResult.Success -> {
                     successFiles.add(pack.name)
                     onFileComplete(pack)
-                    logger.info("进度: ${index + 1}/${packs.size} - ${pack.name} 完成")
                 }
                 is DownloadFileResult.Failed -> {
                     failedFiles.add(pack.name)
-                    logger.error("进度: ${index + 1}/${packs.size} - ${pack.name} 失败")
 
-                    // 如果配置为出错时自动取消，则抛出异常
+                    // If configured to auto-cancel on error, throw exception
                     if (config.autoCancelOnError) {
                         throw result.error
                     }
@@ -207,91 +194,84 @@ class PackDownloader(
             failCount = failedFiles.size
         )
 
-        logger.info("批量下载完成 - 成功: ${batchResult.successCount}, 失败: ${batchResult.failCount}")
         return batchResult
     }
 
     /**
-     * 下载文件到临时文件
+     * Download file to temp file
      *
-     * @param pack 资源包信息
-     * @param onProgress 进度回调
-     * @param isCancelled 检查是否取消
-     * @return 下载的临时文件
+     * @param pack Resource pack info
+     * @param onProgress Progress callback
+     * @param isCancelled Function to check if cancelled
+     * @return Downloaded temp file
      */
     private fun downloadToTempFile(
         pack: RemotePackInfo,
         onProgress: (Long, Long) -> Unit,
         isCancelled: () -> Boolean
     ): File {
-        // 构建下载URL
+        // Build download URL
         val downloadUrl = "${config.serverUrl.trimEnd('/')}${pack.url}"
-        logger.debug("下载URL: $downloadUrl")
 
-        // 创建remote/目录中的临时文件
+        // Create temp file in remote/ directory
         val tempFile = File(remoteDirectory, "${pack.name}.downloading")
         if (tempFile.exists()) {
             tempFile.delete()
         }
 
         try {
-            // 创建HTTP请求
+            // Create HTTP request
             val request = HttpRequest.newBuilder()
                 .uri(URI.create(downloadUrl))
                 .GET()
                 .timeout(Duration.ofSeconds(config.timeoutSeconds.toLong()))
                 .build()
 
-            // 发送请求并获取响应
+            // Send request and get response
             val response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream())
 
-            // 检查HTTP状态码
+            // Check HTTP status code
             when (response.statusCode()) {
                 200 -> {
-                    logger.debug("开始接收数据...")
-
-                    // 流式写入文件
+                    // Stream write to file
                     FileOutputStream(tempFile).use { output ->
                         response.body().use { input ->
-                            val buffer = ByteArray(8192) // 8KB 缓冲区
+                            val buffer = ByteArray(8192) // 8KB buffer
                             var totalBytesRead = 0L
                             var bytesRead: Int
 
                             while (input.read(buffer).also { bytesRead = it } != -1) {
-                                // 检查取消状态
+                                // Check cancel status
                                 if (isCancelled()) {
-                                    logger.warn("下载被用户取消")
                                     tempFile.delete()
-                                    throw CancelledException("用户取消了下载")
+                                    throw CancelledException("User cancelled download")
                                 }
 
-                                // 写入数据
+                                // Write data
                                 output.write(buffer, 0, bytesRead)
                                 totalBytesRead += bytesRead
 
-                                // 回调进度
+                                // Callback progress
                                 onProgress(totalBytesRead, pack.size)
                             }
-
-                            logger.debug("下载完成，共 ${formatBytes(totalBytesRead)}")
                         }
                     }
 
                     return tempFile
                 }
                 404 -> {
-                    throw SyncError.ServerError(404, "文件不存在: ${pack.url}")
+                    throw SyncError.ServerError(404, "File not found: ${pack.url}")
                 }
                 else -> {
-                    throw SyncError.ServerError(response.statusCode(), "服务器返回错误: HTTP ${response.statusCode()}")
+                    throw SyncError.ServerError(response.statusCode(), "Server error: HTTP ${response.statusCode()}")
                 }
             }
         } catch (e: ConnectException) {
             tempFile.delete()
-            throw SyncError.NetworkError("无法连接到服务器: ${config.serverUrl}", e)
+            throw SyncError.NetworkError("Cannot connect to server: ${config.serverUrl}", e)
         } catch (e: java.net.SocketTimeoutException) {
             tempFile.delete()
-            throw SyncError.NetworkError("下载超时 (${config.timeoutSeconds}秒)", e)
+            throw SyncError.NetworkError("Download timeout (${config.timeoutSeconds}s)", e)
         } catch (e: SyncError) {
             tempFile.delete()
             throw e
@@ -300,92 +280,84 @@ class PackDownloader(
             throw e
         } catch (e: Exception) {
             tempFile.delete()
-            throw SyncError.FileError(pack.name, "下载失败: ${e.message}", e)
+            throw SyncError.FileError(pack.name, "Download failed: ${e.message}", e)
         }
     }
 
     /**
-     * 验证MD5并替换文件
+     * Verify MD5 and replace file
      *
-     * @param tempFile 临时文件
-     * @param pack 资源包信息
+     * @param tempFile Temp file
+     * @param pack Resource pack info
      */
     private fun verifyMD5AndReplace(tempFile: File, pack: RemotePackInfo) {
-        logger.debug("验证MD5: ${pack.name}")
-
-        // 计算文件的MD5
+        // Calculate file MD5
         val actualMD5 = try {
             MD5Util.calculateMD5(tempFile)
         } catch (e: Exception) {
             tempFile.delete()
-            throw SyncError.FileError(pack.name, "计算MD5失败: ${e.message}", e)
+            throw SyncError.FileError(pack.name, "MD5 calculation failed: ${e.message}", e)
         }
 
-        // 验证MD5是否匹配
+        // Verify MD5 match
         if (!actualMD5.equals(pack.md5, ignoreCase = true)) {
-            logger.error("MD5验证失败 - 期望: ${pack.md5}, 实际: $actualMD5")
+            logger.error("MD5 verification failed - expected: ${pack.md5}, actual: $actualMD5")
             tempFile.delete()
             throw SyncError.FileError(
                 pack.name,
-                "MD5验证失败 (期望: ${pack.md5}, 实际: $actualMD5)"
+                "MD5 verification failed (expected: ${pack.md5}, actual: $actualMD5)"
             )
         }
 
-        logger.debug("MD5验证通过")
-
-        // 原子性替换文件（在remote/目录中）
+        // Atomic file replacement (in remote/ directory)
         val targetFile = File(remoteDirectory, pack.name)
         atomicReplace(targetFile, tempFile)
     }
 
     /**
-     * 原子性文件替换
-     * 使用备份和恢复机制确保替换的原子性
+     * Atomic file replacement
+     * Uses backup and recovery mechanism to ensure atomicity
      *
-     * @param targetFile 目标文件（在remote/目录中）
-     * @param newFile 新文件（临时文件）
+     * @param targetFile Target file (in remote/ directory)
+     * @param newFile New file (temp file)
      */
     private fun atomicReplace(targetFile: File, newFile: File) {
         val backup = File(remoteDirectory, "${targetFile.name}.backup")
 
         try {
-            // 1. 如果目标文件存在，先备份
+            // 1. Backup old file if exists
             if (targetFile.exists()) {
-                logger.debug("备份旧文件: ${targetFile.name}")
                 if (!targetFile.renameTo(backup)) {
-                    throw IOException("无法备份旧文件")
+                    throw IOException("Cannot backup old file")
                 }
             }
 
-            // 2. 移动新文件到目标位置
-            logger.debug("替换文件: ${targetFile.name}")
+            // 2. Move new file to target location
             if (!newFile.renameTo(targetFile)) {
-                // 替换失败，恢复备份
+                // Replacement failed, restore backup
                 if (backup.exists()) {
                     backup.renameTo(targetFile)
                 }
-                throw IOException("无法替换文件")
+                throw IOException("Cannot replace file")
             }
 
-            // 3. 删除备份
+            // 3. Delete backup
             if (backup.exists()) {
                 backup.delete()
-                logger.debug("已删除备份文件")
             }
 
-            logger.info("文件替换成功: ${targetFile.name}")
         } catch (e: Exception) {
-            // 失败时尝试恢复备份
+            // Restore backup on failure
             if (backup.exists() && !targetFile.exists()) {
-                logger.warn("替换失败，正在恢复备份...")
+                logger.warn("Replacement failed, restoring backup...")
                 backup.renameTo(targetFile)
             }
-            throw SyncError.FileError(targetFile.name, "文件替换失败: ${e.message}", e)
+            throw SyncError.FileError(targetFile.name, "File replacement failed: ${e.message}", e)
         }
     }
 
     /**
-     * 格式化字节数为人类可读格式
+     * Format bytes to human-readable format
      */
     private fun formatBytes(bytes: Long): String {
         return when {
@@ -398,7 +370,7 @@ class PackDownloader(
 }
 
 /**
- * 取消异常
- * 用于表示下载被用户取消
+ * Cancelled Exception
+ * Indicates that the download was cancelled by the user
  */
-class CancelledException(message: String = "操作已取消") : Exception(message)
+class CancelledException(message: String = "Operation cancelled") : Exception(message)

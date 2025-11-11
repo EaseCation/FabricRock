@@ -12,7 +12,8 @@ import java.net.http.HttpResponse
 import java.time.Duration
 
 /**
- * HTTP客户端，用于从服务器获取资源包manifest
+ * HTTP Client
+ * Fetches resource pack manifest from server
  */
 class ManifestClient(
     private val config: ClientConfig
@@ -25,15 +26,14 @@ class ManifestClient(
         .build()
 
     /**
-     * 从服务器获取manifest.json
+     * Fetch manifest.json from server
      *
-     * @return 远程资源包manifest
-     * @throws SyncError.NetworkError 网络连接错误
-     * @throws SyncError.ServerError 服务器返回错误状态码
+     * @return Remote pack manifest
+     * @throws SyncError.NetworkError Network connection error
+     * @throws SyncError.ServerError Server returned error status code
      */
     fun fetchManifest(): RemotePackManifest {
         val url = "${config.serverUrl.trimEnd('/')}/manifest.json"
-        logger.debug("正在获取manifest: $url")
 
         try {
             val request = HttpRequest.newBuilder()
@@ -47,54 +47,52 @@ class ManifestClient(
 
             when (response.statusCode()) {
                 200 -> {
-                    logger.debug("成功获取manifest，长度: ${response.body().length}")
                     return parseManifest(response.body())
                 }
                 else -> {
-                    val errorMessage = "服务器返回错误: HTTP ${response.statusCode()}"
+                    val errorMessage = "Server error: HTTP ${response.statusCode()}"
                     logger.error(errorMessage)
                     throw SyncError.ServerError(response.statusCode(), errorMessage)
                 }
             }
         } catch (e: ConnectException) {
-            val errorMessage = "无法连接到服务器: ${config.serverUrl}"
+            val errorMessage = "Cannot connect to server: ${config.serverUrl}"
             logger.warn(errorMessage)
             throw SyncError.NetworkError(errorMessage, e)
         } catch (e: java.net.SocketTimeoutException) {
-            val errorMessage = "连接超时 (${config.timeoutSeconds}秒)"
+            val errorMessage = "Connection timeout (${config.timeoutSeconds}s)"
             logger.warn(errorMessage)
             throw SyncError.NetworkError(errorMessage, e)
         } catch (e: SyncError) {
-            // 已经是SyncError，直接抛出
+            // Already SyncError, throw directly
             throw e
         } catch (e: Exception) {
-            val errorMessage = "获取manifest失败: ${e.message}"
+            val errorMessage = "Failed to fetch manifest: ${e.message}"
             logger.error(errorMessage, e)
             throw SyncError.NetworkError(errorMessage, e)
         }
     }
 
     /**
-     * 解析JSON字符串为manifest对象
+     * Parse JSON string to manifest object
      */
     private fun parseManifest(json: String): RemotePackManifest {
         return try {
             gson.fromJson(json, RemotePackManifest::class.java)
         } catch (e: Exception) {
-            val errorMessage = "解析manifest失败: ${e.message}"
+            val errorMessage = "Failed to parse manifest: ${e.message}"
             logger.error(errorMessage, e)
             throw SyncError.ServerError(200, errorMessage)
         }
     }
 
     /**
-     * 测试服务器连接
+     * Test server connection
      *
-     * @return true: 服务器可访问，false: 服务器不可访问
+     * @return true: Server accessible, false: Server not accessible
      */
     fun testConnection(): Boolean {
         val url = "${config.serverUrl.trimEnd('/')}/ping"
-        logger.debug("测试服务器连接: $url")
 
         return try {
             val request = HttpRequest.newBuilder()
@@ -107,14 +105,14 @@ class ManifestClient(
             val connected = response.statusCode() == 200
 
             if (connected) {
-                logger.info("服务器连接成功")
+                logger.info("Server connection successful")
             } else {
-                logger.warn("服务器返回非200状态: ${response.statusCode()}")
+                logger.warn("Server returned non-200 status: ${response.statusCode()}")
             }
 
             connected
         } catch (e: Exception) {
-            logger.warn("服务器连接失败: ${e.message}")
+            logger.warn("Server connection failed: ${e.message}")
             false
         }
     }

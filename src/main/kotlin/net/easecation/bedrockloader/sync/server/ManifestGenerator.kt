@@ -7,10 +7,10 @@ import org.slf4j.LoggerFactory
 import java.io.File
 
 /**
- * 资源包清单生成器
+ * Resource Pack Manifest Generator
  *
- * 从BedrockPackRegistry读取已加载的包信息，生成RemotePackManifest对象
- * 确保HTTP服务器暴露的包与游戏加载的包100%一致
+ * Reads loaded pack info from BedrockPackRegistry and generates RemotePackManifest
+ * Ensures HTTP server exposes the same packs as loaded by the game
  */
 class ManifestGenerator(
     private val packDirectory: File,
@@ -19,37 +19,33 @@ class ManifestGenerator(
     private val logger = LoggerFactory.getLogger("BedrockLoader/ManifestGenerator")
 
     /**
-     * 生成资源包清单
+     * Generate resource pack manifest
      *
-     * 从BedrockPackRegistry读取已加载的包信息，确保与游戏加载的包一致
+     * Reads loaded pack info from BedrockPackRegistry to ensure consistency
      *
-     * @return RemotePackManifest对象
+     * @return RemotePackManifest object
      */
     fun generate(): RemotePackManifest {
-        logger.info("开始生成资源包清单...")
-
-        // 直接从包注册表获取所有已加载的包
+        // Get all loaded packs from registry
         val allPacks = BedrockPackRegistry.getAllPacks()
 
         if (allPacks.isEmpty()) {
-            logger.warn("未找到任何资源包")
-        } else {
-            logger.debug("从注册表读取到 ${allPacks.size} 个资源包")
+            logger.warn("No resource packs found")
         }
 
-        // 转换为RemotePackInfo
+        // Convert to RemotePackInfo
         val packInfoList = allPacks.map { packInfo ->
             RemotePackInfo(
                 name = packInfo.file.name,
-                uuid = packInfo.id,           // 从注册表获取UUID
-                version = packInfo.version,   // 从注册表获取版本
+                uuid = packInfo.id,           // Get UUID from registry
+                version = packInfo.version,   // Get version from registry
                 md5 = packInfo.md5,
                 size = packInfo.size,
                 url = generateDownloadUrl(packInfo.file.name)
             )
         }
 
-        // 创建清单对象
+        // Create manifest object
         val manifest = RemotePackManifest(
             version = "1.0",
             generatedAt = System.currentTimeMillis(),
@@ -57,31 +53,31 @@ class ManifestGenerator(
             packs = packInfoList
         )
 
-        logger.info("清单生成完成: ${manifest.getPackCount()} 个资源包, 总大小 ${formatFileSize(manifest.getTotalSize())}")
+        logger.info("Manifest generated: ${manifest.getPackCount()} pack(s), total size ${formatFileSize(manifest.getTotalSize())}")
 
         return manifest
     }
 
     /**
-     * 生成下载URL
+     * Generate download URL
      *
-     * @param filename 文件名
-     * @return 下载URL（相对路径）
+     * @param filename File name
+     * @return Download URL (relative path)
      */
     private fun generateDownloadUrl(filename: String): String {
-        // 使用相对路径，客户端会根据服务器地址拼接完整URL
+        // Use relative path, client will concatenate full URL based on server address
         return "/packs/$filename"
     }
 
     /**
-     * 获取服务器版本信息
+     * Get server version info
      */
     private fun getServerVersion(): String {
-        return "BedrockLoader-1.0.0" // 可以从模组版本读取
+        return "BedrockLoader-1.0.0" // Can be read from mod version
     }
 
     /**
-     * 格式化文件大小为人类可读的字符串
+     * Format file size to human-readable string
      */
     private fun formatFileSize(size: Long): String {
         return when {

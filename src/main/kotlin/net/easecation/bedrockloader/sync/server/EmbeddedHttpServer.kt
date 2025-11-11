@@ -9,9 +9,9 @@ import java.io.File
 import java.lang.reflect.Type
 
 /**
- * 嵌入式HTTP服务器
+ * Embedded HTTP Server
  *
- * 基于Javalin实现的轻量级HTTP服务器，用于提供资源包下载服务
+ * Lightweight HTTP server based on Javalin for resource pack distribution
  */
 class EmbeddedHttpServer(
     private val config: ServerConfig,
@@ -23,17 +23,16 @@ class EmbeddedHttpServer(
     private val manifestGenerator = ManifestGenerator(packDirectory, config)
 
     /**
-     * 启动HTTP服务器
+     * Start HTTP server
      */
     fun start() {
         if (app != null) {
-            logger.warn("HTTP服务器已经在运行")
+            logger.warn("HTTP server is already running")
             return
         }
 
         try {
-            logger.info("正在启动HTTP服务器...")
-            logger.info("配置: 端口=${config.port}, 绑定地址=${config.host}")
+            logger.info("Starting HTTP server on ${config.host}:${config.port}...")
 
             app = Javalin.create { javalinConfig ->
                 // 禁用Javalin横幅
@@ -57,74 +56,70 @@ class EmbeddedHttpServer(
                 }
             }.start(config.host, config.port)
 
-            // 注册路由
+            // Register routes
             registerRoutes()
 
-            logger.info("HTTP服务器启动成功！")
-            logger.info("访问地址: ${config.getEffectiveBaseUrl()}")
-            logger.info("  - 健康检查: ${config.getEffectiveBaseUrl()}/ping")
-            logger.info("  - 资源包清单: ${config.getEffectiveBaseUrl()}/manifest.json")
-            logger.info("  - 资源包下载: ${config.getEffectiveBaseUrl()}/packs/<filename>")
+            logger.info("HTTP server started successfully at ${config.getEffectiveBaseUrl()}")
 
         } catch (e: Exception) {
-            logger.error("HTTP服务器启动失败", e)
+            logger.error("Failed to start HTTP server", e)
             throw e
         }
     }
 
     /**
-     * 停止HTTP服务器
+     * Stop HTTP server
      */
     fun stop() {
         if (app == null) {
-            logger.warn("HTTP服务器未运行")
+            logger.warn("HTTP server is not running")
             return
         }
 
         try {
-            logger.info("正在停止HTTP服务器...")
+            logger.info("Stopping HTTP server...")
             app?.stop()
             app = null
-            logger.info("HTTP服务器已停止")
+            logger.info("HTTP server stopped")
         } catch (e: Exception) {
-            logger.error("停止HTTP服务器时发生错误", e)
+            logger.error("Failed to stop HTTP server", e)
         }
     }
 
     /**
-     * 注册所有REST API路由
+     * Register all REST API routes
      */
     private fun registerRoutes() {
         val javalin = app ?: return
 
-        // GET /ping - 健康检查
+        // GET /ping - Health check
         javalin.get("/ping") { ctx ->
             handlePing(ctx)
         }
 
-        // GET /manifest.json - 获取资源包清单
+        // GET /manifest.json - Get resource pack manifest
         javalin.get("/manifest.json") { ctx ->
             handleGetManifest(ctx)
         }
 
-        // GET /packs/{filename} - 下载资源包文件
+        // GET /packs/{filename} - Download resource pack
         javalin.get("/packs/{filename}") { ctx ->
             handleDownloadPack(ctx)
         }
 
-        // 404处理
+        // 404 handler
         javalin.error(404) { ctx ->
             ctx.json(mapOf(
                 "error" to "Not Found",
-                "message" to "请求的资源不存在: ${ctx.path()}"
+                "message" to "Resource not found: ${ctx.path()}"
             ))
         }
 
-        // 500处理
+        // 500 handler
         javalin.error(500) { ctx ->
             ctx.json(mapOf(
                 "error" to "Internal Server Error",
-                "message" to "服务器内部错误"
+                "message" to "Internal server error"
             ))
         }
     }
@@ -143,102 +138,97 @@ class EmbeddedHttpServer(
     }
 
     /**
-     * 处理获取清单请求
+     * Handle manifest request
      * GET /manifest.json
      */
     private fun handleGetManifest(ctx: Context) {
         try {
-            logger.info("生成资源包清单...")
             val manifest = manifestGenerator.generate()
 
-            // 返回JSON响应
+            // Return JSON response
             ctx.contentType("application/json")
             ctx.result(gson.toJson(manifest))
 
-            logger.info("清单生成成功: ${manifest.getPackCount()} 个资源包")
         } catch (e: Exception) {
-            logger.error("生成清单失败", e)
+            logger.error("Failed to generate manifest", e)
             ctx.status(500)
             ctx.json(mapOf(
                 "error" to "Internal Server Error",
-                "message" to "生成资源包清单失败: ${e.message}"
+                "message" to "Failed to generate manifest: ${e.message}"
             ))
         }
     }
 
     /**
-     * 处理下载资源包请求
+     * Handle resource pack download request
      * GET /packs/{filename}
      */
     private fun handleDownloadPack(ctx: Context) {
         val filename = ctx.pathParam("filename")
 
-        // 安全检查：防止路径遍历攻击
+        // Security check: prevent path traversal attacks
         if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
-            logger.warn("检测到非法文件名: $filename")
+            logger.warn("Invalid filename detected: $filename")
             ctx.status(400)
             ctx.json(mapOf(
                 "error" to "Bad Request",
-                "message" to "非法的文件名"
+                "message" to "Invalid filename"
             ))
             return
         }
 
-        // 优先在缓存目录查找文件夹包
+        // Look for packed files in cache directory first
         val cacheDir = File(packDirectory, ".cache")
         var file = File(cacheDir, filename)
 
-        // 如果缓存中没有，查找主目录中的原始ZIP/MCPACK
+        // Fallback to main directory for original ZIP/MCPACK files
         if (!file.exists() || !file.isFile) {
             file = File(packDirectory, filename)
         }
 
-        // 检查文件是否存在
+        // Check if file exists
         if (!file.exists() || !file.isFile) {
-            logger.warn("请求的文件不存在: $filename")
+            logger.warn("File not found: $filename")
             ctx.status(404)
             ctx.json(mapOf(
                 "error" to "Not Found",
-                "message" to "资源包文件不存在: $filename"
+                "message" to "Resource pack not found: $filename"
             ))
             return
         }
 
-        // 检查文件类型（只允许.zip和.mcpack）
+        // Check file type (only allow .zip and .mcpack)
         if (!filename.endsWith(".zip") && !filename.endsWith(".mcpack")) {
-            logger.warn("请求的文件类型不允许: $filename")
+            logger.warn("Forbidden file type: $filename")
             ctx.status(403)
             ctx.json(mapOf(
                 "error" to "Forbidden",
-                "message" to "不允许下载该类型的文件"
+                "message" to "File type not allowed"
             ))
             return
         }
 
         try {
-            // 传输文件
-            logger.info("开始传输文件: $filename (${file.length()} 字节)")
-
+            // Send file
             ctx.contentType("application/octet-stream")
             ctx.header("Content-Disposition", "attachment; filename=\"$filename\"")
 
-            // 对于资源包文件（通常几MB），直接读取到内存是安全的
-            // 这避免了流生命周期管理的问题
+            // For resource pack files (typically a few MB), reading into memory is safe
+            // This avoids stream lifecycle management issues
             ctx.result(file.readBytes())
 
-            logger.info("文件传输完成: $filename")
         } catch (e: Exception) {
-            logger.error("传输文件失败: $filename", e)
+            logger.error("Failed to transfer file: $filename", e)
             ctx.status(500)
             ctx.json(mapOf(
                 "error" to "Internal Server Error",
-                "message" to "文件传输失败: ${e.message}"
+                "message" to "File transfer failed: ${e.message}"
             ))
         }
     }
 
     /**
-     * 检查服务器是否在运行
+     * Check if server is running
      */
     fun isRunning(): Boolean {
         return app != null

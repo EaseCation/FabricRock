@@ -1,5 +1,6 @@
 package net.easecation.bedrockloader.render
 
+import net.easecation.bedrockloader.BedrockLoaderClient
 import net.easecation.bedrockloader.block.BlockContext
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistryClient
@@ -26,7 +27,11 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
         BedrockAddonsRegistry.blocks.forEach { (id, v) ->
             val block = v as? BlockContext.BlockDataDriven ?: return@forEach
             pluginContext.registerBlockStateResolver(block) { context ->
-                val loadedUnbakedModel = context.getOrLoadModel(id.withPath { "block/${it}" })
+                // 直接从注册表获取模型，避免触发文件加载
+                val loadedUnbakedModel = BedrockAddonsRegistryClient.blockModels[id]
+                if (loadedUnbakedModel == null) {
+                    BedrockLoaderClient.logger.warn("Block model not found for: $id, using missing model")
+                }
                 block.stateManager.states.forEach {
                     val model = (loadedUnbakedModel as? BedrockGeometryModel)?.getModelVariant(block, it) ?: loadedUnbakedModel
                     context.setModel(it, model)

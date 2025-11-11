@@ -52,7 +52,8 @@ object BedrockResourceDeserializer : PackDeserializer<BedrockResourceContext> {
                     }
                 }
                 // geometry
-                if (name.endsWith(".geo.json")) {
+                // 支持 .geo.json 和 models/ 目录下的标准 .json 文件
+                if (name.endsWith(".geo.json") || (name.startsWith("models/") && name.endsWith(".json"))) {
                     zip.getInputStream(entry).use { stream ->
                         try {
                             val geometryDefinition = GsonUtil.GSON.fromJson(InputStreamReader(stream), GeometryDefinition::class.java)

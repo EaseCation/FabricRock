@@ -9,8 +9,8 @@ import java.net.ConnectException
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
- * 远程资源包同步管理器
- * 核心类，协调所有同步组件
+ * Remote Pack Sync Manager
+ * Core class that coordinates all sync components
  */
 class RemotePackSyncManager(
     private val packDirectory: File,
@@ -25,178 +25,158 @@ class RemotePackSyncManager(
     @Volatile
     private var cancelled = false
 
-    // ==================== 监听器管理 ====================
+    // ==================== Listener Management ====================
 
     /**
-     * 添加同步监听器
+     * Add sync listener
      */
     fun addListener(listener: SyncListener) {
         listeners.add(listener)
-        logger.debug("添加监听器: ${listener.javaClass.simpleName}")
     }
 
     /**
-     * 移除同步监听器
+     * Remove sync listener
      */
     fun removeListener(listener: SyncListener) {
         listeners.remove(listener)
-        logger.debug("移除监听器: ${listener.javaClass.simpleName}")
     }
 
     /**
-     * 清空所有监听器
+     * Clear all listeners
      */
     fun clearListeners() {
         listeners.clear()
-        logger.debug("清空所有监听器")
     }
 
-    // ==================== 核心同步方法（阶段2实现） ====================
+    // ==================== Core Sync Methods ====================
 
     /**
-     * 检查资源包更新
-     * 阶段2只检查和对比，不下载文件
+     * Check for pack updates
      *
-     * @return 同步检查结果
+     * @return Sync check result
      */
     fun checkForUpdates(): SyncResult {
-        logger.info("========== 开始检查资源包更新 ==========")
+        logger.info("Checking for pack updates...")
         setState(SyncState.LoadingConfig)
         notifyListeners { it.onCheckingStart() }
 
         try {
-            // 1. 加载配置
+            // 1. Load config
             checkCancelled()
-            logger.debug("正在加载客户端配置...")
-            notifyListeners { it.onCheckingProgress("正在加载配置...") }
+            notifyListeners { it.onCheckingProgress("Loading config...") }
 
             val config = ClientConfigLoader.loadClientConfig(configFile)
 
             if (!config.enabled) {
-                logger.info("远程同步已禁用（配置: enabled=false）")
+                logger.info("Remote sync disabled")
                 setState(SyncState.Complete)
                 return SyncResult.Disabled
             }
 
-            logger.info("服务器地址: ${config.serverUrl}")
-            logger.info("超时时间: ${config.timeoutSeconds}秒")
+            logger.info("Server: ${config.serverUrl}, timeout: ${config.timeoutSeconds}s")
 
-            // 2. 获取远程manifest
+            // 2. Fetch remote manifest
             checkCancelled()
             setState(SyncState.FetchingManifest)
-            logger.debug("正在连接服务器...")
-            notifyListeners { it.onCheckingProgress("正在连接服务器: ${config.serverUrl}") }
+            notifyListeners { it.onCheckingProgress("Connecting to server: ${config.serverUrl}") }
 
             val client = ManifestClient(config)
             val manifest = client.fetchManifest()
 
-            logger.info("成功获取manifest:")
-            logger.info("  - 版本: ${manifest.version}")
-            logger.info("  - 生成时间: ${java.util.Date(manifest.generatedAt)}")
-            logger.info("  - 远程包数量: ${manifest.packs.size}")
+            logger.info("Manifest fetched: ${manifest.packs.size} pack(s)")
 
-            // 3. 对比本地包
+            // 3. Compare local packs
             checkCancelled()
             setState(SyncState.ComparingPacks)
-            logger.debug("正在对比remote/目录中的资源包...")
-            notifyListeners { it.onCheckingProgress("正在对比本地资源包...") }
+            notifyListeners { it.onCheckingProgress("Comparing local packs...") }
 
             val comparator = PackComparator(packDirectory, config)
             val plan = comparator.compare(manifest)
 
-            logger.info("对比完成:")
-            logger.info("  - 需要下载新包: ${plan.toDownload.size}")
-            logger.info("  - 需要更新包: ${plan.toUpdate.size}")
-            logger.info("  - 已是最新: ${plan.upToDate.size}")
-            logger.info("  - 仅remote/目录存在: ${plan.localOnly.size}")
-            logger.info("  - 待清理: ${plan.packagesToCleanup.size}")
+            logger.info("Comparison complete: ${plan.toDownload.size} new, ${plan.toUpdate.size} updates, ${plan.upToDate.size} up-to-date")
 
             if (plan.hasDownloads) {
-                logger.info("  - 总共需要下载: ${plan.totalToDownload} 个文件，${formatBytes(plan.totalBytes)}")
+                logger.info("Total to download: ${plan.totalToDownload} file(s), ${formatBytes(plan.totalBytes)}")
             }
 
-            // 4. 返回结果
+            // 4. Return result
             setState(SyncState.PlanReady(plan))
             notifyListeners { it.onCheckingComplete(plan) }
 
-            logger.info("========== 检查完成 ==========")
             return SyncResult.Success(plan)
 
         } catch (e: CancelledException) {
-            logger.warn("检查已取消")
+            logger.warn("Check cancelled")
             setState(SyncState.Cancelled)
-            notifyListeners { it.onCancelled("用户取消了检查") }
+            notifyListeners { it.onCancelled("User cancelled check") }
             return SyncResult.Cancelled
 
         } catch (e: SyncError.NetworkError) {
-            logger.warn("网络错误: ${e.message}")
-            val offline = SyncResult.Offline("无法连接到服务器，将使用本地资源包")
+            logger.warn("Network error: ${e.message}")
+            val offline = SyncResult.Offline("Cannot connect to server, will use local packs")
             setState(SyncState.Error(e))
             notifyListeners { it.onError(e) }
             return offline
 
         } catch (e: SyncError) {
-            logger.error("同步错误: ${e.message}", e.cause)
+            logger.error("Sync error: ${e.message}", e.cause)
             setState(SyncState.Error(e))
             notifyListeners { it.onError(e) }
             return SyncResult.Failed(e)
 
         } catch (e: Exception) {
             val error = mapExceptionToError(e)
-            logger.error("检查失败: ${error.message}", e)
+            logger.error("Check failed: ${error.message}", e)
             setState(SyncState.Error(error))
             notifyListeners { it.onError(error) }
             return SyncResult.Failed(error)
         }
     }
 
-    // ==================== 下载方法（阶段4实现） ====================
+    // ==================== Download Methods ====================
 
     /**
-     * 下载资源包
-     * 阶段4实现：从服务器下载所有需要的资源包文件
+     * Download resource packs
      *
-     * @param plan 同步计划
-     * @return 下载结果
+     * @param plan Sync plan
+     * @return Download result
      */
     fun downloadPacks(plan: SyncPlan): DownloadResult {
-        logger.info("========== 开始下载资源包 ==========")
+        logger.info("Starting download...")
 
-        // 检查是否有需要下载的文件
+        // Check if there are files to download
         if (!plan.hasDownloads) {
-            logger.info("没有需要下载的文件")
+            logger.info("No files to download")
             setState(SyncState.Complete)
             notifyListeners { it.onDownloadComplete(0, 0) }
             return DownloadResult.Success(emptyList(), emptyList())
         }
 
-        // 设置为下载中状态
+        // Set downloading state
         setState(SyncState.Downloading(0, plan.totalToDownload, 0f))
 
         try {
-            // 1. 加载配置
+            // 1. Load config
             checkCancelled()
             val config = ClientConfigLoader.loadClientConfig(configFile)
 
-            // 2. 创建下载器
+            // 2. Create downloader
             val downloader = PackDownloader(config, packDirectory)
 
-            // 3. 清理旧的临时文件
+            // 3. Cleanup temp files
             downloader.cleanupTempFiles()
 
-            // 4. 合并待下载列表
+            // 4. Merge download list
             val packList = plan.toDownload + plan.toUpdate
-            logger.info("准备下载 ${packList.size} 个文件，总大小: ${formatBytes(plan.totalBytes)}")
+            logger.info("Downloading ${packList.size} file(s), total size: ${formatBytes(plan.totalBytes)}")
 
-            // 5. 通知开始下载
+            // 5. Notify download start
             notifyListeners { it.onDownloadStart(plan.totalToDownload, plan.totalBytes) }
 
-            // 6. 执行批量下载
+            // 6. Execute batch download
             val result = downloader.downloadAll(
                 packs = packList,
-                onProgress = { index, total ->
-                    logger.debug("总体进度: $index/$total")
-                },
+                onProgress = { index, total -> },
                 onFileStart = { file, index, total ->
                     notifyListeners { it.onFileDownloadStart(file, index, total) }
                 },
@@ -209,19 +189,16 @@ class RemotePackSyncManager(
                 isCancelled = { cancelled }
             )
 
-            // 7. 清理远程已删除的包
+            // 7. Cleanup removed packs
             if (plan.packagesToCleanup.isNotEmpty()) {
-                logger.info("========== 开始清理远程已删除的包 ==========")
                 cleanupRemovedPacks(plan.packagesToCleanup)
-                logger.info("========== 清理完成 ==========")
             }
 
-            // 8. 处理下载结果
+            // 8. Process download result
             setState(SyncState.Complete)
             notifyListeners { it.onDownloadComplete(result.successCount, result.failCount) }
 
-            logger.info("========== 下载完成 ==========")
-            logger.info("成功: ${result.successCount}, 失败: ${result.failCount}")
+            logger.info("Download complete: ${result.successCount} succeeded, ${result.failCount} failed")
 
             return if (result.failCount == 0) {
                 DownloadResult.Success(result.successFiles, emptyList())
@@ -230,116 +207,113 @@ class RemotePackSyncManager(
             }
 
         } catch (e: CancelledException) {
-            logger.warn("下载已取消")
+            logger.warn("Download cancelled")
             setState(SyncState.Cancelled)
-            notifyListeners { it.onCancelled("用户取消了下载") }
+            notifyListeners { it.onCancelled("User cancelled download") }
             return DownloadResult.Cancelled
 
         } catch (e: SyncError) {
-            logger.error("下载失败: ${e.message}", e.cause)
+            logger.error("Download failed: ${e.message}", e.cause)
             setState(SyncState.Error(e))
             notifyListeners { it.onError(e) }
             return DownloadResult.Failed(e)
 
         } catch (e: Exception) {
             val error = mapExceptionToError(e)
-            logger.error("下载失败: ${error.message}", e)
+            logger.error("Download failed: ${error.message}", e)
             setState(SyncState.Error(error))
             notifyListeners { it.onError(error) }
             return DownloadResult.Failed(error)
         }
     }
 
-    // ==================== 控制方法 ====================
+    // ==================== Control Methods ====================
 
     /**
-     * 取消当前同步操作
+     * Cancel current sync operation
      */
     fun cancel() {
         if (!cancelled) {
-            logger.info("收到取消请求")
+            logger.info("Cancel requested")
             cancelled = true
         }
     }
 
     /**
-     * 重置同步管理器状态
+     * Reset sync manager state
      */
     fun reset() {
-        logger.debug("重置同步管理器")
         cancelled = false
         setState(SyncState.Idle)
     }
 
     /**
-     * 获取当前状态
+     * Get current state
      */
     fun getCurrentState(): SyncState = currentState
 
     /**
-     * 是否已取消
+     * Is cancelled
      */
     fun isCancelled(): Boolean = cancelled
 
-    // ==================== 内部方法 ====================
+    // ==================== Internal Methods ====================
 
     /**
-     * 设置状态
+     * Set state
      */
     private fun setState(newState: SyncState) {
-        val oldState = currentState
         currentState = newState
-        logger.debug("状态变化: $oldState -> $newState")
     }
 
     /**
-     * 通知所有监听器
+     * Notify all listeners
      */
     private fun notifyListeners(action: (SyncListener) -> Unit) {
         listeners.forEach { listener ->
             try {
                 action(listener)
             } catch (e: Exception) {
-                logger.error("监听器执行失败: ${listener.javaClass.simpleName}", e)
+                logger.error("Listener failed: ${listener.javaClass.simpleName}", e)
             }
         }
     }
 
     /**
-     * 检查是否已取消
-     * @throws CancelledException 如果已取消
+     * Check if cancelled
+     * @throws CancelledException if cancelled
      */
     private fun checkCancelled() {
         if (cancelled) {
-            throw CancelledException("检查已被取消")
+            throw CancelledException("Operation cancelled")
         }
     }
 
     /**
-     * 将异常映射为SyncError
+     * Map exception to SyncError
      */
     private fun mapExceptionToError(e: Exception): SyncError {
         return when (e) {
             is SyncError -> e
-            is ConnectException -> SyncError.NetworkError("无法连接到服务器", e)
-            is java.net.SocketTimeoutException -> SyncError.NetworkError("连接超时", e)
-            is IOException -> SyncError.NetworkError("网络IO错误", e)
-            else -> SyncError.UnknownError(e.message ?: "未知错误", e)
+            is ConnectException -> SyncError.NetworkError("Cannot connect to server", e)
+            is java.net.SocketTimeoutException -> SyncError.NetworkError("Connection timeout", e)
+            is IOException -> SyncError.NetworkError("Network IO error", e)
+            else -> SyncError.UnknownError(e.message ?: "Unknown error", e)
         }
     }
 
     /**
-     * 清理远程已删除的包
-     * 删除remote/目录中那些远程服务器已删除的包
+     * Cleanup removed packs
+     * Delete packs in remote/ directory that are removed from server
      *
-     * @param filenames 要清理的文件名列表
+     * @param filenames List of filenames to cleanup
      */
     private fun cleanupRemovedPacks(filenames: List<String>) {
         if (filenames.isEmpty()) {
             return
         }
 
-        logger.info("准备清理 ${filenames.size} 个远程已删除的包")
+        logger.info("Cleaning up ${filenames.size} removed pack(s)")
         val remoteDirectory = File(packDirectory, "remote")
 
         var cleanedCount = 0
@@ -348,24 +322,20 @@ class RemotePackSyncManager(
         for (filename in filenames) {
             val file = File(remoteDirectory, filename)
             if (file.exists()) {
-                logger.info("清理包: $filename")
                 if (file.delete()) {
                     cleanedCount++
-                    logger.debug("  成功删除: ${file.absolutePath}")
                 } else {
                     failedCount++
-                    logger.warn("  删除失败: ${file.absolutePath}")
+                    logger.warn("Failed to delete: $filename")
                 }
-            } else {
-                logger.warn("文件不存在，跳过: $filename")
             }
         }
 
-        logger.info("清理完成 - 成功: $cleanedCount, 失败: $failedCount")
+        logger.info("Cleanup complete: $cleanedCount succeeded, $failedCount failed")
     }
 
     /**
-     * 格式化字节数为人类可读格式
+     * Format bytes to human-readable format
      */
     private fun formatBytes(bytes: Long): String {
         return when {
