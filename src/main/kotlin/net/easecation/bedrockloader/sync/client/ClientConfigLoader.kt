@@ -7,27 +7,27 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
 /**
- * 客户端配置加载器
+ * Client configuration loader
  */
 object ClientConfigLoader {
     private val logger = LoggerFactory.getLogger("BedrockLoader/ClientConfig")
 
     /**
-     * 加载客户端配置
-     * 如果配置文件不存在，则创建默认配置文件并返回默认配置
+     * Load client configuration
+     * If the config file does not exist, create default config file and return default config
      *
-     * @param configFile 配置文件路径
-     * @return 客户端配置对象
+     * @param configFile Path to the config file
+     * @return Client configuration object
      */
     fun loadClientConfig(configFile: File): ClientConfig {
         if (!configFile.exists()) {
-            logger.info("配置文件不存在，创建默认配置: ${configFile.absolutePath}")
+            logger.info("Config file does not exist, creating default config: ${configFile.absolutePath}")
             createDefaultClientConfig(configFile)
             return ClientConfig.default()
         }
 
         return try {
-            logger.debug("加载客户端配置: ${configFile.absolutePath}")
+            logger.debug("Loading client config: ${configFile.absolutePath}")
             Files.newBufferedReader(configFile.toPath(), StandardCharsets.UTF_8).use { reader ->
                 val yaml = Yaml()
                 val data = yaml.load<Map<String, Any>>(reader) ?: emptyMap()
@@ -42,51 +42,51 @@ object ClientConfigLoader {
                 )
             }
         } catch (e: Exception) {
-            logger.error("加载客户端配置失败，使用默认配置", e)
+            logger.error("Failed to load client config, using default config", e)
             ClientConfig.default()
         }
     }
 
     /**
-     * 保存客户端配置到文件
+     * Save client configuration to file
      *
-     * @param config 配置对象
-     * @param configFile 配置文件路径
+     * @param config Configuration object
+     * @param configFile Path to the config file
      */
     fun saveConfig(config: ClientConfig, configFile: File) {
         try {
             configFile.parentFile.mkdirs()
 
             val configContent = """
-                # Bedrock Loader - 客户端远程同步配置
-                # 此配置用于客户端从服务器同步资源包
+                # Bedrock Loader - Client Remote Sync Configuration
+                # This configuration is used for syncing resource packs from server
 
-                # 是否启用远程同步
-                # true: 启动时检查服务器并下载资源包
-                # false: 禁用远程同步，使用本地资源包（默认）
+                # Enable remote synchronization
+                # true: Check server and download resource packs on startup
+                # false: Disable remote sync, use local resource packs (default)
                 enabled: ${config.enabled}
 
-                # 服务器地址（包含协议和端口）
-                # 示例: http://192.168.1.100:8080
+                # Server address (including protocol and port)
+                # Example: http://192.168.1.100:8080
                 server-url: "${config.serverUrl}"
 
-                # HTTP请求超时时间（秒）
-                # 建议值: 5-30秒
+                # HTTP request timeout (seconds)
+                # Recommended: 5-30 seconds
                 timeout-seconds: ${config.timeoutSeconds}
 
-                # 是否显示UI同步界面
-                # true: 显示下载进度界面（阶段3）
-                # false: 后台静默同步
+                # Show UI sync interface
+                # true: Show download progress UI (Phase 3)
+                # false: Silent background sync
                 show-ui: ${config.showUI}
 
-                # 发生错误时是否自动取消同步
-                # true: 任何错误都取消同步，使用本地包
-                # false: 尝试继续同步其他文件
+                # Auto cancel on error
+                # true: Cancel sync on any error, use local packs
+                # false: Try to continue syncing other files
                 auto-cancel-on-error: ${config.autoCancelOnError}
 
-                # 是否自动清理远程已删除的包
-                # true: 自动删除remote/目录中那些远程服务器已删除的包
-                # false: 保留所有本地包，不自动清理
+                # Auto cleanup removed packs
+                # true: Automatically delete packs from remote/ directory that have been removed from server
+                # false: Keep all local packs, no auto cleanup
                 auto-cleanup-removed-packs: ${config.autoCleanupRemovedPacks}
             """.trimIndent()
 
@@ -94,50 +94,50 @@ object ClientConfigLoader {
                 writer.write(configContent)
             }
 
-            logger.info("已保存客户端配置文件: ${configFile.absolutePath}")
+            logger.info("Saved client config file: ${configFile.absolutePath}")
         } catch (e: Exception) {
-            logger.error("保存客户端配置文件失败", e)
+            logger.error("Failed to save client config file", e)
             throw e
         }
     }
 
     /**
-     * 创建默认客户端配置文件
+     * Create default client configuration file
      */
     private fun createDefaultClientConfig(configFile: File) {
         try {
             configFile.parentFile.mkdirs()
 
             val defaultConfig = """
-                # Bedrock Loader - 客户端远程同步配置
-                # 此配置用于客户端从服务器同步资源包
+                # Bedrock Loader - Client Remote Sync Configuration
+                # This configuration is used for syncing resource packs from server
 
-                # 是否启用远程同步
-                # true: 启动时检查服务器并下载资源包
-                # false: 禁用远程同步，使用本地资源包（默认）
+                # Enable remote synchronization
+                # true: Check server and download resource packs on startup
+                # false: Disable remote sync, use local resource packs (default)
                 enabled: false
 
-                # 服务器地址（包含协议和端口）
-                # 示例: http://192.168.1.100:8080
+                # Server address (including protocol and port)
+                # Example: http://192.168.1.100:8080
                 server-url: "http://localhost:8080"
 
-                # HTTP请求超时时间（秒）
-                # 建议值: 5-30秒
+                # HTTP request timeout (seconds)
+                # Recommended: 5-30 seconds
                 timeout-seconds: 10
 
-                # 是否显示UI同步界面
-                # true: 显示下载进度界面（阶段3）
-                # false: 后台静默同步
+                # Show UI sync interface
+                # true: Show download progress UI (Phase 3)
+                # false: Silent background sync
                 show-ui: true
 
-                # 发生错误时是否自动取消同步
-                # true: 任何错误都取消同步，使用本地包
-                # false: 尝试继续同步其他文件
+                # Auto cancel on error
+                # true: Cancel sync on any error, use local packs
+                # false: Try to continue syncing other files
                 auto-cancel-on-error: false
 
-                # 是否自动清理远程已删除的包
-                # true: 自动删除remote/目录中那些远程服务器已删除的包
-                # false: 保留所有本地包，不自动清理
+                # Auto cleanup removed packs
+                # true: Automatically delete packs from remote/ directory that have been removed from server
+                # false: Keep all local packs, no auto cleanup
                 auto-cleanup-removed-packs: true
             """.trimIndent()
 
@@ -145,9 +145,9 @@ object ClientConfigLoader {
                 writer.write(defaultConfig)
             }
 
-            logger.info("已创建默认客户端配置文件: ${configFile.absolutePath}")
+            logger.info("Created default client config file: ${configFile.absolutePath}")
         } catch (e: Exception) {
-            logger.error("创建默认客户端配置文件失败", e)
+            logger.error("Failed to create default client config file", e)
         }
     }
 }

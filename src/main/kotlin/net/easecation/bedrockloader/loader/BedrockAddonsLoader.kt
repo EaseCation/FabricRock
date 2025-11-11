@@ -252,7 +252,7 @@ object BedrockAddonsLoader {
 
             // 保存内容哈希到文件，用于下次启动时判断缓存是否有效
             try {
-                hashFile.writeText(currentHash)
+                hashFile.writeText(currentHash, Charsets.UTF_8)
                 BedrockLoader.logger.debug("保存内容哈希: ${currentHash.substring(0, 8)}... -> ${hashFile.name}")
             } catch (e: Exception) {
                 BedrockLoader.logger.warn("保存哈希文件失败: ${hashFile.name}", e)

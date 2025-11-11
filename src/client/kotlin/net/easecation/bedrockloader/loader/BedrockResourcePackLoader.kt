@@ -27,7 +27,8 @@ import net.minecraft.client.util.SpriteIdentifier
 import net.minecraft.screen.PlayerScreenHandler
 import net.minecraft.util.Identifier
 import java.io.File
-import java.io.FileWriter
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import javax.imageio.ImageIO
 
 class BedrockResourcePackLoader(
@@ -115,7 +116,7 @@ class BedrockResourcePackLoader(
                         description = "Bedrock addons loader"
                 )
         )
-        FileWriter(fileMcMeta).use { writer ->
+        Files.newBufferedWriter(fileMcMeta.toPath(), StandardCharsets.UTF_8).use { writer ->
             GsonUtil.GSON.toJson(mcMeta, writer)
         }
         // pack.png
