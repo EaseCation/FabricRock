@@ -3,8 +3,8 @@ package net.easecation.bedrockloader.sync.server
 import org.slf4j.LoggerFactory
 import org.yaml.snakeyaml.Yaml
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileWriter
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 
 /**
  * YAML配置文件加载器
@@ -25,9 +25,9 @@ object ConfigLoader {
         }
 
         return try {
-            FileInputStream(configFile).use { input ->
+            Files.newBufferedReader(configFile.toPath(), StandardCharsets.UTF_8).use { reader ->
                 val yaml = Yaml()
-                val data = yaml.load<Map<String, Any>>(input)
+                val data = yaml.load<Map<String, Any>>(reader)
                 parseServerConfig(data)
             }
         } catch (e: Exception) {
@@ -80,7 +80,7 @@ object ConfigLoader {
             # baseUrl: "http://your-server-ip:8080"
         """.trimIndent()
 
-        FileWriter(configFile).use { writer ->
+        Files.newBufferedWriter(configFile.toPath(), StandardCharsets.UTF_8).use { writer ->
             writer.write(defaultContent)
         }
 

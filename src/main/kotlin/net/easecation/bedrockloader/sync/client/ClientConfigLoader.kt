@@ -3,8 +3,8 @@ package net.easecation.bedrockloader.sync.client
 import org.slf4j.LoggerFactory
 import org.yaml.snakeyaml.Yaml
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileWriter
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 
 /**
  * 客户端配置加载器
@@ -28,9 +28,9 @@ object ClientConfigLoader {
 
         return try {
             logger.debug("加载客户端配置: ${configFile.absolutePath}")
-            FileInputStream(configFile).use { input ->
+            Files.newBufferedReader(configFile.toPath(), StandardCharsets.UTF_8).use { reader ->
                 val yaml = Yaml()
-                val data = yaml.load<Map<String, Any>>(input) ?: emptyMap()
+                val data = yaml.load<Map<String, Any>>(reader) ?: emptyMap()
 
                 ClientConfig(
                     enabled = data["enabled"] as? Boolean ?: false,
@@ -90,7 +90,7 @@ object ClientConfigLoader {
                 auto-cleanup-removed-packs: ${config.autoCleanupRemovedPacks}
             """.trimIndent()
 
-            FileWriter(configFile).use { writer ->
+            Files.newBufferedWriter(configFile.toPath(), StandardCharsets.UTF_8).use { writer ->
                 writer.write(configContent)
             }
 
@@ -141,7 +141,7 @@ object ClientConfigLoader {
                 auto-cleanup-removed-packs: true
             """.trimIndent()
 
-            FileWriter(configFile).use { writer ->
+            Files.newBufferedWriter(configFile.toPath(), StandardCharsets.UTF_8).use { writer ->
                 writer.write(defaultConfig)
             }
 
