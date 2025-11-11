@@ -10,6 +10,8 @@ import net.easecation.bedrockloader.loader.deserializer.BedrockBehaviorDeseriali
 import net.easecation.bedrockloader.loader.context.BedrockPackContext
 import net.easecation.bedrockloader.loader.deserializer.BedrockResourceDeserializer
 import net.easecation.bedrockloader.sync.common.MD5Util
+import net.fabricmc.api.EnvType
+import net.fabricmc.loader.api.FabricLoader
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.filefilter.TrueFileFilter
 import java.io.File
@@ -49,10 +51,13 @@ object BedrockAddonsLoader {
             cacheDir.mkdirs()
         }
 
-        // 创建remote目录（用于存储远程下载的包）
-        val remoteDir = File(dataFolder, "remote")
-        if (!remoteDir.exists()) {
-            remoteDir.mkdirs()
+        // 仅在客户端创建remote目录（用于存储远程下载的包）
+        val envType = FabricLoader.getInstance().environmentType
+        if (envType == EnvType.CLIENT) {
+            val remoteDir = File(dataFolder, "remote")
+            if (!remoteDir.exists()) {
+                remoteDir.mkdirs()
+            }
         }
 
         // 从dataFolder根目录读取手动放置的包（排除remote和.cache目录）
@@ -62,11 +67,16 @@ object BedrockAddonsLoader {
             name.endsWith(".zip") || name.endsWith(".mcpack")
         } ?: emptyArray()
 
-        // 从remote/目录读取远程下载的包
-        val remoteFiles = remoteDir.listFiles { file: File, name: String ->
-            val child = File(file, name)
-            (child.isDirectory && name != ".DS_Store") || name.endsWith(".zip") || name.endsWith(".mcpack")
-        } ?: emptyArray()
+        // 从remote/目录读取远程下载的包（仅在客户端且目录存在时）
+        val remoteDir = File(dataFolder, "remote")
+        val remoteFiles = if (envType == EnvType.CLIENT && remoteDir.exists() && remoteDir.isDirectory) {
+            remoteDir.listFiles { file: File, name: String ->
+                val child = File(file, name)
+                (child.isDirectory && name != ".DS_Store") || name.endsWith(".zip") || name.endsWith(".mcpack")
+            } ?: emptyArray()
+        } else {
+            emptyArray()
+        }
 
         // 合并两个目录的文件
         // 重要：先加载远程包，再加载手动包，确保手动包优先（覆盖远程包）
