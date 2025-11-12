@@ -5,6 +5,7 @@ import net.easecation.bedrockloader.bedrock.block.component.*
 import net.easecation.bedrockloader.bedrock.block.state.IBlockState
 import net.easecation.bedrockloader.bedrock.pack.SemVersion
 import net.easecation.bedrockloader.bedrock.definition.BlockResourceDefinition
+import net.easecation.bedrockloader.bedrock.definition.EntityResourceDefinition
 import net.easecation.bedrockloader.bedrock.definition.GeometryDefinition
 import net.easecation.bedrockloader.bedrock.definition.TextureDataDefinition
 import net.easecation.bedrockloader.bedrock.entity.components.ComponentRideable
@@ -50,6 +51,9 @@ object GsonUtil {
             .registerTypeAdapter(ComponentTransformation::class.java, ComponentTransformation.Deserializer())
             // entity component
             .registerTypeAdapter(ComponentRideable::class.java, ComponentRideable.Deserializer())
+            // entity resource
+            .registerTypeAdapter(EntityResourceDefinition.RenderControllerReference::class.java,
+                    EntityResourceDefinition.RenderControllerReference.Deserializer())
             // geometry
             .registerTypeAdapter(GeometryDefinition.Uv::class.java, GeometryDefinition.Uv.Deserializer())
             .registerTypeAdapter(GeometryDefinition.Locator::class.java, GeometryDefinition.Locator.Deserializer())

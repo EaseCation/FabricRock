@@ -450,7 +450,7 @@ class BedrockResourcePackLoader(
             BedrockLoader.logger.warn("[BedrockResourcePackLoader] Entity {} has more than one render controller, only the first one will be used.", clientEntity.identifier)
         }
         val controller = controllers[0]
-        val renderController = context.resource.renderControllers[controller] ?: return null
+        val renderController = context.resource.renderControllers[controller.id] ?: return null
         val model = createRenderControllerModel(identifier, clientEntity, renderController) ?: return null
         return model
     }
