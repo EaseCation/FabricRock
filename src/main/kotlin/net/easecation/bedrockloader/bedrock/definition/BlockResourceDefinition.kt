@@ -6,6 +6,7 @@ import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 import com.google.gson.reflect.TypeToken
 import net.easecation.bedrockloader.bedrock.pack.SemVersion
+import net.easecation.bedrockloader.util.normalizeIdentifier
 import net.minecraft.util.Identifier
 import java.lang.reflect.Type
 
@@ -27,7 +28,7 @@ data class BlockResourceDefinition(
             val blocks = mutableMapOf<Identifier, Block>()
             for ((key, value) in obj.entrySet()) {
                 if (key == "format_version") continue
-                val identifier = Identifier(key)
+                val identifier = Identifier(key.normalizeIdentifier())
                 blocks[identifier] = context.deserialize(value, Block::class.java)
             }
             val type = object: TypeToken<SemVersion>() {}.type

@@ -12,6 +12,22 @@ import net.minecraft.util.Identifier
 import java.lang.reflect.Type
 import java.util.UUID
 
+/**
+ * 将驼峰命名转换为下划线命名，并转换为小写
+ * 例如: pistonArmCollision -> piston_arm_collision
+ */
+fun String.camelToSnakeCase(): String {
+    return this.replace(Regex("([a-z])([A-Z])"), "$1_$2").lowercase()
+}
+
+/**
+ * 规范化基岩版标识符为Java版兼容格式
+ * 将驼峰命名转换为下划线命名，确保符合Minecraft Identifier规范
+ */
+fun String.normalizeIdentifier(): String {
+    return this.camelToSnakeCase()
+}
+
 object GsonUtil {
 
     val GSON: Gson = GsonBuilder()
@@ -53,7 +69,7 @@ object GsonUtil {
             return JsonPrimitive(src.toString())
         }
         override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): Identifier {
-            return Identifier(json.asString)
+            return Identifier(json.asString.normalizeIdentifier())
         }
     }
 }
