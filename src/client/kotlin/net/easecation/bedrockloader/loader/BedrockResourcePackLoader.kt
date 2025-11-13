@@ -40,6 +40,9 @@ class BedrockResourcePackLoader(
 
     fun load() {
         this.init()
+        // 注册资源包上下文，供动态材质创建使用
+        // 使用通配符作为key，因为所有资源包都混合在一个全局context中
+        BedrockAddonsRegistryClient.packContexts["*"] = context
         // Geometry
         context.resource.geometries.forEach { (key, value) ->
             BedrockAddonsRegistryClient.geometries[key] = BedrockGeometryModel.Factory(value)
@@ -289,14 +292,21 @@ class BedrockResourcePackLoader(
         val textureMap = mutableMapOf<String, Either<SpriteIdentifier, String>>()
         // 通过行为包定义了贴图
         materialInstances?.forEach { (key, value) ->
-            if (key == "*") {
-                value.texture?.let { texture ->
-                    context.resource.terrainTextureToJava(identifier.namespace, texture)?.let {
-                        textureMap["all"] = Either.left(SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, it))
+            value.texture?.let { texture ->
+                context.resource.terrainTextureToJava(identifier.namespace, texture)?.let { texturePath ->
+                    val spriteId = SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, texturePath)
+                    // 支持多面材质映射
+                    when (key) {
+                        "*" -> textureMap["all"] = Either.left(spriteId)
+                        "north" -> textureMap["north"] = Either.left(spriteId)
+                        "south" -> textureMap["south"] = Either.left(spriteId)
+                        "east" -> textureMap["east"] = Either.left(spriteId)
+                        "west" -> textureMap["west"] = Either.left(spriteId)
+                        "up" -> textureMap["up"] = Either.left(spriteId)
+                        "down" -> textureMap["down"] = Either.left(spriteId)
+                        else -> BedrockLoader.logger.warn("[BedrockResourcePackLoader] Unknown material instance key '$key' for block $identifier")
                     }
                 }
-            } else {
-                BedrockLoader.logger.info("[BedrockResourcePackLoader] Material instance $key -> $value is not supported yet.")
             }
         }
         // 普通方块情况：通过材质包的blocks.json定义贴图
@@ -360,7 +370,8 @@ class BedrockResourcePackLoader(
                 )
             )
         } ?: emptyMap()
-        return geometryFactory?.create(materials)
+        // 使用带identifier的create方法，支持permutations动态材质切换
+        return geometryFactory?.create(materials, identifier)
     }
 
     private fun registerBlockRenderLayer(

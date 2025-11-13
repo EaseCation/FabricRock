@@ -39,7 +39,10 @@ class BedrockGeometryModel private constructor(
     val materials: Map<String, BedrockMaterialInstance>,
     private val transformation: ModelTransformation,
     private val modelPart: ModelPart,
-    private val blockTransformation: ComponentTransformation?
+    private val blockTransformation: ComponentTransformation?,
+    // 用于变体检测的基准信息
+    private var blockIdentifier: Identifier? = null,
+    private var baseMaterialsHash: Int? = null
 ) : EntityModel<EntityDataDriven>(), UnbakedModel, BakedModel, FabricBakedModel {
 
     companion object {
@@ -68,6 +71,13 @@ class BedrockGeometryModel private constructor(
             }
         }
 
+        /**
+         * 创建基础几何体模型
+         *
+         * @param materials 材质映射
+         * @param transformation 模型变换
+         * @return 基础几何体模型
+         */
         fun create(
             materials: Map<String, BedrockMaterialInstance>,
             transformation: ModelTransformation = MODEL_TRANSFORM_BLOCK
@@ -75,15 +85,92 @@ class BedrockGeometryModel private constructor(
             val modelPart = getTexturedModelData(bedrockModel).createModel()
             return BedrockGeometryModel(bedrockModel, materials, transformation, modelPart, null)
         }
+
+        /**
+         * 创建支持动态材质切换的几何体模型
+         *
+         * @param materials 基础材质映射
+         * @param identifier 方块标识符，用于后续动态创建材质
+         * @param transformation 模型变换
+         * @return 支持动态材质的几何体模型
+         */
+        fun create(
+            materials: Map<String, BedrockMaterialInstance>,
+            identifier: Identifier,
+            transformation: ModelTransformation = MODEL_TRANSFORM_BLOCK
+        ): BedrockGeometryModel {
+            val modelPart = getTexturedModelData(bedrockModel).createModel()
+            return BedrockGeometryModel(
+                bedrockModel,
+                materials,
+                transformation,
+                modelPart,
+                null,
+                identifier,
+                materials.hashCode()
+            )
+        }
     }
 
     private var defaultSprite: Sprite? = null
     private var sprites: MutableMap<String, Sprite> = mutableMapOf()
     private var mesh: Mesh? = null
 
+    /**
+     * 获取特定BlockState的模型变体
+     *
+     * 根据BlockState的components（经过permutations烘焙），动态创建模型变体。
+     * 支持以下组件的动态切换：
+     * - minecraft:transformation（旋转/缩放/位移）
+     * - minecraft:material_instances（材质/纹理）
+     *
+     * @param block 方块数据驱动实例
+     * @param state 方块状态
+     * @return 对应状态的UnbakedModel（可能是this本身或新创建的变体）
+     */
     fun getModelVariant(block: BlockContext.BlockDataDriven, state: BlockState): UnbakedModel {
-        val blockTransformation = block.getComponents(state).minecraftTransformation ?: return this
-        return BedrockGeometryModel(bedrockModel, materials, transformation, modelPart, blockTransformation)
+        val components = block.getComponents(state)
+        val newTransformation = components.minecraftTransformation
+        val newMaterialInstances = components.minecraftMaterialInstances
+
+        // 检查是否需要创建新的材质映射
+        val needsNewMaterials = blockIdentifier != null &&
+                newMaterialInstances != null &&
+                newMaterialInstances.hashCode() != baseMaterialsHash
+
+        // 检查是否有transformation变化
+        val hasTransformation = newTransformation != null
+
+        // 如果都没有变化，复用基础模型
+        if (!needsNewMaterials && !hasTransformation) {
+            return this
+        }
+
+        // 创建新的材质映射（如果需要）
+        val newMaterials = if (needsNewMaterials && blockIdentifier != null) {
+            BedrockMaterialHelper.createMaterialsFromInstances(
+                blockIdentifier!!.namespace,
+                blockIdentifier!!,
+                newMaterialInstances!!
+            ).also {
+                BedrockLoader.logger.debug(
+                    "[BedrockGeometryModel] Created material variant for block ${blockIdentifier} state $state: ${newMaterialInstances.keys}"
+                )
+            }
+        } else {
+            materials
+        }
+
+        // 创建新的模型变体
+        return BedrockGeometryModel(
+            bedrockModel,
+            newMaterials,
+            transformation,
+            modelPart,
+            newTransformation,
+            blockIdentifier,
+            baseMaterialsHash
+        )
     }
 
     override fun getModelDependencies(): Collection<Identifier> {

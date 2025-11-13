@@ -96,11 +96,22 @@ src/
 - 支持基岩几何体模型或标准立方体模型
 - 支持材质实例(Material Instances)和渲染层
 - 支持方块实体(Block Entity)
+- ✨ **支持Permutations（条件变体）**: 根据方块状态动态切换材质、模型和变换
+
+**Permutations系统** (v1.1新增):
+- **材质动态切换**: 根据permutation条件改变minecraft:material_instances
+- **Geometry动态切换**: 根据permutation条件替换minecraft:geometry（实现开关门等效果）
+- **多面材质映射**: 支持north/south/east/west/up/down独立纹理
+- **Transformation变体**: 支持每个状态独立的旋转/缩放/位移
+- **条件表达式**: 支持`query.block_state('property') == 'value'`语法和&&运算
+- **性能优化**: 预烘焙策略，运行时O(1)组件查询
 
 **重要类**:
 - `BlockContext` - 方块创建工厂
 - `BlockDataDriven` - 数据驱动的方块实现
+- `BlockDataDriven.getGeometryIdentifier()` - 提取当前状态的geometry标识符
 - `BlockEntityDataDriven` - 数据驱动的方块实体实现
+- `BedrockMaterialHelper` - 材质实例动态创建辅助类
 
 ### 实体系统
 
@@ -150,11 +161,22 @@ src/
 
 **模型加载插件**: 通过`ModelLoadingPlugin`拦截模型加载,为基岩方块和物品提供自定义模型。
 
+**模型变体系统** (v1.1增强):
+- 使用Fabric的`BlockStateResolver` API为每个BlockState注册独立模型
+- `BedrockGeometryModel.getModelVariant()` - 根据components创建模型变体
+- 支持材质、geometry、transformation的动态组合
+- 自动缓存和复用相同配置的模型
+
 **渲染层**: 根据Material Instance的`render_method`选择:
 - `alpha_test` → RenderLayer.getCutout()
 - `blend` → RenderLayer.getTranslucent()
 
 **实体渲染**: 注册`EntityDataDrivenRenderer`和`BedrockGeometryModel`到实体渲染器注册表。
+
+**关键类**:
+- `BedrockModelLoadingPlugin` - Fabric模型加载插件
+- `BedrockGeometryModel.Factory` - 几何体模型工厂
+- `BedrockMaterialHelper` - 动态材质创建辅助类
 
 ## 开发建议
 
@@ -164,6 +186,146 @@ src/
 2. 在资源包中定义纹理和模型: `blocks.json`, `terrain_texture.json`
 3. 将基岩包放入 `config/bedrock-loader/`
 4. 重启游戏,模组会自动加载和注册
+
+### 使用Permutations实现动态方块
+
+#### 示例1: 材质切换（颜色变体）
+
+```json
+{
+  "minecraft:block": {
+    "description": {
+      "identifier": "mymod:colored_block",
+      "properties": {
+        "mymod:color": ["red", "blue", "green"]
+      }
+    },
+    "components": {
+      "minecraft:geometry": "geometry.cube",
+      "minecraft:material_instances": {
+        "*": { "texture": "default_texture", "render_method": "opaque" }
+      }
+    },
+    "permutations": [
+      {
+        "condition": "query.block_state('mymod:color') == 'red'",
+        "components": {
+          "minecraft:material_instances": {
+            "*": { "texture": "red_texture" }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('mymod:color') == 'blue'",
+        "components": {
+          "minecraft:material_instances": {
+            "*": { "texture": "blue_texture" }
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+#### 示例2: 模型切换（开关门）
+
+```json
+{
+  "minecraft:block": {
+    "description": {
+      "identifier": "mymod:custom_door",
+      "properties": {
+        "mymod:open": [true, false]
+      }
+    },
+    "components": {
+      "minecraft:geometry": "geometry.door_closed",
+      "minecraft:material_instances": {
+        "*": { "texture": "door", "render_method": "alpha_test" }
+      }
+    },
+    "permutations": [
+      {
+        "condition": "query.block_state('mymod:open') == 'true'",
+        "components": {
+          "minecraft:geometry": "geometry.door_open"
+        }
+      }
+    ]
+  }
+}
+```
+
+#### 示例3: 多面材质
+
+```json
+{
+  "minecraft:block": {
+    "description": {
+      "identifier": "mymod:directional_block"
+    },
+    "components": {
+      "minecraft:geometry": "geometry.cube",
+      "minecraft:material_instances": {
+        "north": { "texture": "front_texture" },
+        "south": { "texture": "back_texture" },
+        "east": { "texture": "side_texture" },
+        "west": { "texture": "side_texture" },
+        "up": { "texture": "top_texture" },
+        "down": { "texture": "bottom_texture" }
+      }
+    }
+  }
+}
+```
+
+#### 示例4: 旋转变换
+
+```json
+{
+  "minecraft:block": {
+    "description": {
+      "identifier": "mymod:rotatable_block",
+      "properties": {
+        "minecraft:cardinal_direction": ["north", "south", "east", "west"]
+      }
+    },
+    "components": {
+      "minecraft:geometry": "geometry.custom_model",
+      "minecraft:material_instances": {
+        "*": { "texture": "model_texture" }
+      }
+    },
+    "permutations": [
+      {
+        "condition": "query.block_state('minecraft:cardinal_direction') == 'north'",
+        "components": {
+          "minecraft:transformation": { "rotation": [0, 180, 0] }
+        }
+      },
+      {
+        "condition": "query.block_state('minecraft:cardinal_direction') == 'south'",
+        "components": {
+          "minecraft:transformation": { "rotation": [0, 0, 0] }
+        }
+      },
+      {
+        "condition": "query.block_state('minecraft:cardinal_direction') == 'east'",
+        "components": {
+          "minecraft:transformation": { "rotation": [0, 270, 0] }
+        }
+      },
+      {
+        "condition": "query.block_state('minecraft:cardinal_direction') == 'west'",
+        "components": {
+          "minecraft:transformation": { "rotation": [0, 90, 0] }
+        }
+      }
+    ]
+  }
+}
+```
 
 ### 添加新的基岩实体支持
 
@@ -189,11 +351,21 @@ src/
 ## 项目状态
 
 项目目前处于早期开发阶段,许多功能尚未完成。当前重点:
-- 自定义方块和模型
-- 实体模型和组件系统
-- 资源包转换系统
+- ✅ 自定义方块和模型
+- ✅ 实体模型和组件系统
+- ✅ 资源包转换系统
+- ✅ **Permutations动态变体系统 (v1.1新增)**
+
+已完成功能:
+- ✅ 方块状态系统和permutations支持
+- ✅ 材质动态切换
+- ✅ Geometry动态切换
+- ✅ 多面材质映射（north/south/east/west/up/down）
+- ✅ Transformation变换系统
+- ✅ 基岩几何体渲染
+- ✅ 实体组件系统
 
 已知问题:
-- 方块状态系统不完整
 - 碰撞箱支持有限
-- 许多基岩特性尚未实现
+- Molang表达式仅支持简单的`==`、`!=`和`&&`
+- 部分基岩特性尚未实现

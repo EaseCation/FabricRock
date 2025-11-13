@@ -194,6 +194,23 @@ data class BlockContext(
             return componentsByState[state] ?: behaviour.components
         }
 
+        /**
+         * 获取特定BlockState的几何体标识符
+         *
+         * 用于支持permutations中的geometry动态切换。
+         * 从当前state的components中提取minecraft:geometry组件的标识符。
+         *
+         * @param state 方块状态
+         * @return geometry标识符，如果没有定义geometry则返回null
+         */
+        fun getGeometryIdentifier(state: BlockState): String? {
+            return when (val geometry = getComponents(state).minecraftGeometry) {
+                is net.easecation.bedrockloader.bedrock.block.component.ComponentGeometry.ComponentGeometrySimple -> geometry.identifier
+                is net.easecation.bedrockloader.bedrock.block.component.ComponentGeometry.ComponentGeometryFull -> geometry.identifier
+                null -> null
+            }
+        }
+
         override fun getCodec(): MapCodec<out BlockWithEntity> {
             return createCodec(::BlockDataDriven)
         }
