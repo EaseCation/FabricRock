@@ -8,7 +8,9 @@ import net.easecation.bedrockloader.bedrock.block.component.ComponentMaterialIns
 import net.easecation.bedrockloader.bedrock.definition.BlockResourceDefinition
 import net.easecation.bedrockloader.bedrock.definition.EntityRenderControllerDefinition
 import net.easecation.bedrockloader.bedrock.definition.EntityResourceDefinition
+import net.easecation.bedrockloader.java.definition.JavaBlockTag
 import net.easecation.bedrockloader.java.definition.JavaMCMeta
+import net.easecation.bedrockloader.java.definition.VanillaBlockTagsData
 import net.easecation.bedrockloader.loader.context.BedrockPackContext
 import net.easecation.bedrockloader.render.BedrockGeometryModel
 import net.easecation.bedrockloader.render.BedrockMaterialInstance
@@ -52,6 +54,8 @@ class BedrockResourcePackLoader(
             val block = context.resource.blocks[identifier]
             val blockComponents = blockBehaviour.components
 
+            // tags
+            createBlockTags(identifier, blockComponents.tags)
             // textures
             createBlockTextures(identifier, block, blockComponents)
             // models
@@ -133,6 +137,11 @@ class BedrockResourcePackLoader(
         // 创建assets文件夹
         val assetsDir = javaResDir.resolve("assets")
         assetsDir.mkdirs()
+        // 创建data文件夹（用于Tag等数据包内容）
+        val dataDir = javaResDir.resolve("data")
+        dataDir.mkdirs()
+        // 加载基岩版原生方块Tag定义
+        loadVanillaBlockTags()
     }
 
     /**
@@ -521,6 +530,262 @@ class BedrockResourcePackLoader(
         val spriteId = model.materials["*"]?.spriteId ?: return
         EntityRendererRegistry.register(entityType) { context ->
             EntityDataDrivenRenderer.create(context, model, 0.5f, spriteId.textureId)
+        }
+    }
+
+    /**
+     * 为方块生成Tag JSON文件
+     *
+     * 将基岩版方块的 tag:* 组件转换为Java版数据包Tag文件。
+     * 例如：`tag:wood` → `data/minecraft/tags/blocks/wood.json`
+     *
+     * @param identifier 方块标识符
+     * @param tags 方块的Tag集合（从BlockComponents.tags提取）
+     */
+    private fun createBlockTags(
+        identifier: Identifier,
+        tags: Set<String>
+    ) {
+        if (tags.isEmpty()) return
+
+        // 按命名空间和路径分组tag
+        // 例如："wood" → minecraft:wood → data/minecraft/tags/blocks/wood.json
+        //      "c:ores" → c:ores → data/c/tags/blocks/ores.json
+        val tagsByNamespace = mutableMapOf<String, MutableMap<String, MutableList<String>>>()
+
+        for (tagName in tags) {
+            // 跳过空白tag名称
+            if (tagName.isBlank()) {
+                BedrockLoader.logger.warn("[BedrockResourcePackLoader] Skipping empty tag for block $identifier")
+                continue
+            }
+
+            // 解析tag名称，提取命名空间和路径
+            val (namespace, path) = if (tagName.contains(':')) {
+                val parts = tagName.split(':', limit = 2)
+                parts[0].lowercase() to parts[1]  // 命名空间强制小写
+            } else {
+                "minecraft" to tagName
+            }
+
+            // 将方块ID添加到对应的tag
+            tagsByNamespace
+                .getOrPut(namespace) { mutableMapOf() }
+                .getOrPut(path) { mutableListOf() }
+                .add(identifier.toString())
+        }
+
+        // 为每个tag生成JSON文件
+        for ((namespace, tagMap) in tagsByNamespace) {
+            for ((path, blockIds) in tagMap) {
+                createTagFile(namespace, path, blockIds)
+            }
+        }
+    }
+
+    /**
+     * 创建单个Tag JSON文件
+     *
+     * 支持Tag合并：如果文件已存在，会读取并合并方块ID列表。
+     * 支持子目录：路径如 `mineable/pickaxe` 会创建 `mineable/pickaxe.json`
+     *
+     * @param namespace Tag命名空间（如 minecraft, c）
+     * @param path Tag路径（如 wood, mineable/pickaxe）
+     * @param blockIds 要添加到Tag的方块ID列表
+     */
+    private fun createTagFile(
+        namespace: String,
+        path: String,
+        blockIds: List<String>
+    ) {
+        // 构建文件路径（支持子目录，如 mineable/pickaxe）
+        val tagDir = if (path.contains('/')) {
+            // 有子目录的情况
+            val parentPath = path.substringBeforeLast('/')
+            javaResDir.resolve("data/$namespace/tags/blocks/$parentPath")
+        } else {
+            // 无子目录的情况
+            javaResDir.resolve("data/$namespace/tags/blocks")
+        }
+
+        // 确保目录存在
+        tagDir.mkdirs()
+
+        // 获取文件名（路径的最后一部分）
+        val fileName = path.substringAfterLast('/') + ".json"
+        val tagFile = File(tagDir, fileName)
+
+        // 如果文件已存在，读取并合并
+        val existingBlocks = if (tagFile.exists()) {
+            try {
+                val existingJson = GsonUtil.GSON.fromJson(
+                    tagFile.readText(StandardCharsets.UTF_8),
+                    JavaBlockTag::class.java
+                )
+                existingJson.values.toMutableList()
+            } catch (e: Exception) {
+                BedrockLoader.logger.warn("[BedrockResourcePackLoader] Failed to read existing tag file: $tagFile", e)
+                mutableListOf()
+            }
+        } else {
+            mutableListOf()
+        }
+
+        // 合并新方块ID（去重并排序）
+        val allBlocks = (existingBlocks + blockIds).distinct().sorted()
+
+        // 创建Tag对象
+        val tag = JavaBlockTag(
+            replace = false,  // 不替换现有Tag，与其他数据包合并
+            values = allBlocks
+        )
+
+        // 写入文件
+        try {
+            Files.newBufferedWriter(tagFile.toPath(), StandardCharsets.UTF_8).use { writer ->
+                GsonUtil.GSON.toJson(tag, writer)
+            }
+            BedrockLoader.logger.debug("[BedrockResourcePackLoader] Generated tag: $namespace:$path with ${allBlocks.size} blocks")
+        } catch (e: Exception) {
+            BedrockLoader.logger.error("[BedrockResourcePackLoader] Failed to write tag file: $tagFile", e)
+        }
+    }
+
+    /**
+     * 加载基岩版原生方块Tag定义
+     *
+     * 从 `src/main/resources/vanilla_block_tags.json` 读取基岩版官方定义的方块Tag，
+     * 并为每个Tag生成对应的Java版数据包Tag文件。
+     *
+     * 这些Tag将被用于Molang条件查询，例如：
+     * - `query.block_neighbor_has_all_tags(0, -1, 0, 'dirt')`
+     * - `query.block_neighbor_has_any_tag(0, 0, -1, 'wood', 'log')`
+     *
+     * 文件格式说明：
+     * - Tag名称格式：`` `dirt` `` 或 `` `minecraft:crop` `` （被反引号包裹）
+     * - 方块ID格式：`` `minecraft:stone` `` （被反引号包裹，包含完整命名空间）
+     */
+    private fun loadVanillaBlockTags() {
+        try {
+            // 从resources读取vanilla_block_tags.json
+            val inputStream = BedrockLoader::class.java.getResourceAsStream("/vanilla_block_tags.json")
+            if (inputStream == null) {
+                BedrockLoader.logger.warn("[VanillaBlockTags] vanilla_block_tags.json not found in resources, skipping")
+                return
+            }
+
+            // 解析JSON
+            val data = inputStream.bufferedReader(StandardCharsets.UTF_8).use { reader ->
+                GsonUtil.GSON.fromJson(reader, VanillaBlockTagsData::class.java)
+            }
+
+            if (data.rows.isEmpty()) {
+                BedrockLoader.logger.warn("[VanillaBlockTags] No tag data found in vanilla_block_tags.json")
+                return
+            }
+
+            // 加载基岩版到Java版的方块ID映射
+            val blockIdMapping = loadBedrockToJavaBlockIdMapping()
+            BedrockLoader.logger.info("[VanillaBlockTags] Loaded ${blockIdMapping.size} block ID mappings")
+
+            // 处理每个Tag行
+            var successCount = 0
+            var totalFilteredBlocks = 0
+            var totalMappedBlocks = 0
+
+            for (row in data.rows) {
+                try {
+                    // 去掉反引号，提取Tag名称
+                    val tagName = row.tag.trim('`', ' ')
+                    if (tagName.isBlank()) {
+                        BedrockLoader.logger.warn("[VanillaBlockTags] Skipping empty tag name")
+                        continue
+                    }
+
+                    // 去掉反引号，提取方块ID列表（基岩版ID）
+                    val bedrockBlockIds = row.vanilla_usage.map { it.trim('`', ' ') }.filter { it.isNotBlank() }
+                    if (bedrockBlockIds.isEmpty()) {
+                        BedrockLoader.logger.warn("[VanillaBlockTags] Tag '$tagName' has no block IDs, skipping")
+                        continue
+                    }
+
+                    // 应用映射：基岩版ID -> Java版ID
+                    val javaBlockIds = mutableListOf<String>()
+                    for (bedrockId in bedrockBlockIds) {
+                        // 移除minecraft:前缀（如果有）
+                        val cleanBedrockId = bedrockId.removePrefix("minecraft:")
+
+                        // 查找映射
+                        val javaId = blockIdMapping[cleanBedrockId]
+
+                        when {
+                            javaId == null -> {
+                                // 映射为null，表示Java版中不存在，需要过滤
+                                totalFilteredBlocks++
+                                BedrockLoader.logger.debug("[VanillaBlockTags] Filtered block (not in Java): $bedrockId")
+                            }
+                            javaId != cleanBedrockId -> {
+                                // ID不同，需要映射
+                                javaBlockIds.add("minecraft:$javaId")
+                                totalMappedBlocks++
+                                BedrockLoader.logger.debug("[VanillaBlockTags] Mapped block: $bedrockId -> minecraft:$javaId")
+                            }
+                            else -> {
+                                // ID相同，直接使用
+                                javaBlockIds.add(bedrockId)
+                            }
+                        }
+                    }
+
+                    if (javaBlockIds.isEmpty()) {
+                        BedrockLoader.logger.debug("[VanillaBlockTags] Tag '$tagName' has no valid Java blocks after mapping, skipping")
+                        continue
+                    }
+
+                    // 解析命名空间和路径
+                    val (namespace, path) = if (tagName.contains(':')) {
+                        val parts = tagName.split(':', limit = 2)
+                        parts[0].lowercase() to parts[1]
+                    } else {
+                        "minecraft" to tagName
+                    }
+
+                    // 生成Tag文件（复用现有的createTagFile方法）
+                    createTagFile(namespace, path, javaBlockIds)
+                    successCount++
+
+                } catch (e: Exception) {
+                    BedrockLoader.logger.error("[VanillaBlockTags] Failed to process tag: ${row.tag}", e)
+                }
+            }
+
+            BedrockLoader.logger.info("[VanillaBlockTags] Successfully loaded $successCount / ${data.rows.size} vanilla block tags")
+            BedrockLoader.logger.info("[VanillaBlockTags] Mapped $totalMappedBlocks blocks, filtered $totalFilteredBlocks blocks (not in Java)")
+
+        } catch (e: Exception) {
+            BedrockLoader.logger.error("[VanillaBlockTags] Failed to load vanilla_block_tags.json", e)
+        }
+    }
+
+    /**
+     * 加载基岩版到Java版的方块ID映射表
+     *
+     * @return 映射表，key为基岩版ID（不带命名空间），value为Java版ID（不带命名空间）或null（表示不存在）
+     */
+    private fun loadBedrockToJavaBlockIdMapping(): Map<String, String?> {
+        try {
+            val inputStream = BedrockLoader::class.java.getResourceAsStream("/bedrock_to_java_block_ids.json")
+            if (inputStream == null) {
+                BedrockLoader.logger.warn("[VanillaBlockTags] bedrock_to_java_block_ids.json not found, using identity mapping")
+                return emptyMap()
+            }
+
+            return inputStream.bufferedReader(StandardCharsets.UTF_8).use { reader ->
+                GsonUtil.GSON.fromJson(reader, object : com.google.gson.reflect.TypeToken<Map<String, String?>>() {}.type)
+            }
+        } catch (e: Exception) {
+            BedrockLoader.logger.error("[VanillaBlockTags] Failed to load bedrock_to_java_block_ids.json", e)
+            return emptyMap()
         }
     }
 

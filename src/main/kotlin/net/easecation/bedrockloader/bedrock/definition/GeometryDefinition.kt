@@ -9,7 +9,7 @@ import java.lang.reflect.Type
 data class GeometryDefinition(
         val debug: Boolean?,
         val format_version: String,
-        @SerializedName("minecraft:geometry") val geometry: List<Model>
+        @SerializedName("minecraft:geometry") val geometry: List<Model>?
 ) {
 
     data class Model(

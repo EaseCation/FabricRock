@@ -13,6 +13,9 @@ import net.easecation.bedrockloader.bedrock.block.state.StateString
 import net.easecation.bedrockloader.bedrock.block.traits.TraitPlacementDirection
 import net.easecation.bedrockloader.bedrock.block.traits.TraitPlacementPosition
 import net.easecation.bedrockloader.bedrock.definition.BlockBehaviourDefinition
+import net.easecation.bedrockloader.block.condition.CompiledCondition
+import net.easecation.bedrockloader.block.condition.ConditionContext
+import net.easecation.bedrockloader.block.condition.MolangConditionCompiler
 import net.easecation.bedrockloader.block.property.*
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.minecraft.block.*
@@ -28,6 +31,7 @@ import net.minecraft.util.math.Direction
 import net.minecraft.util.shape.VoxelShape
 import net.minecraft.util.shape.VoxelShapes
 import net.minecraft.world.BlockView
+import net.minecraft.world.WorldAccess
 import org.joml.Matrix3f
 import org.joml.Matrix4f
 import org.joml.Quaternionf
@@ -47,6 +51,23 @@ data class BlockContext(
         // netease:face_directional
         val DIRECTION = BedrockIntProperty.of("direction", (0..3).toSet())
         val FACING_DIRECTION = BedrockIntProperty.of("facing_direction", (0..5).toSet())
+
+        /**
+         * 创建PERMUTATION_STATE属性
+         *
+         * 用于存储当前激活的permutation索引：
+         * - 0: 无permutation匹配（使用基础components）
+         * - 1+: 第N个permutation匹配
+         *
+         * @param permutationCount permutations列表的大小
+         * @return Bedrock整数属性
+         */
+        fun createPermutationStateProperty(permutationCount: Int): BedrockIntProperty {
+            return BedrockIntProperty.of(
+                "bedrock:permutation_state",
+                (0..permutationCount).toSet()
+            )
+        }
 
         fun create(identifier: Identifier, behaviour: BlockBehaviourDefinition.BlockBehaviour): BlockDataDriven {
             val components = behaviour.components
@@ -78,7 +99,40 @@ data class BlockContext(
                         is StateRange -> BedrockIntProperty.of(key, (state.values.min..state.values.max).toSet())
                     }
                 } ?: emptyMap()
-                return placementDirection + placementPosition + faceDirectional + properties
+
+                // 仅在有动态permutations时添加permutation_state属性
+                // 动态permutations是指需要World上下文的条件（如邻居查询）
+                val permutationState: Map<String, BedrockProperty<*, *>> = if (behaviour.permutations != null && behaviour.permutations!!.isNotEmpty()) {
+                    // 预编译所有permutations以检测是否有动态条件
+                    val hasDynamicPermutations = behaviour.permutations!!.any { (condition, _) ->
+                        try {
+                            val compiled = MolangConditionCompiler.compile(condition)
+                            !compiled.isStatic()  // 检查是否为动态条件
+                        } catch (e: Exception) {
+                            false  // 编译失败视为静态
+                        }
+                    }
+
+                    if (hasDynamicPermutations) {
+                        // 计算动态permutations的数量
+                        val dynamicCount = behaviour.permutations!!.count { (condition, _) ->
+                            try {
+                                val compiled = MolangConditionCompiler.compile(condition)
+                                !compiled.isStatic()
+                            } catch (e: Exception) {
+                                false
+                            }
+                        }
+                        val permutationProperty = createPermutationStateProperty(dynamicCount)
+                        mapOf(permutationProperty.getBedrockName() to permutationProperty)
+                    } else {
+                        emptyMap()  // 仅有静态permutations，无需额外属性
+                    }
+                } else {
+                    emptyMap()
+                }
+
+                return placementDirection + placementPosition + faceDirectional + properties + permutationState
             }
 
             fun calculateSettings(): Settings {
@@ -113,12 +167,63 @@ data class BlockContext(
 
     inner class BlockDataDriven(settings: Settings) : BlockWithEntity(settings) {
 
-        private val conditionSplitRegex = """\s*&&\s*""".toRegex()
-        private val blockStateRegex = """^\s*q(uery)?\s*\.\s*block_state\s*\(\s*'(?<key>[^']+)'\s*\)\s*(?<operator>==|!=)\s*'(?<value>[^']+)'\s*$""".toRegex()
+        // ========== Permutations系统 ==========
 
+        /**
+         * 预编译的permutation条件列表
+         * 每个元素为 (编译后的条件, 对应的components) 对
+         */
+        private val compiledPermutations: List<Pair<CompiledCondition, BlockComponents>>
+
+        /**
+         * 静态permutations（仅依赖BlockState本身，可在初始化时预计算）
+         */
+        private val staticPermutations: List<Pair<CompiledCondition, BlockComponents>>
+
+        /**
+         * 动态permutations（依赖World上下文，必须运行时求值）
+         */
+        private val dynamicPermutations: List<Pair<CompiledCondition, BlockComponents>>
+
+        /**
+         * 获取permutation_state属性（仅在有动态permutations时存在）
+         */
+        private val permutationStateProperty: BedrockIntProperty? =
+            properties["bedrock:permutation_state"] as? BedrockIntProperty
+
+        /**
+         * 每个完整BlockState对应的components缓存
+         */
         private val componentsByState: Map<BlockState, BlockComponents>
 
         init {
+            // 1. 预编译所有permutations
+            compiledPermutations = if (behaviour.permutations != null) {
+                behaviour.permutations!!.mapNotNull { (condition, components) ->
+                    try {
+                        val compiled = MolangConditionCompiler.compile(condition)
+                        compiled to components
+                    } catch (e: Exception) {
+                        BedrockLoader.logger.error("[BlockDataDriven] Failed to compile permutation condition for block $identifier: $condition", e)
+                        null  // 跳过编译失败的permutation
+                    }
+                }
+            } else {
+                emptyList()
+            }
+
+            // 2. 分类为静态和动态permutations
+            val (static, dynamic) = compiledPermutations.partition { (condition, _) ->
+                condition.isStatic()
+            }
+            staticPermutations = static
+            dynamicPermutations = dynamic
+
+            if (compiledPermutations.isNotEmpty()) {
+                BedrockLoader.logger.info("[BlockDataDriven] Block $identifier: ${staticPermutations.size} static + ${dynamicPermutations.size} dynamic permutations")
+            }
+
+            // 3. 设置默认状态
             defaultState = stateManager.defaultState
                 .withIfExists(MINECRAFT_CARDINAL_DIRECTION, Direction.SOUTH)
                 .withIfExists(MINECRAFT_FACING_DIRECTION, Direction.DOWN)
@@ -126,41 +231,68 @@ data class BlockContext(
                 .withIfExists(MINECRAFT_VERTICAL_HALF, BlockHalf.BOTTOM)
                 .withIfExists(DIRECTION, 0)
                 .withIfExists(FACING_DIRECTION, 0)
-            componentsByState = stateManager.states.associateWith { bakeComponents(it) }
+                .withIfExists(permutationStateProperty, 0)  // 默认无动态permutation匹配
+
+            // 4. 为每个BlockState预烘焙components（混合策略）
+            componentsByState = stateManager.states.associateWith { state ->
+                // 步骤1：应用所有静态permutations（初始化时求值）
+                var components = behaviour.components
+                staticPermutations.forEach { (condition, permComponents) ->
+                    try {
+                        // 对于静态条件，可以在初始化时求值（不需要World）
+                        if (condition.evaluate(ConditionContext(null, BlockPos.ORIGIN, state), properties)) {
+                            components = components.mergeComponents(permComponents)
+                        }
+                    } catch (e: Exception) {
+                        BedrockLoader.logger.warn("[BlockDataDriven] Static permutation evaluation failed for block $identifier", e)
+                    }
+                }
+
+                // 步骤2：如果有动态permutations，根据permutation_state继续合并
+                if (permutationStateProperty != null && dynamicPermutations.isNotEmpty()) {
+                    val permutationIndex = state[permutationStateProperty]
+                    if (permutationIndex > 0 && permutationIndex <= dynamicPermutations.size) {
+                        val (_, dynComponents) = dynamicPermutations[permutationIndex - 1]
+                        components = components.mergeComponents(dynComponents)
+                    }
+                }
+
+                components
+            }
+
+            BedrockLoader.logger.debug("[BlockDataDriven] Block $identifier has ${stateManager.states.size} total states")
         }
 
-        private fun bakeComponents(state: BlockState): BlockComponents {
-            var activated = behaviour.components
-            behaviour.permutations?.forEach { (condition, components) ->
-                val conditions = conditionSplitRegex.split(condition)
-                val satisfied = conditions.all { evalBlockStateCondition(it, state) }
-                if (satisfied) {
-                    activated = activated.mergeComponents(components)
+        /**
+         * 运行时求值动态permutations，找到匹配的permutation索引
+         *
+         * 仅遍历动态permutations（需要World上下文的条件），找到第一个满足的条件。
+         * 静态permutations已经在初始化时预计算，不在此处理。
+         *
+         * @param world 世界访问器
+         * @param pos 方块位置
+         * @param state 当前方块状态
+         * @return 动态permutation索引（0表示无匹配，1+表示第N个动态permutation）
+         */
+        private fun evaluatePermutations(world: WorldAccess, pos: BlockPos, state: BlockState): Int {
+            if (dynamicPermutations.isEmpty()) {
+                return 0
+            }
+
+            val context = ConditionContext(world, pos, state)
+
+            // 遍历动态permutations，找到第一个匹配的
+            dynamicPermutations.forEachIndexed { index, (condition, _) ->
+                try {
+                    if (condition.evaluate(context, properties)) {
+                        return index + 1
+                    }
+                } catch (e: Exception) {
+                    BedrockLoader.logger.error("[BlockDataDriven] Error evaluating dynamic permutation $index for block $identifier", e)
                 }
             }
-            return activated
-        }
 
-        private fun evalBlockStateCondition(condition: String, state: BlockState): Boolean {
-            val matchResult = blockStateRegex.matchEntire(condition)
-            if (matchResult == null) {
-                BedrockLoader.logger.warn("[BlockDataDriven] Block $identifier contains unsupported permutation block state condition: $condition")
-                return false
-            }
-            val key = matchResult.groups["key"]?.value ?: return false
-            val operator = matchResult.groups["operator"]?.value ?: return false
-            val value = matchResult.groups["value"]?.value ?: return false
-            val property = properties[key]
-            if (property == null) {
-                BedrockLoader.logger.warn("[BlockDataDriven] Block $identifier contains unknown property in permutation: $key")
-                return false
-            }
-            val valueName = property.getBedrockValueName(state) ?: return false
-            return when (operator) {
-                "==" -> valueName == value
-                "!=" -> valueName != value
-                else -> false
-            }
+            return 0  // 无匹配
         }
 
         fun applyTransformation(state: BlockState, box: Box): Box {
@@ -239,7 +371,7 @@ data class BlockContext(
         }
         override fun getPlacementState(ctx: ItemPlacementContext): BlockState {
             val yRotationOffset =  behaviour.description.traits?.minecraftPlacementDirection?.y_rotation_offset ?: 0
-            return defaultState
+            var state = defaultState
                 .withIfExists(MINECRAFT_CARDINAL_DIRECTION, rotateDirection(ctx.horizontalPlayerFacing, yRotationOffset))
                 .withIfExists(MINECRAFT_FACING_DIRECTION, rotateDirection(ctx.playerLookDirection, yRotationOffset))
                 .withIfExists(MINECRAFT_BLOCK_FACE, ctx.side)
@@ -253,6 +385,39 @@ data class BlockContext(
                 )
                 .withIfExists(DIRECTION, ctx.horizontalPlayerFacing.opposite.horizontal)
                 .withIfExists(FACING_DIRECTION, ctx.playerLookDirection.opposite.id)
+
+            // 求值permutations并设置permutation_state
+            if (permutationStateProperty != null) {
+                val permutationIndex = evaluatePermutations(ctx.world, ctx.blockPos, state)
+                state = state.with(permutationStateProperty, permutationIndex)
+            }
+
+            return state
+        }
+
+        override fun getStateForNeighborUpdate(
+            state: BlockState,
+            direction: Direction,
+            neighborState: BlockState,
+            world: WorldAccess,
+            pos: BlockPos,
+            neighborPos: BlockPos
+        ): BlockState {
+            // 如果没有permutations，直接返回原状态
+            if (permutationStateProperty == null) {
+                return state
+            }
+
+            // 重新求值permutations（邻居变化可能影响条件结果）
+            val newPermutationIndex = evaluatePermutations(world, pos, state)
+            val currentPermutationIndex = state[permutationStateProperty]
+
+            // 仅当permutation变化时才更新BlockState
+            return if (newPermutationIndex != currentPermutationIndex) {
+                state.with(permutationStateProperty, newPermutationIndex)
+            } else {
+                state
+            }
         }
 
         override fun appendProperties(builder: StateManager.Builder<Block, BlockState>) {

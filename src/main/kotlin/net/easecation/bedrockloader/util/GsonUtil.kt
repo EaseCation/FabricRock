@@ -43,7 +43,8 @@ object GsonUtil {
             .registerTypeAdapter(TextureDataDefinition::class.java, TextureDataDefinition.Deserializer())
             // block state
             .registerTypeAdapter(IBlockState::class.java, IBlockState.Deserializer())
-            // block component
+            // block component - 使用 Factory 而不是 Deserializer，避免无限递归
+            .registerTypeAdapterFactory(BlockComponents.Factory())
             .registerTypeAdapter(ComponentGeometry::class.java, ComponentGeometry.Deserializer())
             .registerTypeAdapter(ComponentSelectionBox::class.java, ComponentSelectionBox.Deserializer())
             .registerTypeAdapter(ComponentCollisionBox::class.java, ComponentCollisionBox.Deserializer())

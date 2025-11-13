@@ -327,6 +327,114 @@ src/
 }
 ```
 
+#### 示例5: 邻居方块查询（v1.2新增）
+
+```json
+{
+  "minecraft:block": {
+    "description": {
+      "identifier": "mymod:grass_block"
+    },
+    "components": {
+      "minecraft:geometry": "geometry.grass_dry",
+      "minecraft:material_instances": {
+        "*": { "texture": "grass_dry" }
+      }
+    },
+    "permutations": [
+      {
+        "condition": "query.block_neighbor_has_all_tags(0, -1, 0, 'dirt')",
+        "components": {
+          "minecraft:geometry": "geometry.grass_green",
+          "minecraft:material_instances": {
+            "*": { "texture": "grass_green" }
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+**说明**：
+- `query.block_neighbor_has_all_tags(x, y, z, 'tag1', 'tag2', ...)` - 检查相对位置(x, y, z)的方块是否拥有所有指定标签
+- `query.block_neighbor_has_any_tag(x, y, z, 'tag1', 'tag2', ...)` - 检查是否至少拥有一个标签
+- 支持Java版标签系统（如 `minecraft:dirt`, `c:ores` 等）
+- 条件在方块放置和邻居更新时自动求值
+
+#### 示例6: 可连接方块（栅栏/墙）
+
+```json
+{
+  "minecraft:block": {
+    "description": {
+      "identifier": "mymod:custom_fence"
+    },
+    "components": {
+      "minecraft:geometry": "geometry.fence_post",
+      "minecraft:material_instances": {
+        "*": { "texture": "fence", "render_method": "alpha_test" }
+      }
+    },
+    "permutations": [
+      {
+        "condition": "query.block_neighbor_has_any_tag(0, 0, -1, 'minecraft:fences', 'mymod:connectable')",
+        "components": {
+          "minecraft:geometry": "geometry.fence_with_north_arm"
+        }
+      },
+      {
+        "condition": "query.block_neighbor_has_any_tag(0, 0, 1, 'minecraft:fences', 'mymod:connectable')",
+        "components": {
+          "minecraft:geometry": "geometry.fence_with_south_arm"
+        }
+      },
+      {
+        "condition": "query.block_neighbor_has_any_tag(-1, 0, 0, 'minecraft:fences', 'mymod:connectable')",
+        "components": {
+          "minecraft:geometry": "geometry.fence_with_west_arm"
+        }
+      },
+      {
+        "condition": "query.block_neighbor_has_any_tag(1, 0, 0, 'minecraft:fences', 'mymod:connectable')",
+        "components": {
+          "minecraft:geometry": "geometry.fence_with_east_arm"
+        }
+      }
+    ]
+  }
+}
+```
+
+**注意**：如需完整的4方向连接效果，需要为16种组合分别定义permutation（可组合多个条件）。
+
+#### 示例7: 复合条件（逻辑运算）
+
+```json
+{
+  "permutations": [
+    {
+      "condition": "query.block_state('powered') == 'true' && query.block_neighbor_has_all_tags(0, -1, 0, 'redstone_conductor')",
+      "components": {
+        "minecraft:light_emission": 15
+      }
+    },
+    {
+      "condition": "query.block_neighbor_has_any_tag(0, 1, 0, 'water') || query.block_neighbor_has_any_tag(0, -1, 0, 'water')",
+      "components": {
+        "minecraft:geometry": "geometry.wet_block"
+      }
+    }
+  ]
+}
+```
+
+**支持的运算符**：
+- `&&` - 逻辑与（所有条件都满足）
+- `||` - 逻辑或（至少一个条件满足）
+- `!` - 逻辑非（条件不满足）
+- `()` - 括号分组
+
 ### 添加新的基岩实体支持
 
 1. 在行为包中定义实体: `entities/xxx.json`,配置组件
@@ -354,7 +462,8 @@ src/
 - ✅ 自定义方块和模型
 - ✅ 实体模型和组件系统
 - ✅ 资源包转换系统
-- ✅ **Permutations动态变体系统 (v1.1新增)**
+- ✅ **Permutations动态变体系统 (v1.1)**
+- ✅ **邻居方块查询系统 (v1.2新增)**
 
 已完成功能:
 - ✅ 方块状态系统和permutations支持
@@ -364,8 +473,26 @@ src/
 - ✅ Transformation变换系统
 - ✅ 基岩几何体渲染
 - ✅ 实体组件系统
+- ✅ **Molang条件预编译系统 (v1.2)**
+- ✅ **邻居方块Tag查询 (v1.2)**
+- ✅ **可连接方块支持 (v1.2)**
+
+Molang支持：
+- ✅ `query.block_state('property') == 'value'` - 方块自身状态查询
+- ✅ `query.block_neighbor_has_all_tags(x, y, z, 'tag1', ...)` - 邻居方块标签查询（所有标签）
+- ✅ `query.block_neighbor_has_any_tag(x, y, z, 'tag1', ...)` - 邻居方块标签查询（任意标签）
+- ✅ 逻辑运算符：`&&`（与）、`||`（或）、`!`（非）
+- ✅ 括号分组：`(...)`
+- ✅ 条件预编译为Java函数，运行时零解析开销
+
+性能特性：
+- ✅ Permutation条件预编译（初始化时一次性编译）
+- ✅ Components预烘焙（每个permutation_state一份）
+- ✅ BlockState更新触发（方块放置和邻居更新时）
+- ✅ 运行时O(1)组件查询
+- ✅ 预估开销：<10μs/方块更新
 
 已知问题:
 - 碰撞箱支持有限
-- Molang表达式仅支持简单的`==`、`!=`和`&&`
+- Molang表达式支持有限（不支持算术运算、复杂函数调用）
 - 部分基岩特性尚未实现

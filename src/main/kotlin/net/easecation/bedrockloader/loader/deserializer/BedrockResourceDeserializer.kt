@@ -57,6 +57,10 @@ object BedrockResourceDeserializer : PackDeserializer<BedrockResourceContext> {
                     zip.getInputStream(entry).use { stream ->
                         try {
                             val geometryDefinition = GsonUtil.GSON.fromJson(InputStreamReader(stream), GeometryDefinition::class.java)
+                            if (geometryDefinition.geometry == null) {
+                                BedrockLoader.logger.warn("Skipping unsupported geometry format (possibly 1.8 legacy format): $name")
+                                return@use
+                            }
                             for (model in geometryDefinition.geometry) {
                                 context.geometries[model.description.identifier] = model
                             }
