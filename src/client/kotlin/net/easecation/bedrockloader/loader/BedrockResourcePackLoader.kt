@@ -332,6 +332,13 @@ class BedrockResourcePackLoader(
                     // 支持多面材质映射
                     when (key) {
                         "*" -> textureMap["all"] = Either.left(spriteId)
+                        "side" -> {
+                            // "side" 是基岩版的简写键,表示四个水平侧面
+                            textureMap["north"] = Either.left(spriteId)
+                            textureMap["south"] = Either.left(spriteId)
+                            textureMap["east"] = Either.left(spriteId)
+                            textureMap["west"] = Either.left(spriteId)
+                        }
                         "north" -> textureMap["north"] = Either.left(spriteId)
                         "south" -> textureMap["south"] = Either.left(spriteId)
                         "east" -> textureMap["east"] = Either.left(spriteId)

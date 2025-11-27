@@ -327,6 +327,32 @@ src/
 }
 ```
 
+#### 材质实例键说明
+
+支持的材质实例键包括：
+
+- `*`: 通配符，应用于所有面
+- `side`: 简写键，应用于四个水平侧面（north、south、east、west）
+- `up`, `down`, `north`, `south`, `east`, `west`: 单独的面
+
+**示例：使用 side 简写键**
+
+```json
+{
+  "minecraft:material_instances": {
+    "*": { "texture": "default_texture" },
+    "side": { "texture": "side_texture" },
+    "up": { "texture": "top_texture" },
+    "down": { "texture": "bottom_texture" }
+  }
+}
+```
+
+在这个例子中：
+- `side` 会自动展开应用到 north、south、east、west 四个侧面
+- `up` 和 `down` 分别应用到顶面和底面
+- 如果同时定义了 `side` 和具体方向键（如 `north`），具体方向键会覆盖 `side` 的设置（取决于JSON中的定义顺序）
+
 ### 添加新的基岩实体支持
 
 1. 在行为包中定义实体: `entities/xxx.json`,配置组件
