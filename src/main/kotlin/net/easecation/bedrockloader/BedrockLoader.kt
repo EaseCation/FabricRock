@@ -12,6 +12,7 @@ import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents.ModifyEntries
 import net.fabricmc.loader.api.FabricLoader
+import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
 import net.minecraft.registry.Registries
@@ -28,12 +29,6 @@ object BedrockLoader : ModInitializer {
 
     val logger: Logger = LoggerFactory.getLogger("bedrock-loader")
 
-	val ITEM_GROUP_KEY = RegistryKey.of(Registries.ITEM_GROUP.key, Identifier("bedrock-loader", "bedrock-loader"))
-	val ITEM_GROUP = FabricItemGroup.builder()
-		.icon { ItemStack(BedrockAddonsRegistry.items.values.firstOrNull() ?: Items.BONE_BLOCK) }
-		.displayName(Text.translatable("itemGroup.bedrock-loader.bedrock-loader"))
-		.build()
-
 	// Remote Pack Sync HTTP Server
 	private var httpServer: EmbeddedHttpServer? = null
 
@@ -41,27 +36,99 @@ object BedrockLoader : ModInitializer {
 		logger.info("Initializing BedrockLoader...")
 
 		logger.info("Loading bedrock addons...")
-
 		BedrockAddonsLoader.load()
-
-		Registry.register(Registries.ITEM_GROUP, ITEM_GROUP_KEY, ITEM_GROUP);
-
-		ItemGroupEvents.modifyEntriesEvent(ITEM_GROUP_KEY)
-			.register(ModifyEntries { itemGroup ->
-				BedrockAddonsRegistry.items.values.forEach {
-					itemGroup.add(ItemStack(it))
-				}
-			})
 
 		// load behaviour pack
 		logger.info("Loading behaviour pack...")
 		val behaviorPackLoader = BedrockBehaviorPackLoader(context)
 		behaviorPackLoader.load()
 
+		// 动态创建每个包的创造模式选项卡
+		logger.info("Creating item groups for loaded packs...")
+		createPackItemGroups()
+
 		// 启动HTTP服务器（仅在专用服务器上）
 		startHttpServerIfNeeded()
 
 		logger.info("BedrockLoader initialized!")
+	}
+
+	/**
+	 * 为每个加载的包创建独立的创造模式选项卡
+	 */
+	private fun createPackItemGroups() {
+		// 按包的加载顺序创建选项卡
+		context.packs.forEach { packContext ->
+			val packId = packContext.packId
+			val packInfo = packContext.packInfo
+
+			// 仅为data包创建选项卡
+			if (packInfo.type != "data") return@forEach
+
+			// 获取该包的所有物品
+			val packItems = BedrockAddonsRegistry.getItemsByPack(packId)
+
+			// 仅为有物品的包创建选项卡
+			if (packItems.isEmpty()) {
+				logger.debug("跳过空包: ${packInfo.name} [$packId]")
+				return@forEach
+			}
+
+			// 智能选择图标
+			val iconItem = selectIconItem(packId) ?: packItems.first()
+
+			// 创建唯一的RegistryKey
+			val groupKey = RegistryKey.of(
+				Registries.ITEM_GROUP.key,
+				Identifier("bedrock-loader", "pack_${packId.substring(0, 8)}")
+			)
+
+			// 创建ItemGroup
+			val itemGroup = FabricItemGroup.builder()
+				.icon { ItemStack(iconItem) }
+				.displayName(Text.literal(packInfo.name))
+				.build()
+
+			// 注册ItemGroup
+			Registry.register(Registries.ITEM_GROUP, groupKey, itemGroup)
+			logger.info("创建创造模式选项卡: ${packInfo.name} [$packId] (${packItems.size} 个物品)")
+
+			// 添加物品到选项卡
+			ItemGroupEvents.modifyEntriesEvent(groupKey)
+				.register { itemGroup ->
+					packItems.forEach { item ->
+						itemGroup.add(ItemStack(item))
+					}
+				}
+		}
+	}
+
+	/**
+	 * 智能选择图标物品
+	 * 优先级: 方块 > 工具/武器 > 其他物品 > 刷怪蛋
+	 */
+	private fun selectIconItem(packId: String): Item? {
+		val allItems = BedrockAddonsRegistry.getItemsByPack(packId)
+		if (allItems.isEmpty()) return null
+
+		// 优先级1: 方块物品
+		val blockItems = BedrockAddonsRegistry.getBlockItemsByPack(packId)
+		if (blockItems.isNotEmpty()) return blockItems.first()
+
+		// 优先级2: 工具/武器（检查类名）
+		val toolOrWeapon = allItems.find { item ->
+			val className = item.javaClass.simpleName
+			className.contains("Tool") || className.contains("Sword") ||
+			className.contains("Axe") || className.contains("Pickaxe")
+		}
+		if (toolOrWeapon != null) return toolOrWeapon
+
+		// 优先级3: 其他物品（非刷怪蛋）
+		val nonSpawnEgg = allItems.find { it !is net.minecraft.item.SpawnEggItem }
+		if (nonSpawnEgg != null) return nonSpawnEgg
+
+		// 最后：刷怪蛋
+		return allItems.first()
 	}
 
 	/**

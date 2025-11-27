@@ -138,20 +138,43 @@ object BedrockAddonsLoader {
                 val packId = pack.getPackId() ?: continue
                 val packType = pack.getPackType()
 
+                // 先创建PackInfo并注册到统一注册表
+                val packInfo = createPackInfo(pack, f, isDirectoryPack)
+                BedrockPackRegistry.register(packInfo)
+
                 if (packType.equals("resources")) {
                     // 只添加到材质包管理器中
                     resourcePackMap[packId] = pack
-                    context.resource.putAll(BedrockResourceDeserializer.deserialize(ZipFile(f)))
+
+                    // 为该包创建独立的资源上下文
+                    val resourceContext = BedrockResourceDeserializer.deserialize(ZipFile(f))
+
+                    // 查找或创建对应的SinglePackContext
+                    var singleContext = context.packs.find { it.packId == packId }
+                    if (singleContext == null) {
+                        singleContext = net.easecation.bedrockloader.loader.context.SinglePackContext(packId, packInfo)
+                        context.packs.add(singleContext)
+                    }
+                    singleContext.resource.putAll(resourceContext)
+
                     BedrockLoader.logger.info((("Reading resource pack: " + pack.getPackName()) + "[" + packId) + "]")
                 } else if (packType.equals("data")) {
                     // 行为包，需要读取内容
                     behaviourPackMap[packId] = pack
-                    context.behavior.putAll(BedrockBehaviorDeserializer.deserialize(ZipFile(f)))
+
+                    // 为该包创建独立的行为上下文
+                    val behaviorContext = BedrockBehaviorDeserializer.deserialize(ZipFile(f))
+
+                    // 查找或创建对应的SinglePackContext
+                    var singleContext = context.packs.find { it.packId == packId }
+                    if (singleContext == null) {
+                        singleContext = net.easecation.bedrockloader.loader.context.SinglePackContext(packId, packInfo)
+                        context.packs.add(singleContext)
+                    }
+                    singleContext.behavior.putAll(behaviorContext)
+
                     BedrockLoader.logger.info((("Reading behaviour pack: " + pack.getPackName()) + "[" + packId) + "]")
                 }
-
-                // 注册包到统一注册表
-                registerPack(pack, f, isDirectoryPack)
 
             } catch (e: Exception) {
                 BedrockLoader.logger.warn("Failed to load pack " + file.name, e)
@@ -267,51 +290,44 @@ object BedrockAddonsLoader {
     }
 
     /**
-     * 注册资源包到统一注册表
+     * 创建包信息对象
      *
      * @param pack 基岩包对象
      * @param file ZIP文件
      * @param isDirectoryPack 是否是文件夹包
+     * @return PackInfo对象
      */
-    private fun registerPack(pack: BedrockPack, file: File, isDirectoryPack: Boolean) {
-        try {
-            // 从BedrockPack获取包信息（已经解析好的）
-            val packId = pack.getPackId() ?: return
-            val packName = pack.getPackName() ?: "未知包"
-            val packVersion = pack.getPackVersion() ?: "0.0.0"
-            val packType = if (pack.getPackType().equals("resources")) "resources" else "data"
+    private fun createPackInfo(pack: BedrockPack, file: File, isDirectoryPack: Boolean): BedrockPackRegistry.PackInfo {
+        // 从BedrockPack获取包信息（已经解析好的）
+        val packId = pack.getPackId() ?: throw IllegalStateException("包ID不能为空")
+        val packName = pack.getPackName() ?: "未知包"
+        val packVersion = pack.getPackVersion() ?: "0.0.0"
+        val packType = if (pack.getPackType().equals("resources")) "resources" else "data"
 
-            // 计算MD5和文件大小
-            val md5 = MD5Util.calculateMD5(file)
-            val size = file.length()
+        // 计算MD5和文件大小
+        val md5 = MD5Util.calculateMD5(file)
+        val size = file.length()
 
-            // 创建一个简化的manifest对象（仅用于存储基本信息）
-            val manifest = PackManifest().apply {
-                header = PackManifest.Header().apply {
-                    name = packName
-                    uuid = java.util.UUID.fromString(packId)
-                    // version使用字符串表示，避免解析问题
-                }
+        // 创建一个简化的manifest对象（仅用于存储基本信息）
+        val manifest = PackManifest().apply {
+            header = PackManifest.Header().apply {
+                name = packName
+                uuid = java.util.UUID.fromString(packId)
+                // version使用字符串表示，避免解析问题
             }
-
-            // 创建包信息
-            val packInfo = BedrockPackRegistry.PackInfo(
-                id = packId,
-                name = packName,
-                version = packVersion,
-                type = packType,
-                file = file,
-                md5 = md5,
-                size = size,
-                manifest = manifest
-            )
-
-            // 注册到统一注册表
-            BedrockPackRegistry.register(packInfo)
-
-        } catch (e: Exception) {
-            BedrockLoader.logger.error("注册包失败: ${file.name}", e)
         }
+
+        // 返回包信息
+        return BedrockPackRegistry.PackInfo(
+            id = packId,
+            name = packName,
+            version = packVersion,
+            type = packType,
+            file = file,
+            md5 = md5,
+            size = size,
+            manifest = manifest
+        )
     }
 
 }

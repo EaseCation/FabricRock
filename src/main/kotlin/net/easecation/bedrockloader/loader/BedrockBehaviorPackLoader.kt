@@ -19,16 +19,38 @@ class BedrockBehaviorPackLoader(
 
     @OptIn(ExperimentalStdlibApi::class)
     fun load() {
-        // Block
-        context.behavior.blocks.forEach { (id, beh) ->
-            BedrockLoader.logger.info("Registering block $id")
+        // 按包注册（保持加载顺序）
+        context.packs.forEach { packContext ->
+            loadPackContent(packContext)
+        }
+    }
+
+    /**
+     * 加载单个包的内容
+     * @param packContext 包上下文
+     */
+    @OptIn(ExperimentalStdlibApi::class)
+    private fun loadPackContent(packContext: net.easecation.bedrockloader.loader.context.SinglePackContext) {
+        val packId = packContext.packId
+        val packName = packContext.packInfo.name
+
+        BedrockLoader.logger.info("加载行为包内容: $packName [$packId]")
+
+        // 注册方块
+        packContext.behavior.blocks.forEach { (id, beh) ->
+            BedrockLoader.logger.info("Registering block $id from pack $packName")
             val block = BlockContext.create(id, beh)
             Registry.register(Registries.BLOCK, id, block)
             BedrockAddonsRegistry.blocks[id] = block
+
             val item = BlockItem(block, Item.Settings())
             Registry.register(Registries.ITEM, id, item)
             BedrockAddonsRegistry.items[id] = item
-            // Block Entity
+
+            // 关键：记录物品到包的映射
+            BedrockAddonsRegistry.itemToPackMapping[id] = packId
+
+            // 方块实体
             beh.components.neteaseBlockEntity?.let { blockEntity ->
                 BedrockLoader.logger.info("Registering block entity $id")
                 val blockEntityType = BlockEntityDataDriven.buildBlockEntityType(id)
@@ -36,19 +58,22 @@ class BedrockBehaviorPackLoader(
                 BedrockAddonsRegistry.blockEntities[id] = blockEntityType
             }
         }
-        // Entity
-        context.behavior.entities.forEach { (id, beh) ->
-            BedrockLoader.logger.info("Registering entity $id")
+
+        // 注册实体
+        packContext.behavior.entities.forEach { (id, beh) ->
+            BedrockLoader.logger.info("Registering entity $id from pack $packName")
             // entity type
             val entityType = EntityDataDriven.buildEntityType(id)
             Registry.register(Registries.ENTITY_TYPE, id, entityType)
             BedrockAddonsRegistry.entities[id] = entityType
             BedrockAddonsRegistry.entityComponents[id] = beh.components
+
             // entity attributes
             FabricDefaultAttributeRegistry.register(entityType, EntityDataDriven.buildEntityAttributes(beh.components))
+
             // spawn egg
             if (beh.description.is_spawnable == true) {
-                val clientEntity = context.resource.entities[id]?.description
+                val clientEntity = packContext.resource.entities[id]?.description
                 val entityName = id.path
                 val itemIdentifier = Identifier(id.namespace, "${entityName}_spawn_egg")
                 val spawnEggItem = SpawnEggItem(
@@ -59,6 +84,9 @@ class BedrockBehaviorPackLoader(
                 )
                 Registry.register(Registries.ITEM, itemIdentifier, spawnEggItem)
                 BedrockAddonsRegistry.items[itemIdentifier] = spawnEggItem
+
+                // 关键：记录刷怪蛋到包的映射
+                BedrockAddonsRegistry.itemToPackMapping[itemIdentifier] = packId
             }
         }
     }
