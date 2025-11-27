@@ -1,13 +1,63 @@
 package net.easecation.bedrockloader.render
 
+import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.BedrockLoaderClient
+import net.easecation.bedrockloader.bedrock.block.component.ComponentTransformation
 import net.easecation.bedrockloader.block.BlockContext
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistryClient
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin
+import net.minecraft.client.render.model.ModelRotation
+import net.minecraft.client.render.model.json.JsonUnbakedModel
 import net.minecraft.util.Identifier
 
 object BedrockModelLoadingPlugin : ModelLoadingPlugin {
+    /**
+     * 将基岩版的 ComponentTransformation 转换为 Minecraft 的 ModelRotation
+     *
+     * 限制：
+     * - 仅支持 Y 轴旋转
+     * - 仅支持 90 度增量（0°/90°/180°/270°）
+     * - 忽略缩放和平移
+     */
+    private fun transformationToModelRotation(transformation: ComponentTransformation): ModelRotation {
+        val rotation = transformation.rotation
+
+        // 提取Y轴旋转角度（rotation[1]是Y轴）
+        val yRotation = if (rotation != null && rotation.size >= 2) {
+            rotation[1].toInt()
+        } else {
+            0
+        }
+
+        // 归一化到0-360范围
+        val normalizedY = ((yRotation % 360 + 360) % 360)
+
+        // 转换为 ModelRotation 枚举
+        val modelRotation = when (normalizedY) {
+            0 -> ModelRotation.X0_Y0
+            90 -> ModelRotation.X0_Y90
+            180 -> ModelRotation.X0_Y180
+            270 -> ModelRotation.X0_Y270
+            else -> {
+                // 非90度增量，使用最接近的值
+                BedrockLoader.logger.warn(
+                    "[BedrockModelLoadingPlugin] Transformation Y rotation $yRotation " +
+                    "is not a multiple of 90°, using closest match"
+                )
+                when {
+                    normalizedY < 45 -> ModelRotation.X0_Y0
+                    normalizedY < 135 -> ModelRotation.X0_Y90
+                    normalizedY < 225 -> ModelRotation.X0_Y180
+                    normalizedY < 315 -> ModelRotation.X0_Y270
+                    else -> ModelRotation.X0_Y0
+                }
+            }
+        }
+
+        return modelRotation
+    }
+
     override fun onInitializeModelLoader(pluginContext: ModelLoadingPlugin.Context) {
         pluginContext.resolveModel().register { context ->
             val id = context.id()
@@ -77,7 +127,26 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                     }
 
                     // 应用transformation和材质变体
-                    val finalModel = (unbakedModel as? BedrockGeometryModel)?.getModelVariant(block, state) ?: unbakedModel
+                    val finalModel = when (unbakedModel) {
+                        // BedrockGeometryModel: 使用现有的变体系统（支持任意角度）
+                        is BedrockGeometryModel -> unbakedModel.getModelVariant(block, state)
+
+                        // JsonUnbakedModel: 应用 ModelRotation（仅支持90度增量）
+                        is JsonUnbakedModel -> {
+                            val components = block.getComponents(state)
+                            val transformation = components?.minecraftTransformation
+
+                            if (transformation != null) {
+                                // 将transformation转换为ModelRotation并包装
+                                val rotation = transformationToModelRotation(transformation)
+                                RotatedJsonModel(unbakedModel, rotation)
+                            } else {
+                                unbakedModel
+                            }
+                        }
+
+                        else -> unbakedModel
+                    }
                     context.setModel(state, finalModel)
                 }
             }
