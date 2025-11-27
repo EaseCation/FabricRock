@@ -251,11 +251,16 @@ class BedrockResourcePackLoader(
     ) {
         val geometry = blockComponents?.minecraftGeometry
         val materialInstances = blockComponents?.minecraftMaterialInstances
-        if (geometry != null) {
-            // 带有模型的方块情况：通过行为包定义模型和贴图
-            val model = createGeometryModel(identifier, geometry, materialInstances) ?: return
+
+        // 检查是否使用标准立方体geometry
+        val isStandardCube = geometry == null || isStandardCubeGeometry(geometry)
+
+        if (!isStandardCube) {
+            // 自定义几何体：通过行为包定义模型和贴图
+            val model = createGeometryModel(identifier, geometry!!, materialInstances) ?: return
             BedrockAddonsRegistryClient.blockModels[identifier] = model
         } else {
+            // 标准立方体：使用cube模型
             val textures = block?.textures
             val model = createCubeModel(identifier, textures, materialInstances)
             BedrockAddonsRegistryClient.blockModels[identifier] = model
@@ -281,16 +286,36 @@ class BedrockResourcePackLoader(
         } else {
             val geometry = blockComponents?.minecraftGeometry
             val materialInstances = blockComponents?.minecraftMaterialInstances
-            if (geometry != null) {
-                // 带有模型的方块情况：通过行为包定义模型和贴图
-                val model = createGeometryModel(identifier, geometry, materialInstances) ?: return
+
+            // 检查是否使用标准立方体geometry
+            val isStandardCube = geometry == null || isStandardCubeGeometry(geometry)
+
+            if (!isStandardCube) {
+                // 自定义几何体：通过行为包定义模型和贴图
+                val model = createGeometryModel(identifier, geometry!!, materialInstances) ?: return
                 BedrockAddonsRegistryClient.itemModels[identifier] = model
             } else {
+                // 标准立方体：使用cube模型
                 val textures = block?.carried_textures ?: block?.textures
                 val model = createCubeModel(identifier, textures, materialInstances)
                 BedrockAddonsRegistryClient.itemModels[identifier] = model
             }
         }
+    }
+
+    /**
+     * 判断geometry是否为标准立方体（应该使用createCubeModel处理）
+     * 基岩版内置的标准立方体标识符包括：
+     * - minecraft:geometry.full_block
+     * 未来可能需要添加其他标识符
+     */
+    private fun isStandardCubeGeometry(geometry: ComponentGeometry): Boolean {
+        val geometryIdentifier = when (geometry) {
+            is ComponentGeometry.ComponentGeometrySimple -> geometry.identifier
+            is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
+        }
+
+        return geometryIdentifier == "minecraft:geometry.full_block"
     }
 
     private fun createCubeModel(
