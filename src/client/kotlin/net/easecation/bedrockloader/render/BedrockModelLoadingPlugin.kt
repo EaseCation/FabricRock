@@ -6,6 +6,7 @@ import net.easecation.bedrockloader.bedrock.block.component.ComponentTransformat
 import net.easecation.bedrockloader.block.BlockContext
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistryClient
+import net.fabricmc.fabric.api.client.model.loading.v1.DelegatingUnbakedModel
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin
 import net.minecraft.client.render.model.ModelRotation
 import net.minecraft.client.render.model.json.JsonUnbakedModel
@@ -76,8 +77,20 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
 
         BedrockAddonsRegistry.blocks.forEach { (id, v) ->
             val block = v as? BlockContext.BlockDataDriven ?: return@forEach
+            val isBlockEntity = BedrockAddonsRegistry.blockEntities[id] != null
+
             pluginContext.registerBlockStateResolver(block) { context ->
-                // 直接从注册表获取基础模型
+                // 方块实体：注册占位符模型
+                // 渲染类型是 INVISIBLE，所以这个模型不会被实际渲染
+                // 但 Minecraft 仍然要求每个 blockstate 变体都有对应的模型
+                if (isBlockEntity) {
+                    block.stateManager.states.forEach { state ->
+                        context.setModel(state, DelegatingUnbakedModel(Identifier("block/air")))
+                    }
+                    return@registerBlockStateResolver
+                }
+
+                // 普通方块：从注册表获取基础模型
                 val baseUnbakedModel = BedrockAddonsRegistryClient.blockModels[id]
                 if (baseUnbakedModel == null) {
                     BedrockLoaderClient.logger.warn("Block model not found for: $id, using missing model")
