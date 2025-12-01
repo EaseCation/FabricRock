@@ -1,10 +1,12 @@
 package net.easecation.bedrockloader.render
 
 import net.easecation.bedrockloader.BedrockLoader
+import net.easecation.bedrockloader.animation.EntityAnimationManager
 import net.easecation.bedrockloader.bedrock.block.component.ComponentTransformation
 import net.easecation.bedrockloader.bedrock.definition.GeometryDefinition
 import net.easecation.bedrockloader.block.BlockContext
 import net.easecation.bedrockloader.entity.EntityDataDriven
+import net.easecation.bedrockloader.loader.BedrockAddonsRegistryClient
 import net.easecation.bedrockloader.render.model.ModelPart
 import net.easecation.bedrockloader.render.model.TexturedModelData
 import net.fabricmc.api.EnvType
@@ -33,6 +35,19 @@ import java.util.function.Function
 import java.util.function.Supplier
 
 
+/**
+ * 存储骨骼的原始变换值
+ */
+@Environment(EnvType.CLIENT)
+data class OriginalBoneTransform(
+    val pivotX: Double,
+    val pivotY: Double,
+    val pivotZ: Double,
+    val pitch: Double,
+    val yaw: Double,
+    val roll: Double
+)
+
 @Environment(EnvType.CLIENT)
 class BedrockGeometryModel private constructor(
     private val bedrockModel: GeometryDefinition.Model,
@@ -42,7 +57,11 @@ class BedrockGeometryModel private constructor(
     private val blockTransformation: ComponentTransformation?,
     // 用于变体检测的基准信息
     private var blockIdentifier: Identifier? = null,
-    private var baseMaterialsHash: Int? = null
+    private var baseMaterialsHash: Int? = null,
+    // 骨骼名称到 ModelPart 的映射（用于动画）
+    private val boneMap: Map<String, ModelPart> = emptyMap(),
+    // 骨骼原始变换值（用于动画重置）
+    private val originalBoneTransforms: Map<String, OriginalBoneTransform> = emptyMap()
 ) : EntityModel<EntityDataDriven>(), UnbakedModel, BakedModel, FabricBakedModel {
 
     companion object {
@@ -72,6 +91,46 @@ class BedrockGeometryModel private constructor(
         }
 
         /**
+         * 构建骨骼名称到 ModelPart 的映射，并保存原始变换值
+         */
+        private fun buildBoneMapAndOriginals(
+            root: ModelPart,
+            bones: List<GeometryDefinition.Bone>
+        ): Pair<Map<String, ModelPart>, Map<String, OriginalBoneTransform>> {
+            val boneMap = mutableMapOf<String, ModelPart>()
+            val originalTransforms = mutableMapOf<String, OriginalBoneTransform>()
+
+            fun traverse(parent: ModelPart, boneList: List<GeometryDefinition.Bone>) {
+                for (bone in boneList) {
+                    try {
+                        val part = parent.getChild(bone.name)
+                        boneMap[bone.name] = part
+                        // 保存原始变换值
+                        originalTransforms[bone.name] = OriginalBoneTransform(
+                            pivotX = part.pivotX,
+                            pivotY = part.pivotY,
+                            pivotZ = part.pivotZ,
+                            pitch = part.pitch,
+                            yaw = part.yaw,
+                            roll = part.roll
+                        )
+                        // 递归处理子骨骼
+                        val childBones = bones.filter { it.parent == bone.name }
+                        if (childBones.isNotEmpty()) {
+                            traverse(part, childBones)
+                        }
+                    } catch (e: NoSuchElementException) {
+                        // 骨骼不存在，跳过
+                    }
+                }
+            }
+            // 从根骨骼开始
+            val rootBones = bones.filter { it.parent == null }
+            traverse(root, rootBones)
+            return Pair(boneMap, originalTransforms)
+        }
+
+        /**
          * 创建基础几何体模型
          *
          * @param materials 材质映射
@@ -83,7 +142,13 @@ class BedrockGeometryModel private constructor(
             transformation: ModelTransformation = MODEL_TRANSFORM_BLOCK
         ): BedrockGeometryModel {
             val modelPart = getTexturedModelData(bedrockModel).createModel()
-            return BedrockGeometryModel(bedrockModel, materials, transformation, modelPart, null)
+            val (boneMap, originalTransforms) = bedrockModel.bones?.let {
+                buildBoneMapAndOriginals(modelPart, it)
+            } ?: Pair(emptyMap(), emptyMap())
+            return BedrockGeometryModel(
+                bedrockModel, materials, transformation, modelPart, null,
+                null, null, boneMap, originalTransforms
+            )
         }
 
         /**
@@ -100,6 +165,9 @@ class BedrockGeometryModel private constructor(
             transformation: ModelTransformation = MODEL_TRANSFORM_BLOCK
         ): BedrockGeometryModel {
             val modelPart = getTexturedModelData(bedrockModel).createModel()
+            val (boneMap, originalTransforms) = bedrockModel.bones?.let {
+                buildBoneMapAndOriginals(modelPart, it)
+            } ?: Pair(emptyMap(), emptyMap())
             return BedrockGeometryModel(
                 bedrockModel,
                 materials,
@@ -107,7 +175,9 @@ class BedrockGeometryModel private constructor(
                 modelPart,
                 null,
                 identifier,
-                materials.hashCode()
+                materials.hashCode(),
+                boneMap,
+                originalTransforms
             )
         }
     }
@@ -169,7 +239,9 @@ class BedrockGeometryModel private constructor(
             modelPart,
             newTransformation,
             blockIdentifier,
-            baseMaterialsHash
+            baseMaterialsHash,
+            boneMap,
+            originalBoneTransforms
         )
     }
 
@@ -247,8 +319,165 @@ class BedrockGeometryModel private constructor(
         modelPart.render(matrices, vertices, light, overlay, red, green, blue, alpha)
     }
 
-    override fun setAngles(entity: EntityDataDriven?, limbAngle: Float, limbDistance: Float, animationProgress: Float, headYaw: Float, headPitch: Float) {
+    /**
+     * 应用动画变换到骨骼
+     *
+     * 这个方法用于方块实体渲染器，在渲染前更新骨骼状态。
+     * 调用此方法前，需要先调用 animManager.tick(deltaTime) 更新动画状态。
+     *
+     * @param animManager 动画管理器
+     */
+    fun applyAnimations(animManager: EntityAnimationManager) {
+        // 重置所有骨骼到原始状态
+        for ((boneName, bone) in boneMap) {
+            val original = originalBoneTransforms[boneName]
+            if (original != null) {
+                bone.pivotX = original.pivotX
+                bone.pivotY = original.pivotY
+                bone.pivotZ = original.pivotZ
+                bone.pitch = original.pitch
+                bone.yaw = original.yaw
+                bone.roll = original.roll
+            } else {
+                bone.pitch = 0.0
+                bone.yaw = 0.0
+                bone.roll = 0.0
+            }
+            bone.resetScale()
+            bone.resetAnimOffset()  // 重置动画位移
+        }
 
+        // 应用骨骼变换
+        for ((boneName, bone) in boneMap) {
+            val transform = animManager.getBoneTransform(boneName) ?: continue
+            val original = originalBoneTransforms[boneName]
+
+            // 应用旋转（基岩版角度单位是度，需要转换为弧度）
+            // 动画旋转是相对于原始旋转的增量
+            transform.rotation?.let { rot ->
+                if (rot.size >= 3) {
+                    val originalPitch = original?.pitch ?: 0.0
+                    val originalYaw = original?.yaw ?: 0.0
+                    val originalRoll = original?.roll ?: 0.0
+                    bone.pitch = originalPitch + Math.toRadians(rot[0])
+                    bone.yaw = originalYaw + Math.toRadians(rot[1])
+                    bone.roll = originalRoll + Math.toRadians(rot[2])
+                }
+            }
+
+            // 应用位移（使用animOffset，不修改pivot）
+            // 基岩版position动画是相对于父骨骼的位移，pivot保持不变用于旋转中心
+            transform.position?.let { pos ->
+                if (pos.size >= 3) {
+                    // 基岩版坐标系：+X=西，+Y=上，+Z=南
+                    // Java版坐标系：+X=东，+Y=上，+Z=南
+                    // BlockEntityRenderer有Z轴180度旋转，会反转X和Y
+                    // 所以这里X取反，Y取反，Z不变
+                    bone.setAnimOffset(-pos[0], -pos[1], pos[2])
+                }
+            }
+
+            // 应用缩放
+            transform.scale?.let { scale ->
+                if (scale.size >= 3) {
+                    bone.setScale(scale[0], scale[1], scale[2])
+                } else if (scale.size == 1) {
+                    // 统一缩放
+                    bone.setScale(scale[0], scale[0], scale[0])
+                }
+            }
+        }
+    }
+
+    override fun setAngles(entity: EntityDataDriven?, limbAngle: Float, limbDistance: Float, animationProgress: Float, headYaw: Float, headPitch: Float) {
+        if (entity == null) return
+
+        // 懒加载创建动画管理器
+        var animManager = entity.animationManager as? EntityAnimationManager
+        if (animManager == null) {
+            // 尝试从注册表获取动画配置并创建动画管理器
+            val config = BedrockAddonsRegistryClient.entityAnimationConfigs[entity.identifier]
+            if (config != null) {
+                animManager = EntityAnimationManager(
+                    config.animationMap,
+                    config.animations,
+                    config.autoPlayList
+                )
+                entity.animationManager = animManager
+                BedrockLoader.logger.debug("[BedrockGeometryModel] Created animation manager for entity ${entity.identifier}")
+            } else {
+                // 没有动画配置，跳过动画处理
+                return
+            }
+        }
+
+        // 使用固定的时间增量（1/20秒 = 1 tick）
+        // 注：setAngles 每帧调用一次，但动画使用 tick 更新
+        // 这里用一个小的固定值避免动画过快或卡顿
+        val deltaTime = 0.05  // 1 tick = 1/20 秒
+
+        // 更新动画
+        animManager.tick(deltaTime)
+
+        // 重置所有骨骼到原始状态
+        for ((boneName, bone) in boneMap) {
+            val original = originalBoneTransforms[boneName]
+            if (original != null) {
+                bone.pivotX = original.pivotX
+                bone.pivotY = original.pivotY
+                bone.pivotZ = original.pivotZ
+                bone.pitch = original.pitch
+                bone.yaw = original.yaw
+                bone.roll = original.roll
+            } else {
+                bone.pitch = 0.0
+                bone.yaw = 0.0
+                bone.roll = 0.0
+            }
+            bone.resetScale()
+            bone.resetAnimOffset()  // 重置动画位移
+        }
+
+        // 应用骨骼变换
+        for ((boneName, bone) in boneMap) {
+            val transform = animManager.getBoneTransform(boneName) ?: continue
+            val original = originalBoneTransforms[boneName]
+
+            // 应用旋转（基岩版角度单位是度，需要转换为弧度）
+            // 动画旋转是相对于原始旋转的增量
+            transform.rotation?.let { rot ->
+                if (rot.size >= 3) {
+                    val originalPitch = original?.pitch ?: 0.0
+                    val originalYaw = original?.yaw ?: 0.0
+                    val originalRoll = original?.roll ?: 0.0
+                    bone.pitch = originalPitch + Math.toRadians(rot[0])
+                    bone.yaw = originalYaw + Math.toRadians(rot[1])
+                    bone.roll = originalRoll + Math.toRadians(rot[2])
+                }
+            }
+
+            // 应用位移（使用animOffset，不修改pivot）
+            // 基岩版position动画是相对于父骨骼的位移，pivot保持不变用于旋转中心
+            transform.position?.let { pos ->
+                if (pos.size >= 3) {
+                    // 基岩版坐标系：+X=西，+Y=上，+Z=南
+                    // Java版坐标系：+X=东，+Y=上，+Z=南
+                    // BlockEntityRenderer有Z轴180度旋转，会反转X和Y
+                    // 所以这里X取反，Y取反，Z不变
+                    bone.setAnimOffset(-pos[0], -pos[1], pos[2])
+                }
+            }
+
+            // 应用缩放
+            transform.scale?.let { scale ->
+                if (scale.size >= 3) {
+                    bone.setScale(scale[0], scale[1], scale[2])
+                } else if (scale.size == 1) {
+                    // 统一缩放
+                    bone.setScale(scale[0], scale[0], scale[0])
+                }
+            }
+        }
     }
 
 }

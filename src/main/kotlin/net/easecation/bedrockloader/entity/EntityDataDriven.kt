@@ -20,6 +20,12 @@ class EntityDataDriven(
         world: World
 ) : MobEntity(entityType, world) {
 
+    /**
+     * 动画管理器 - 仅在客户端存在
+     * 类型为 EntityAnimationManager，但由于是客户端类，这里声明为 Any?
+     */
+    var animationManager: Any? = null
+
     companion object {
         fun buildEntityType(identifier: Identifier): EntityType<EntityDataDriven> {
             return EntityType.Builder.create({ type, world ->

@@ -14,6 +14,12 @@ class BlockEntityDataDriven(
     state: BlockState
 ) : BlockEntity(type, pos, state) {
 
+    /**
+     * 动画管理器，用于管理方块实体的动画播放
+     * 在客户端渲染时懒加载创建
+     */
+    var animationManager: Any? = null
+
     companion object {
         fun buildBlockEntityType(identifier: Identifier): BlockEntityType<BlockEntityDataDriven> {
             val block = BedrockAddonsRegistry.blocks[identifier]!!

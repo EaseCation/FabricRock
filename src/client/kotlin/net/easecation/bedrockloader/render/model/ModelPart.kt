@@ -26,6 +26,14 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
     var inflate: Double = 0.0
     var detachPivot: Boolean = false
     var visible: Boolean = true
+    // 动画缩放属性
+    var scaleX: Double = 1.0
+    var scaleY: Double = 1.0
+    var scaleZ: Double = 1.0
+    // 动画位移属性（相对于父骨骼的额外位移）
+    var animOffsetX: Double = 0.0
+    var animOffsetY: Double = 0.0
+    var animOffsetZ: Double = 0.0
 
     var transform: ModelTransform
         get() = ModelTransform.of(
@@ -65,6 +73,13 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
         return modelPart
     }
 
+    /**
+     * 获取所有子骨骼的名称（用于调试）
+     */
+    fun getChildrenKeys(): Set<String> {
+        return children.keys
+    }
+
     fun setPivot(x: Double, y: Double, z: Double) {
         this.pivotX = x
         this.pivotY = y
@@ -75,6 +90,30 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
         this.pitch = pitch
         this.yaw = yaw
         this.roll = roll
+    }
+
+    fun setScale(x: Double, y: Double, z: Double) {
+        this.scaleX = x
+        this.scaleY = y
+        this.scaleZ = z
+    }
+
+    fun resetScale() {
+        this.scaleX = 1.0
+        this.scaleY = 1.0
+        this.scaleZ = 1.0
+    }
+
+    fun setAnimOffset(x: Double, y: Double, z: Double) {
+        this.animOffsetX = x
+        this.animOffsetY = y
+        this.animOffsetZ = z
+    }
+
+    fun resetAnimOffset() {
+        this.animOffsetX = 0.0
+        this.animOffsetY = 0.0
+        this.animOffsetZ = 0.0
     }
 
     @JvmOverloads
@@ -118,6 +157,11 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
     }
 
     fun rotate(matrices: MatrixStack) {
+        // 1. 首先应用动画位移（移动整个骨骼，包括旋转中心）
+        if (this.animOffsetX != 0.0 || this.animOffsetY != 0.0 || this.animOffsetZ != 0.0) {
+            matrices.translate(this.animOffsetX / 16.0f, this.animOffsetY / 16.0f, this.animOffsetZ / 16.0f)
+        }
+        // 2. 然后应用pivot旋转逻辑
         if (detachPivot) {
             matrices.multiply(
                 Quaternionf().rotationZYX(this.roll.toFloat(), this.yaw.toFloat(), this.pitch.toFloat()),
@@ -130,6 +174,10 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
             if (this.pitch != 0.0 || (this.yaw != 0.0) || (this.roll != 0.0)) {
                 matrices.multiply(Quaternionf().rotationZYX(this.roll.toFloat(), this.yaw.toFloat(), this.pitch.toFloat()))
             }
+        }
+        // 3. 最后应用动画缩放
+        if (this.scaleX != 1.0 || this.scaleY != 1.0 || this.scaleZ != 1.0) {
+            matrices.scale(this.scaleX.toFloat(), this.scaleY.toFloat(), this.scaleZ.toFloat())
         }
     }
 

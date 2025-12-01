@@ -16,6 +16,7 @@ class BedrockResourceContext {
     val geometries: MutableMap<String, GeometryDefinition.Model> = mutableMapOf()
     val renderControllers: MutableMap<String, EntityRenderControllerDefinition.RenderController> = mutableMapOf()
     val textureImages: MutableMap<BedrockTexturePath, TextureImage> = mutableMapOf()  // 去除后缀的路径(如textures/block/stone) -> TextureImage(image, type(后缀类型))
+    val animations: MutableMap<String, AnimationDefinition.Animation> = mutableMapOf()  // 动画ID -> 动画数据
 
     fun putAll(other: BedrockResourceContext) {
         terrainTexture.putAll(other.terrainTexture)
@@ -25,6 +26,7 @@ class BedrockResourceContext {
         renderControllers.putAll(other.renderControllers)
         textureImages.putAll(other.textureImages)
         itemTexture.putAll(other.itemTexture)
+        animations.putAll(other.animations)
     }
 
     fun terrainTextureToJava(namespace: String, textureKey: String) : JavaTexturePath? {

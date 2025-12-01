@@ -4,6 +4,7 @@ import com.google.gson.*
 import net.easecation.bedrockloader.bedrock.block.component.*
 import net.easecation.bedrockloader.bedrock.block.state.IBlockState
 import net.easecation.bedrockloader.bedrock.pack.SemVersion
+import net.easecation.bedrockloader.bedrock.definition.AnimationDefinition
 import net.easecation.bedrockloader.bedrock.definition.BlockResourceDefinition
 import net.easecation.bedrockloader.bedrock.definition.EntityResourceDefinition
 import net.easecation.bedrockloader.bedrock.definition.GeometryDefinition
@@ -58,6 +59,9 @@ object GsonUtil {
             // geometry
             .registerTypeAdapter(GeometryDefinition.Uv::class.java, GeometryDefinition.Uv.Deserializer())
             .registerTypeAdapter(GeometryDefinition.Locator::class.java, GeometryDefinition.Locator.Deserializer())
+            // animation
+            .registerTypeAdapter(AnimationDefinition.LoopMode::class.java, AnimationDefinition.LoopMode.Deserializer())
+            .registerTypeAdapter(AnimationDefinition.BoneAnimation::class.java, AnimationDefinition.BoneAnimation.Deserializer())
             .create()
 
     class UUIDSerializer : JsonSerializer<UUID>, JsonDeserializer<UUID> {

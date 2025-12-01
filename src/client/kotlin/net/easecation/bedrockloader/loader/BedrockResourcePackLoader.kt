@@ -98,6 +98,12 @@ class BedrockResourcePackLoader(
         val clientEntity = block.client_entity?.let { context.resource.entities[it.identifier]?.description } ?: return
         val model = createClientEntityModel(identifier, clientEntity) ?: return
         BedrockAddonsRegistryClient.blockEntityModels[identifier] = model
+
+        // 注册方块实体动画配置（用于懒加载创建 EntityAnimationManager）
+        registerBlockEntityAnimationConfig(identifier, clientEntity)
+
+        // 注册方块实体缩放配置
+        registerBlockEntityScaleConfig(identifier, clientEntity)
     }
 
     private fun registerBlockEntityRenderer(identifier: Identifier) {
@@ -108,7 +114,7 @@ class BedrockResourcePackLoader(
         // SpriteIdentifier 的 textureId 格式是 block/entity_xxx（不带 textures/ 和 .png）
         val entityTextureId = Identifier(spriteId.textureId.namespace, "textures/" + spriteId.textureId.path + ".png")
         BlockEntityRendererFactories.register(blockEntityType) { context ->
-            BlockEntityDataDrivenRenderer.create(context, model, entityTextureId)
+            BlockEntityDataDrivenRenderer.create(context, model, entityTextureId, identifier)
         }
     }
 
@@ -497,6 +503,7 @@ class BedrockResourcePackLoader(
 
     /**
      * 从ClientEntity读取需要的模型，然后将对应的模型保存到Java材质包中（对应命名空间）
+     * 同时注册动画配置
      */
     private fun createEntityModel(
         identifier: Identifier,
@@ -504,6 +511,161 @@ class BedrockResourcePackLoader(
     ) {
         val model = createClientEntityModel(identifier, clientEntity) ?: return
         BedrockAddonsRegistryClient.entityModel[identifier] = model
+
+        // 注册动画配置（用于懒加载创建 EntityAnimationManager）
+        registerEntityAnimationConfig(identifier, clientEntity)
+
+        // 注册缩放配置
+        registerEntityScaleConfig(identifier, clientEntity)
+    }
+
+    /**
+     * 注册实体动画配置
+     *
+     * 解析 ClientEntity 中的 animations 和 scripts.animate 配置，
+     * 存储到 BedrockAddonsRegistryClient 供实体运行时使用。
+     */
+    private fun registerEntityAnimationConfig(
+        identifier: Identifier,
+        clientEntity: EntityResourceDefinition.ClientEntityDescription?
+    ) {
+        if (clientEntity == null) return
+
+        val animationMap = clientEntity.animations ?: return
+        val scripts = clientEntity.scripts ?: return
+        val animateList = scripts.animate ?: return
+
+        // 解析 scripts.animate 列表
+        val autoPlayList = animateList.mapNotNull { item ->
+            when (item) {
+                is String -> item
+                is Map<*, *> -> item.keys.firstOrNull()?.toString()
+                else -> null
+            }
+        }
+
+        if (autoPlayList.isEmpty()) return
+
+        // 收集需要的动画数据
+        val animations = mutableMapOf<String, net.easecation.bedrockloader.bedrock.definition.AnimationDefinition.Animation>()
+        for (alias in autoPlayList) {
+            val animId = animationMap[alias] ?: continue
+            val anim = context.resource.animations[animId]
+            if (anim != null) {
+                animations[animId] = anim
+            } else {
+                BedrockLoader.logger.warn("[BedrockResourcePackLoader] Animation not found: $animId for entity $identifier")
+            }
+        }
+
+        if (animations.isEmpty()) return
+
+        // 注册动画配置
+        BedrockAddonsRegistryClient.entityAnimationConfigs[identifier] = EntityAnimationConfig(
+            animationMap = animationMap,
+            animations = animations,
+            autoPlayList = autoPlayList
+        )
+
+        BedrockLoader.logger.debug("[BedrockResourcePackLoader] Registered animation config for entity $identifier: ${autoPlayList.size} auto-play animations")
+    }
+
+    /**
+     * 注册方块实体动画配置
+     *
+     * 解析 ClientEntity 中的 animations 和 scripts.animate 配置，
+     * 存储到 BedrockAddonsRegistryClient.blockEntityAnimationConfigs 供方块实体运行时使用。
+     */
+    private fun registerBlockEntityAnimationConfig(
+        identifier: Identifier,
+        clientEntity: EntityResourceDefinition.ClientEntityDescription?
+    ) {
+        if (clientEntity == null) return
+
+        val animationMap = clientEntity.animations ?: return
+        val scripts = clientEntity.scripts ?: return
+        val animateList = scripts.animate ?: return
+
+        // 解析 scripts.animate 列表
+        val autoPlayList = animateList.mapNotNull { item ->
+            when (item) {
+                is String -> item
+                is Map<*, *> -> item.keys.firstOrNull()?.toString()
+                else -> null
+            }
+        }
+
+        if (autoPlayList.isEmpty()) return
+
+        // 收集需要的动画数据
+        val animations = mutableMapOf<String, net.easecation.bedrockloader.bedrock.definition.AnimationDefinition.Animation>()
+        for (alias in autoPlayList) {
+            val animId = animationMap[alias] ?: continue
+            val anim = context.resource.animations[animId]
+            if (anim != null) {
+                animations[animId] = anim
+            } else {
+                BedrockLoader.logger.warn("[BedrockResourcePackLoader] Animation not found: $animId for block entity $identifier")
+            }
+        }
+
+        if (animations.isEmpty()) return
+
+        // 注册动画配置到方块实体专用存储
+        BedrockAddonsRegistryClient.blockEntityAnimationConfigs[identifier] = EntityAnimationConfig(
+            animationMap = animationMap,
+            animations = animations,
+            autoPlayList = autoPlayList
+        )
+
+        BedrockLoader.logger.info("[BedrockResourcePackLoader] Registered animation config for block entity $identifier: ${autoPlayList.size} auto-play animations")
+    }
+
+    /**
+     * 解析 scripts.scale 值为 Float
+     * 支持格式: 数字、字符串数字
+     * Molang 表达式返回默认值 1.0f
+     */
+    private fun parseScaleValue(scale: Any?): Float {
+        if (scale == null) return 1.0f
+        return when (scale) {
+            is Number -> scale.toFloat()
+            is String -> scale.toFloatOrNull() ?: run {
+                BedrockLoader.logger.warn("[BedrockResourcePackLoader] Molang scale expression not supported, using default 1.0: $scale")
+                1.0f
+            }
+            else -> 1.0f
+        }
+    }
+
+    /**
+     * 注册实体缩放配置
+     */
+    private fun registerEntityScaleConfig(
+        identifier: Identifier,
+        clientEntity: EntityResourceDefinition.ClientEntityDescription?
+    ) {
+        val scripts = clientEntity?.scripts ?: return
+        val scale = parseScaleValue(scripts.scale)
+        if (scale != 1.0f) {
+            BedrockAddonsRegistryClient.entityScaleConfigs[identifier] = scale
+            BedrockLoader.logger.info("[BedrockResourcePackLoader] Registered scale $scale for entity $identifier")
+        }
+    }
+
+    /**
+     * 注册方块实体缩放配置
+     */
+    private fun registerBlockEntityScaleConfig(
+        identifier: Identifier,
+        clientEntity: EntityResourceDefinition.ClientEntityDescription?
+    ) {
+        val scripts = clientEntity?.scripts ?: return
+        val scale = parseScaleValue(scripts.scale)
+        if (scale != 1.0f) {
+            BedrockAddonsRegistryClient.blockEntityScaleConfigs[identifier] = scale
+            BedrockLoader.logger.info("[BedrockResourcePackLoader] Registered scale $scale for block entity $identifier")
+        }
     }
 
     /**
@@ -583,7 +745,7 @@ class BedrockResourcePackLoader(
         val model = BedrockAddonsRegistryClient.entityModel[identifier] ?: return
         val spriteId = model.materials["*"]?.spriteId ?: return
         EntityRendererRegistry.register(entityType) { context ->
-            EntityDataDrivenRenderer.create(context, model, 0.5f, spriteId.textureId)
+            EntityDataDrivenRenderer.create(context, model, 0.5f, spriteId.textureId, identifier)
         }
     }
 

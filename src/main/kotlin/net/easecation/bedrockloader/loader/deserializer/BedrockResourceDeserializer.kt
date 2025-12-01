@@ -91,6 +91,18 @@ object BedrockResourceDeserializer : PackDeserializer<BedrockResourceContext> {
                         }
                     }
                 }
+                // animation
+                // 支持 .animation.json 和 animations/ 目录下的标准 .json 文件
+                if (name.endsWith(".animation.json") || (name.startsWith("animations/") && name.endsWith(".json"))) {
+                    zip.getInputStream(entry).use { stream ->
+                        try {
+                            val animationDefinition = GsonUtil.GSON.fromJson(InputStreamReader(stream), AnimationDefinition::class.java)
+                            context.animations.putAll(animationDefinition.animations)
+                        } catch (e: Exception) {
+                            BedrockLoader.logger.error("Error parsing animation: $name", e)
+                        }
+                    }
+                }
             }
         }
         return context
