@@ -369,11 +369,7 @@ class BedrockGeometryModel private constructor(
             // 基岩版position动画是相对于父骨骼的位移，pivot保持不变用于旋转中心
             transform.position?.let { pos ->
                 if (pos.size >= 3) {
-                    // 基岩版坐标系：+X=西，+Y=上，+Z=南
-                    // Java版坐标系：+X=东，+Y=上，+Z=南
-                    // BlockEntityRenderer有Z轴180度旋转，会反转X和Y
-                    // 所以这里X取反，Y取反，Z不变
-                    bone.setAnimOffset(-pos[0], -pos[1], pos[2])
+                    bone.setAnimOffset(pos[0], -pos[1], pos[2])
                 }
             }
 
@@ -460,11 +456,7 @@ class BedrockGeometryModel private constructor(
             // 基岩版position动画是相对于父骨骼的位移，pivot保持不变用于旋转中心
             transform.position?.let { pos ->
                 if (pos.size >= 3) {
-                    // 基岩版坐标系：+X=西，+Y=上，+Z=南
-                    // Java版坐标系：+X=东，+Y=上，+Z=南
-                    // BlockEntityRenderer有Z轴180度旋转，会反转X和Y
-                    // 所以这里X取反，Y取反，Z不变
-                    bone.setAnimOffset(-pos[0], -pos[1], pos[2])
+                    bone.setAnimOffset(pos[0], -pos[1], pos[2])
                 }
             }
 
