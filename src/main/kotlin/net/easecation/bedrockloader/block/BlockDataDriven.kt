@@ -299,5 +299,16 @@ data class BlockContext(
             }
             else -> super.getOutlineShape(state, world, pos, context)
         }
+
+        override fun getSidesShape(state: BlockState, world: BlockView, pos: BlockPos): VoxelShape {
+            // 如果碰撞箱有效（非空），返回完整立方体以支持侧面放置物品（如悬挂木牌、火把等）
+            return when (val box = getComponents(state).minecraftCollisionBox) {
+                is ComponentCollisionBox.ComponentCollisionBoxBoolean ->
+                    if (box.value) VoxelShapes.fullCube() else VoxelShapes.empty()
+                is ComponentCollisionBox.ComponentCollisionBoxCustom ->
+                    if (box.size.any { it > 0f }) VoxelShapes.fullCube() else VoxelShapes.empty()
+                else -> VoxelShapes.fullCube()
+            }
+        }
     }
 }
