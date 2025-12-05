@@ -2,6 +2,7 @@ package net.easecation.bedrockloader.loader
 
 import net.easecation.bedrockloader.bedrock.definition.AnimationDefinition
 import net.easecation.bedrockloader.loader.context.BedrockPackContext
+import net.easecation.bedrockloader.render.BedrockEntityMaterial
 import net.easecation.bedrockloader.render.BedrockGeometryModel
 import net.minecraft.client.render.model.UnbakedModel
 import net.minecraft.util.Identifier
@@ -21,6 +22,18 @@ object BedrockAddonsRegistryClient {
     val blockEntityModels: MutableMap<Identifier, BedrockGeometryModel> = mutableMapOf()
     val itemModels: MutableMap<Identifier, UnbakedModel> = mutableMapOf()
     val entityModel: MutableMap<Identifier, BedrockGeometryModel> = mutableMapOf()
+
+    /**
+     * 存储实体材质类型配置
+     * key: 实体标识符, value: 材质类型
+     */
+    val entityMaterial: MutableMap<Identifier, BedrockEntityMaterial> = mutableMapOf()
+
+    /**
+     * 存储方块实体材质类型配置
+     * key: 方块标识符, value: 材质类型
+     */
+    val blockEntityMaterial: MutableMap<Identifier, BedrockEntityMaterial> = mutableMapOf()
 
     /**
      * 存储每个namespace对应的资源包上下文，用于动态创建材质映射

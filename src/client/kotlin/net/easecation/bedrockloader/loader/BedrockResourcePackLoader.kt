@@ -12,6 +12,7 @@ import net.easecation.bedrockloader.java.definition.JavaBlockTag
 import net.easecation.bedrockloader.java.definition.JavaMCMeta
 import net.easecation.bedrockloader.java.definition.VanillaBlockTagsData
 import net.easecation.bedrockloader.loader.context.BedrockPackContext
+import net.easecation.bedrockloader.render.BedrockEntityMaterial
 import net.easecation.bedrockloader.render.BedrockGeometryModel
 import net.easecation.bedrockloader.render.BedrockMaterialInstance
 import net.easecation.bedrockloader.render.renderer.BlockEntityDataDrivenRenderer
@@ -96,8 +97,9 @@ class BedrockResourcePackLoader(
 
     private fun createBlockEntityModel(identifier: Identifier, block: BlockResourceDefinition.Block) {
         val clientEntity = block.client_entity?.let { context.resource.entities[it.identifier]?.description } ?: return
-        val model = createClientEntityModel(identifier, clientEntity) ?: return
+        val (model, material) = createClientEntityModel(identifier, clientEntity) ?: return
         BedrockAddonsRegistryClient.blockEntityModels[identifier] = model
+        BedrockAddonsRegistryClient.blockEntityMaterial[identifier] = material
 
         // 注册方块实体动画配置（用于懒加载创建 EntityAnimationManager）
         registerBlockEntityAnimationConfig(identifier, clientEntity)
@@ -109,12 +111,13 @@ class BedrockResourcePackLoader(
     private fun registerBlockEntityRenderer(identifier: Identifier) {
         val blockEntityType = BedrockAddonsRegistry.blockEntities[identifier] ?: return
         val model = BedrockAddonsRegistryClient.blockEntityModels[identifier] ?: return
+        val material = BedrockAddonsRegistryClient.blockEntityMaterial[identifier] ?: BedrockEntityMaterial.ENTITY
         val spriteId = model.materials["*"]?.spriteId ?: return
         // 实体渲染器需要完整的纹理路径（带 textures/ 前缀和 .png 扩展名）
         // SpriteIdentifier 的 textureId 格式是 block/entity_xxx（不带 textures/ 和 .png）
         val entityTextureId = Identifier(spriteId.textureId.namespace, "textures/" + spriteId.textureId.path + ".png")
         BlockEntityRendererFactories.register(blockEntityType) { context ->
-            BlockEntityDataDrivenRenderer.create(context, model, entityTextureId, identifier)
+            BlockEntityDataDrivenRenderer.create(context, model, entityTextureId, identifier, material)
         }
     }
 
@@ -290,8 +293,9 @@ class BedrockResourcePackLoader(
                 // 使用客户端实体的几何体渲染物品
                 val clientEntity = context.resource.entities[bedrockClientEntity.identifier]?.description
                 if (clientEntity != null) {
-                    val model = createClientEntityModel(identifier, clientEntity)
-                    if (model != null) {
+                    val result = createClientEntityModel(identifier, clientEntity)
+                    if (result != null) {
+                        val (model, _) = result
                         BedrockAddonsRegistryClient.itemModels[identifier] = model
                         return
                     }
@@ -503,14 +507,15 @@ class BedrockResourcePackLoader(
 
     /**
      * 从ClientEntity读取需要的模型，然后将对应的模型保存到Java材质包中（对应命名空间）
-     * 同时注册动画配置
+     * 同时注册动画配置和材质类型
      */
     private fun createEntityModel(
         identifier: Identifier,
         clientEntity: EntityResourceDefinition.ClientEntityDescription?
     ) {
-        val model = createClientEntityModel(identifier, clientEntity) ?: return
+        val (model, material) = createClientEntityModel(identifier, clientEntity) ?: return
         BedrockAddonsRegistryClient.entityModel[identifier] = model
+        BedrockAddonsRegistryClient.entityMaterial[identifier] = material
 
         // 注册动画配置（用于懒加载创建 EntityAnimationManager）
         registerEntityAnimationConfig(identifier, clientEntity)
@@ -669,12 +674,14 @@ class BedrockResourcePackLoader(
     }
 
     /**
-     * 从ClientEntity读取需要的模型
+     * 从ClientEntity读取需要的模型和材质类型
+     *
+     * @return Pair(模型, 材质类型)，如果失败则返回 null
      */
     private fun createClientEntityModel(
         identifier: Identifier,
         clientEntity: EntityResourceDefinition.ClientEntityDescription?
-    ): BedrockGeometryModel? {
+    ): Pair<BedrockGeometryModel, BedrockEntityMaterial>? {
         val controllers = clientEntity?.render_controllers ?: return null
         if (controllers.isEmpty()) return null
         if (controllers.size > 1) {
@@ -682,18 +689,19 @@ class BedrockResourcePackLoader(
         }
         val controller = controllers[0]
         val renderController = context.resource.renderControllers[controller.id] ?: return null
-        val model = createRenderControllerModel(identifier, clientEntity, renderController) ?: return null
-        return model
+        return createRenderControllerModel(identifier, clientEntity, renderController)
     }
 
     /**
-     * 从RenderController读取需要的模型
+     * 从RenderController读取需要的模型和材质类型
+     *
+     * @return Pair(模型, 材质类型)，如果失败则返回 null
      */
     private fun createRenderControllerModel(
         identifier: Identifier,
         clientEntity: EntityResourceDefinition.ClientEntityDescription,
         renderController: EntityRenderControllerDefinition.RenderController
-    ): BedrockGeometryModel? {
+    ): Pair<BedrockGeometryModel, BedrockEntityMaterial>? {
         val geometryMolang = renderController.geometry
         val geometryAlias = geometryMolang.substringAfter("geometry.").substringAfter("Geometry.")
         val geometryIdentifier = clientEntity.geometry?.get(geometryAlias) ?: return null
@@ -708,7 +716,47 @@ class BedrockResourcePackLoader(
             Identifier(identifier.namespace, "block/entity_" + texture.substringAfterLast("/"))
         )
         val materials = mapOf("*" to BedrockMaterialInstance(spriteId))
-        return geometryFactory.create(materials)
+        val model = geometryFactory.create(materials)
+
+        // 解析材质类型
+        // RenderController.materials 格式: [{"*": "Material.default"}, {"body": "Material.emissive"}]
+        // 我们取第一个通配符材质（"*"）的值
+        val entityMaterial = parseMaterialFromRenderController(renderController, clientEntity)
+
+        return Pair(model, entityMaterial)
+    }
+
+    /**
+     * 从 RenderController 解析材质类型
+     *
+     * 数据流：RenderController.materials → ClientEntity.materials → BedrockEntityMaterial
+     */
+    private fun parseMaterialFromRenderController(
+        renderController: EntityRenderControllerDefinition.RenderController,
+        clientEntity: EntityResourceDefinition.ClientEntityDescription
+    ): BedrockEntityMaterial {
+        // 从 RenderController.materials 获取材质别名
+        // 格式: [{"*": "Material.default"}, {"bone_name": "Material.xxx"}]
+        val materialsList = renderController.materials
+        if (materialsList.isEmpty()) {
+            return BedrockEntityMaterial.ENTITY
+        }
+
+        // 优先查找通配符材质 "*"，否则取第一个
+        val materialEntry = materialsList.find { it.containsKey("*") } ?: materialsList.firstOrNull()
+        val materialMolang = materialEntry?.values?.firstOrNull() ?: return BedrockEntityMaterial.ENTITY
+
+        // 解析 Molang 表达式，提取材质别名
+        // 格式: "Material.default" 或 "material.default"
+        val materialAlias = materialMolang
+            .substringAfter("Material.")
+            .substringAfter("material.")
+
+        // 从 ClientEntity.materials 查找实际材质名称
+        // ClientEntity.materials 格式: {"default": "entity", "emissive": "entity_emissive"}
+        val actualMaterialName = clientEntity.materials?.get(materialAlias) ?: materialAlias
+
+        return BedrockEntityMaterial.fromBedrockName(actualMaterialName)
     }
 
     /**
@@ -743,9 +791,10 @@ class BedrockResourcePackLoader(
     private fun registerEntityRenderController(identifier: Identifier) {
         val entityType = BedrockAddonsRegistry.entities[identifier] ?: return
         val model = BedrockAddonsRegistryClient.entityModel[identifier] ?: return
+        val material = BedrockAddonsRegistryClient.entityMaterial[identifier] ?: BedrockEntityMaterial.ENTITY
         val spriteId = model.materials["*"]?.spriteId ?: return
         EntityRendererRegistry.register(entityType) { context ->
-            EntityDataDrivenRenderer.create(context, model, 0.5f, spriteId.textureId, identifier)
+            EntityDataDrivenRenderer.create(context, model, 0.5f, spriteId.textureId, identifier, material)
         }
     }
 
