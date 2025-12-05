@@ -82,7 +82,16 @@ data class BlockContext(
             }
 
             fun calculateSettings(): Settings {
-                val settings = Settings.create().hardness(4.0f).nonOpaque()  // TODO hardness
+                val settings = Settings.create().hardness(4.0f)  // TODO hardness
+
+                // 处理 light_dampening（光阻挡）
+                // 基岩版默认值是 15（完全阻挡光线）
+                val lightDampening = components.minecraftLightDampening ?: 15
+                if (lightDampening < 8) {
+                    // 只有当 light_dampening < 8 时才设置为非完全不透明
+                    settings.nonOpaque()
+                }
+
                 components.minecraftCollisionBox?.let {
                     when (it) {
                         is ComponentCollisionBox.ComponentCollisionBoxBoolean -> {
