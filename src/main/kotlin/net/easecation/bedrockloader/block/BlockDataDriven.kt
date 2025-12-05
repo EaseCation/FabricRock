@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec
 import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.bedrock.block.component.BlockComponents
 import net.easecation.bedrockloader.bedrock.block.component.ComponentCollisionBox
+import net.easecation.bedrockloader.bedrock.block.component.ComponentMaterialInstances
 import net.easecation.bedrockloader.bedrock.block.component.ComponentSelectionBox
 import net.easecation.bedrockloader.bedrock.block.component.FaceDirectionalType
 import net.easecation.bedrockloader.bedrock.block.state.StateBoolean
@@ -29,8 +30,11 @@ import net.minecraft.util.shape.VoxelShape
 import net.minecraft.util.shape.VoxelShapes
 import net.minecraft.world.BlockView
 import org.joml.Matrix3f
+import org.joml.Matrix4d
 import org.joml.Matrix4f
+import org.joml.Quaterniond
 import org.joml.Quaternionf
+import org.joml.Vector3d
 
 data class BlockContext(
     val identifier: Identifier,
@@ -84,11 +88,18 @@ data class BlockContext(
             fun calculateSettings(): Settings {
                 val settings = Settings.create().hardness(4.0f)  // TODO hardness
 
-                // 处理 light_dampening（光阻挡）
-                // 基岩版默认值是 15（完全阻挡光线）
-                val lightDampening = components.minecraftLightDampening ?: 15
-                if (lightDampening < 8) {
-                    // 只有当 light_dampening < 8 时才设置为非完全不透明
+                // 面剔除控制：根据是否有自定义 geometry、透明渲染方法或方块实体决定
+                // Full block（无自定义 geometry）：默认启用面剔除，确保性能优化
+                // 有自定义 geometry、透明渲染或方块实体：禁用面剔除
+                val hasCustomGeometry = components.minecraftGeometry != null
+                val hasBlockEntity = components.neteaseBlockEntity != null
+                val renderMethod = components.minecraftMaterialInstances?.get("*")?.render_method
+                val needsNonOpaque = hasCustomGeometry ||
+                    hasBlockEntity ||
+                    renderMethod == ComponentMaterialInstances.RenderMethod.blend ||
+                    renderMethod == ComponentMaterialInstances.RenderMethod.alpha_test
+
+                if (needsNonOpaque) {
                     settings.nonOpaque()
                 }
 
@@ -175,6 +186,27 @@ data class BlockContext(
         fun applyTransformation(state: BlockState, box: Box): Box {
             val transformation = getComponents(state).minecraftTransformation ?: return box
             return transformation.apply(box)
+        }
+
+        fun applyFaceDirectionalToBox(state: BlockState, box: Box): Box {
+            val faceDirectional = getComponents(state).neteaseFaceDirectional ?: return box
+            val direction = when (faceDirectional.type) {
+                FaceDirectionalType.direction -> Direction.fromHorizontal(state[DIRECTION])
+                FaceDirectionalType.facing_direction -> Direction.byId(state[FACING_DIRECTION])
+            }
+            val quaternion = getFaceQuaternion(direction)
+            // 使用四元数围绕方块中心 (0.5, 0.5, 0.5) 旋转 Box
+            val matrix = Matrix4d().rotateAround(
+                Quaterniond(quaternion.x.toDouble(), quaternion.y.toDouble(), quaternion.z.toDouble(), quaternion.w.toDouble()),
+                0.5, 0.5, 0.5
+            )
+            val p1 = Vector3d(box.minX, box.minY, box.minZ).mulProject(matrix)
+            val p2 = Vector3d(box.maxX, box.maxY, box.maxZ).mulProject(matrix)
+            // 重新计算 min/max（旋转后可能交换）
+            return Box(
+                minOf(p1.x, p2.x), minOf(p1.y, p2.y), minOf(p1.z, p2.z),
+                maxOf(p1.x, p2.x), maxOf(p1.y, p2.y), maxOf(p1.z, p2.z)
+            )
         }
 
         fun getFaceQuaternion(direction: Direction): Quaternionf {
@@ -276,14 +308,16 @@ data class BlockContext(
         ): VoxelShape = when {
             this.collidable -> when (val box = getComponents(state).minecraftCollisionBox) {
                 is ComponentCollisionBox.ComponentCollisionBoxBoolean -> getOutlineShape(state, world, pos, context)
-                is ComponentCollisionBox.ComponentCollisionBoxCustom -> VoxelShapes.cuboid(applyTransformation(state, Box(
-                    (1.0 / 16) * (16 - (box.origin[0] + 8 + box.size[0])),
-                    (1.0 / 16) * (box.origin[1]),
-                    (1.0 / 16) * (box.origin[2] + 8),
-                    (1.0 / 16) * (16 - (box.origin[0] + 8)),
-                    (1.0 / 16) * (box.origin[1] + box.size[1]),
-                    (1.0 / 16) * (box.origin[2] + 8 + box.size[2])
-                )))
+                is ComponentCollisionBox.ComponentCollisionBoxCustom -> VoxelShapes.cuboid(
+                    applyFaceDirectionalToBox(state, applyTransformation(state, Box(
+                        (1.0 / 16) * (16 - (box.origin[0] + 8 + box.size[0])),
+                        (1.0 / 16) * (box.origin[1]),
+                        (1.0 / 16) * (box.origin[2] + 8),
+                        (1.0 / 16) * (16 - (box.origin[0] + 8)),
+                        (1.0 / 16) * (box.origin[1] + box.size[1]),
+                        (1.0 / 16) * (box.origin[2] + 8 + box.size[2])
+                    )))
+                )
                 else -> getOutlineShape(state, world, pos, context)
             }
             else -> VoxelShapes.empty()
@@ -297,14 +331,14 @@ data class BlockContext(
         ): VoxelShape = when (val box = getComponents(state).minecraftSelectionBox) {
             is ComponentSelectionBox.ComponentSelectionBoxBoolean -> super.getOutlineShape(state, world, pos, context)
             is ComponentSelectionBox.ComponentSelectionBoxCustom -> {
-                VoxelShapes.cuboid(applyTransformation(state, Box(
+                VoxelShapes.cuboid(applyFaceDirectionalToBox(state, applyTransformation(state, Box(
                     (1.0 / 16) * (16 - (box.origin[0] + 8 + box.size[0])),
                     (1.0 / 16) * (box.origin[1]),
                     (1.0 / 16) * (box.origin[2] + 8),
                     (1.0 / 16) * (16 - (box.origin[0] + 8)),
                     (1.0 / 16) * (box.origin[1] + box.size[1]),
                     (1.0 / 16) * (box.origin[2] + 8 + box.size[2])
-                )))
+                ))))
             }
             else -> super.getOutlineShape(state, world, pos, context)
         }
@@ -318,6 +352,33 @@ data class BlockContext(
                     if (box.size.any { it > 0f }) VoxelShapes.fullCube() else VoxelShapes.empty()
                 else -> VoxelShapes.fullCube()
             }
+        }
+
+        /**
+         * 控制光照穿透（独立于面剔除）
+         * 基岩版 minecraft:light_dampening 组件
+         * 默认值：有方块实体时为 0（接收光照），否则为 15（完全阻挡）
+         */
+        @Deprecated("", ReplaceWith("state.getOpacity(world, pos)"))
+        override fun getOpacity(state: BlockState, world: BlockView, pos: BlockPos): Int {
+            val components = getComponents(state)
+            // 优先使用显式配置的 light_dampening
+            // 如果未配置：方块实体默认 0（接收光照），否则默认 15（阻挡光线）
+            val defaultValue = if (components.neteaseBlockEntity != null) 0 else 15
+            return components.minecraftLightDampening ?: defaultValue
+        }
+
+        /**
+         * 控制环境光遮蔽（AO）- 支持 0-15 渐变控制
+         * 线性插值：light_dampening 0 → 1.0（无AO），15 → 0.2（正常AO）
+         * 默认值：有方块实体时为 0（无AO），否则为 15（正常AO）
+         */
+        @Deprecated("", ReplaceWith("state.getAmbientOcclusionLightLevel(world, pos)"))
+        override fun getAmbientOcclusionLightLevel(state: BlockState, world: BlockView, pos: BlockPos): Float {
+            val components = getComponents(state)
+            val defaultValue = if (components.neteaseBlockEntity != null) 0 else 15
+            val lightDampening = components.minecraftLightDampening ?: defaultValue
+            return 1.0f - (lightDampening / 15.0f) * 0.8f
         }
     }
 }
