@@ -5,11 +5,22 @@ package net.easecation.bedrockloader.render.model
 
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
+import net.minecraft.util.math.Direction
 import org.joml.Vector2d
 import org.joml.Vector3d
 
 @Environment(value = EnvType.CLIENT)
-class ModelCuboidData(private val name: String?, textureX: Double, textureY: Double, private val faceUV: ModelPart.FaceUV?, offsetX: Double, offsetY: Double, offsetZ: Double, sizeX: Double, sizeY: Double, sizeZ: Double, extra: Dilation, private val mirror: Boolean, textureScaleX: Double, textureScaleY: Double) {
+class ModelCuboidData(
+    private val name: String?,
+    textureX: Double, textureY: Double,
+    private val faceUV: ModelPart.FaceUV?,
+    offsetX: Double, offsetY: Double, offsetZ: Double,
+    sizeX: Double, sizeY: Double, sizeZ: Double,
+    extra: Dilation,
+    private val mirror: Boolean,
+    textureScaleX: Double, textureScaleY: Double,
+    private val faceCulling: FaceCullingMap? = null  // 面剔除信息
+) {
     private val offset = Vector3d(offsetX, offsetY, offsetZ)
     private val dimensions = Vector3d(sizeX, sizeY, sizeZ)
     private val extraSize = extra
@@ -32,7 +43,8 @@ class ModelCuboidData(private val name: String?, textureX: Double, textureY: Dou
             extraSize.radiusZ,
             this.mirror,
             textureWidth.toDouble() * textureScale.x,
-            textureHeight.toDouble() * textureScale.y
+            textureHeight.toDouble() * textureScale.y,
+            faceCulling
         )
     }
 }

@@ -3,6 +3,7 @@ package net.easecation.bedrockloader.render
 import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.animation.EntityAnimationManager
 import net.easecation.bedrockloader.bedrock.block.component.ComponentTransformation
+import net.easecation.bedrockloader.bedrock.definition.BlockCullingDefinition
 import net.easecation.bedrockloader.bedrock.definition.GeometryDefinition
 import net.easecation.bedrockloader.block.BlockContext
 import net.easecation.bedrockloader.entity.EntityDataDriven
@@ -61,7 +62,9 @@ class BedrockGeometryModel private constructor(
     // 骨骼名称到 ModelPart 的映射（用于动画）
     private val boneMap: Map<String, ModelPart> = emptyMap(),
     // 骨骼原始变换值（用于动画重置）
-    private val originalBoneTransforms: Map<String, OriginalBoneTransform> = emptyMap()
+    private val originalBoneTransforms: Map<String, OriginalBoneTransform> = emptyMap(),
+    // 面剔除规则（用于根据 transformation 旋转）
+    private val cullingRules: BlockCullingDefinition.BlockCullingRules? = null
 ) : EntityModel<EntityDataDriven>(), UnbakedModel, BakedModel, FabricBakedModel {
 
     companion object {
@@ -78,10 +81,13 @@ class BedrockGeometryModel private constructor(
     }
 
     class Factory(private val bedrockModel: GeometryDefinition.Model) {
-        private fun getTexturedModelData(bedrockModel: GeometryDefinition.Model): TexturedModelData {
+        private fun getTexturedModelData(
+            bedrockModel: GeometryDefinition.Model,
+            cullingInfo: BlockCullingInfo? = null
+        ): TexturedModelData {
             if (bedrockModel.description.texture_width == null || bedrockModel.description.texture_height == null) throw IllegalStateException("[BedrockGeometryModel] Model has no texture size")
             if (bedrockModel.bones == null) throw IllegalStateException("[BedrockGeometryModel] Model has no bones")
-            BedrockRenderUtil.bedrockBonesToJavaModelData(bedrockModel.bones!!).let { modelData ->
+            BedrockRenderUtil.bedrockBonesToJavaModelData(bedrockModel.bones!!, cullingInfo).let { modelData ->
                 return TexturedModelData.of(
                     modelData,
                     bedrockModel.description.texture_width!!,
@@ -135,19 +141,22 @@ class BedrockGeometryModel private constructor(
          *
          * @param materials 材质映射
          * @param transformation 模型变换
+         * @param cullingRules 面剔除规则（可选）
          * @return 基础几何体模型
          */
         fun create(
             materials: Map<String, BedrockMaterialInstance>,
-            transformation: ModelTransformation = MODEL_TRANSFORM_BLOCK
+            transformation: ModelTransformation = MODEL_TRANSFORM_BLOCK,
+            cullingRules: BlockCullingDefinition.BlockCullingRules? = null
         ): BedrockGeometryModel {
-            val modelPart = getTexturedModelData(bedrockModel).createModel()
+            val cullingInfo = BlockCullingInfo.fromRules(cullingRules)
+            val modelPart = getTexturedModelData(bedrockModel, cullingInfo).createModel()
             val (boneMap, originalTransforms) = bedrockModel.bones?.let {
                 buildBoneMapAndOriginals(modelPart, it)
             } ?: Pair(emptyMap(), emptyMap())
             return BedrockGeometryModel(
                 bedrockModel, materials, transformation, modelPart, null,
-                null, null, boneMap, originalTransforms
+                null, null, boneMap, originalTransforms, cullingRules
             )
         }
 
@@ -157,14 +166,17 @@ class BedrockGeometryModel private constructor(
          * @param materials 基础材质映射
          * @param identifier 方块标识符，用于后续动态创建材质
          * @param transformation 模型变换
+         * @param cullingRules 面剔除规则（可选）
          * @return 支持动态材质的几何体模型
          */
         fun create(
             materials: Map<String, BedrockMaterialInstance>,
             identifier: Identifier,
-            transformation: ModelTransformation = MODEL_TRANSFORM_BLOCK
+            transformation: ModelTransformation = MODEL_TRANSFORM_BLOCK,
+            cullingRules: BlockCullingDefinition.BlockCullingRules? = null
         ): BedrockGeometryModel {
-            val modelPart = getTexturedModelData(bedrockModel).createModel()
+            val cullingInfo = BlockCullingInfo.fromRules(cullingRules)
+            val modelPart = getTexturedModelData(bedrockModel, cullingInfo).createModel()
             val (boneMap, originalTransforms) = bedrockModel.bones?.let {
                 buildBoneMapAndOriginals(modelPart, it)
             } ?: Pair(emptyMap(), emptyMap())
@@ -177,7 +189,8 @@ class BedrockGeometryModel private constructor(
                 identifier,
                 materials.hashCode(),
                 boneMap,
-                originalTransforms
+                originalTransforms,
+                cullingRules
             )
         }
     }
@@ -241,7 +254,8 @@ class BedrockGeometryModel private constructor(
             blockIdentifier,
             baseMaterialsHash,
             boneMap,
-            originalBoneTransforms
+            originalBoneTransforms,
+            cullingRules  // 传递 culling 规则，bake 时会根据 newTransformation 旋转
         )
     }
 

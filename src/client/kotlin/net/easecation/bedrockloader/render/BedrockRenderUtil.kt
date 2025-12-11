@@ -6,11 +6,19 @@ import net.easecation.bedrockloader.render.model.*
 import net.fabricmc.fabric.api.renderer.v1.mesh.Mesh
 import net.minecraft.client.texture.Sprite
 import net.minecraft.client.util.math.MatrixStack
+import net.minecraft.util.math.Direction
 import org.joml.Quaternionf
 
 object BedrockRenderUtil {
 
-    fun bedrockBonesToJavaModelData(bones: List<GeometryDefinition.Bone>) : ModelData {
+    /**
+     * 将基岩版骨骼数据转换为 Java 版 ModelData
+     *
+     * @param bones 基岩版骨骼列表
+     * @param cullingInfo 面剔除信息（可选）
+     * @return Java 版 ModelData
+     */
+    fun bedrockBonesToJavaModelData(bones: List<GeometryDefinition.Bone>, cullingInfo: BlockCullingInfo? = null) : ModelData {
         var boneCount = 0
         fun addBoneToModelData(bone: GeometryDefinition.Bone, parentPartData: ModelPartData) {
             val pivotTransform = ModelTransform.of(
@@ -25,8 +33,26 @@ object BedrockRenderUtil {
             )
             val bonePartData = parentPartData.addChild(bone.name, ModelPartBuilder.create(), pivotTransform)
 
-            bone.cubes?.forEach { cube ->
+            bone.cubes?.forEachIndexed { cubeIndex, cube ->
                 val cubeBuilder = ModelPartBuilder.create()
+
+                // 查找此 cube 的 culling 信息
+                val cubeFaceCulling = cullingInfo?.let { info ->
+                    val cullingMap = mutableMapOf<Direction, Direction>()
+                    Direction.values().forEach { faceDir ->
+                        val cullDir = info.getCullDirection(bone.name, cubeIndex, faceDir)
+                        if (cullDir != null) {
+                            cullingMap[faceDir] = cullDir
+                        }
+                    }
+                    if (cullingMap.isNotEmpty()) cullingMap else null
+                }
+
+                // 设置 culling 信息
+                if (cubeFaceCulling != null) {
+                    cubeBuilder.faceCulling(cubeFaceCulling)
+                }
+
                 cube.uv?.let {
                     when (it) {
                         is GeometryDefinition.Uv.UvBox -> cubeBuilder.uv(it.uv?.get(0) ?: 0, it.uv?.get(1) ?: 0)
@@ -103,7 +129,8 @@ object BedrockRenderUtil {
         blockTransformation?.apply(entry.positionMatrix, entry.normalMatrix)
         matrixStack.translate(0.5, 0.0, 0.5)
         matrixStack.multiply(Quaternionf().rotateXYZ((180.0 * (Math.PI * 2 / 360.0)).toFloat(), (180.0 * (Math.PI * 2 / 360.0)).toFloat(), 0.0F))
-        val vertices = MeshBuilderVertexConsumer(defaultSprite, sprites)
+        // 传递 blockTransformation 以便旋转 cullFace 方向
+        val vertices = MeshBuilderVertexConsumer(defaultSprite, sprites, blockTransformation)
         modelPart.render(matrixStack, vertices, 1, 1)
         return vertices.build()
     }

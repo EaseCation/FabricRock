@@ -15,6 +15,13 @@ import org.joml.Vector3f
 import java.util.*
 import java.util.stream.Stream
 
+/**
+ * 面剔除映射类型
+ * Key: 面方向 (Direction)
+ * Value: 剔除方向 (当该方向有完整方块时不渲染此面)
+ */
+typealias FaceCullingMap = Map<Direction, Direction>
+
 @Environment(value = EnvType.CLIENT)
 class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<String, ModelPart>) {
     var pivotX: Double = 0.0
@@ -221,7 +228,15 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
     )
 
     @Environment(value = EnvType.CLIENT)
-    class Cuboid(u: Int, v: Int, faceUV: FaceUV?, x: Double, y: Double, z: Double, sizeX: Double, sizeY: Double, sizeZ: Double, extraX: Double, extraY: Double, extraZ: Double, mirror: Boolean, textureWidth: Double, textureHeight: Double) {
+    class Cuboid(
+        u: Int, v: Int, faceUV: FaceUV?,
+        x: Double, y: Double, z: Double,
+        sizeX: Double, sizeY: Double, sizeZ: Double,
+        extraX: Double, extraY: Double, extraZ: Double,
+        mirror: Boolean,
+        textureWidth: Double, textureHeight: Double,
+        faceCulling: FaceCullingMap? = null  // 面剔除信息：面方向 -> 剔除方向
+    ) {
         private val sides: Array<Quad?>
         val minX: Double
         val minY: Double
@@ -269,19 +284,19 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
             val textureEndVY = textureOriginV + sizeZ + sizeY
 
             if (faceUV == null) {
-                sides[2] = Quad(arrayOf(vertexBottomSE, vertexBottomSW, vertexBottomNW, vertexBottomNE), null, textureEndUZ, textureOriginV, textureEndUX, textureEndVZ, textureWidth, textureHeight, mirror, Direction.DOWN)
-                sides[3] = Quad(arrayOf(vertexTopNE, vertexTopNW, vertexTopSW, vertexTopSE), null, textureEndUX, textureEndVZ, textureDoubleEndUX, textureOriginV, textureWidth, textureHeight, mirror, Direction.UP)
-                sides[1] = Quad(arrayOf(vertexBottomNW, vertexBottomSW, vertexTopSW, vertexTopNW), null, textureOriginU, textureEndVZ, textureEndUZ, textureEndVY, textureWidth, textureHeight, mirror, Direction.WEST)
-                sides[4] = Quad(arrayOf(vertexBottomNE, vertexBottomNW, vertexTopNW, vertexTopNE), null, textureEndUZ, textureEndVZ, textureEndUX, textureEndVY, textureWidth, textureHeight, mirror, Direction.NORTH)
-                sides[0] = Quad(arrayOf(vertexBottomSE, vertexBottomNE, vertexTopNE, vertexTopSE), null, textureEndUX, textureEndVZ, textureWrapU, textureEndVY, textureWidth, textureHeight, mirror, Direction.EAST)
-                sides[5] = Quad(arrayOf(vertexBottomSW, vertexBottomSE, vertexTopSE, vertexTopSW), null, textureWrapU, textureEndVZ, textureFullWrapU, textureEndVY, textureWidth, textureHeight, mirror, Direction.SOUTH)
+                sides[2] = Quad(arrayOf(vertexBottomSE, vertexBottomSW, vertexBottomNW, vertexBottomNE), null, textureEndUZ, textureOriginV, textureEndUX, textureEndVZ, textureWidth, textureHeight, mirror, Direction.DOWN, faceCulling?.get(Direction.DOWN))
+                sides[3] = Quad(arrayOf(vertexTopNE, vertexTopNW, vertexTopSW, vertexTopSE), null, textureEndUX, textureEndVZ, textureDoubleEndUX, textureOriginV, textureWidth, textureHeight, mirror, Direction.UP, faceCulling?.get(Direction.UP))
+                sides[1] = Quad(arrayOf(vertexBottomNW, vertexBottomSW, vertexTopSW, vertexTopNW), null, textureOriginU, textureEndVZ, textureEndUZ, textureEndVY, textureWidth, textureHeight, mirror, Direction.WEST, faceCulling?.get(Direction.WEST))
+                sides[4] = Quad(arrayOf(vertexBottomNE, vertexBottomNW, vertexTopNW, vertexTopNE), null, textureEndUZ, textureEndVZ, textureEndUX, textureEndVY, textureWidth, textureHeight, mirror, Direction.NORTH, faceCulling?.get(Direction.NORTH))
+                sides[0] = Quad(arrayOf(vertexBottomSE, vertexBottomNE, vertexTopNE, vertexTopSE), null, textureEndUX, textureEndVZ, textureWrapU, textureEndVY, textureWidth, textureHeight, mirror, Direction.EAST, faceCulling?.get(Direction.EAST))
+                sides[5] = Quad(arrayOf(vertexBottomSW, vertexBottomSE, vertexTopSE, vertexTopSW), null, textureWrapU, textureEndVZ, textureFullWrapU, textureEndVY, textureWidth, textureHeight, mirror, Direction.SOUTH, faceCulling?.get(Direction.SOUTH))
             } else {
-                sides[2] = Quad(arrayOf(vertexBottomSE, vertexBottomSW, vertexBottomNW, vertexBottomNE), faceUV.down.material, faceUV.down.uv.first.toDouble(), faceUV.down.uv.second.toDouble(), faceUV.down.uv.first.toDouble() + faceUV.down.uvSize.first.toDouble(), faceUV.down.uv.second.toDouble() + faceUV.down.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.DOWN)
-                sides[3] = Quad(arrayOf(vertexTopNE, vertexTopNW, vertexTopSW, vertexTopSE), faceUV.up.material, faceUV.up.uv.first.toDouble(), faceUV.up.uv.second.toDouble(), faceUV.up.uv.first.toDouble() + faceUV.up.uvSize.first.toDouble(), faceUV.up.uv.second.toDouble() + faceUV.up.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.UP)
-                sides[1] = Quad(arrayOf(vertexBottomNW, vertexBottomSW, vertexTopSW, vertexTopNW), faceUV.west.material, faceUV.west.uv.first.toDouble(), faceUV.west.uv.second.toDouble(), faceUV.west.uv.first.toDouble() + faceUV.west.uvSize.first.toDouble(), faceUV.west.uv.second.toDouble() + faceUV.west.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.WEST)
-                sides[4] = Quad(arrayOf(vertexBottomNE, vertexBottomNW, vertexTopNW, vertexTopNE), faceUV.north.material, faceUV.north.uv.first.toDouble(), faceUV.north.uv.second.toDouble(), faceUV.north.uv.first.toDouble() + faceUV.north.uvSize.first.toDouble(), faceUV.north.uv.second.toDouble() + faceUV.north.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.NORTH)
-                sides[0] = Quad(arrayOf(vertexBottomSE, vertexBottomNE, vertexTopNE, vertexTopSE), faceUV.east.material, faceUV.east.uv.first.toDouble(), faceUV.east.uv.second.toDouble(), faceUV.east.uv.first.toDouble() + faceUV.east.uvSize.first.toDouble(), faceUV.east.uv.second.toDouble() + faceUV.east.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.EAST)
-                sides[5] = Quad(arrayOf(vertexBottomSW, vertexBottomSE, vertexTopSE, vertexTopSW), faceUV.south.material, faceUV.south.uv.first.toDouble(), faceUV.south.uv.second.toDouble(), faceUV.south.uv.first.toDouble() + faceUV.south.uvSize.first.toDouble(), faceUV.south.uv.second.toDouble() + faceUV.south.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.SOUTH)
+                sides[2] = Quad(arrayOf(vertexBottomSE, vertexBottomSW, vertexBottomNW, vertexBottomNE), faceUV.down.material, faceUV.down.uv.first.toDouble(), faceUV.down.uv.second.toDouble(), faceUV.down.uv.first.toDouble() + faceUV.down.uvSize.first.toDouble(), faceUV.down.uv.second.toDouble() + faceUV.down.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.DOWN, faceCulling?.get(Direction.DOWN))
+                sides[3] = Quad(arrayOf(vertexTopNE, vertexTopNW, vertexTopSW, vertexTopSE), faceUV.up.material, faceUV.up.uv.first.toDouble(), faceUV.up.uv.second.toDouble(), faceUV.up.uv.first.toDouble() + faceUV.up.uvSize.first.toDouble(), faceUV.up.uv.second.toDouble() + faceUV.up.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.UP, faceCulling?.get(Direction.UP))
+                sides[1] = Quad(arrayOf(vertexBottomNW, vertexBottomSW, vertexTopSW, vertexTopNW), faceUV.west.material, faceUV.west.uv.first.toDouble(), faceUV.west.uv.second.toDouble(), faceUV.west.uv.first.toDouble() + faceUV.west.uvSize.first.toDouble(), faceUV.west.uv.second.toDouble() + faceUV.west.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.WEST, faceCulling?.get(Direction.WEST))
+                sides[4] = Quad(arrayOf(vertexBottomNE, vertexBottomNW, vertexTopNW, vertexTopNE), faceUV.north.material, faceUV.north.uv.first.toDouble(), faceUV.north.uv.second.toDouble(), faceUV.north.uv.first.toDouble() + faceUV.north.uvSize.first.toDouble(), faceUV.north.uv.second.toDouble() + faceUV.north.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.NORTH, faceCulling?.get(Direction.NORTH))
+                sides[0] = Quad(arrayOf(vertexBottomSE, vertexBottomNE, vertexTopNE, vertexTopSE), faceUV.east.material, faceUV.east.uv.first.toDouble(), faceUV.east.uv.second.toDouble(), faceUV.east.uv.first.toDouble() + faceUV.east.uvSize.first.toDouble(), faceUV.east.uv.second.toDouble() + faceUV.east.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.EAST, faceCulling?.get(Direction.EAST))
+                sides[5] = Quad(arrayOf(vertexBottomSW, vertexBottomSE, vertexTopSE, vertexTopSW), faceUV.south.material, faceUV.south.uv.first.toDouble(), faceUV.south.uv.second.toDouble(), faceUV.south.uv.first.toDouble() + faceUV.south.uvSize.first.toDouble(), faceUV.south.uv.second.toDouble() + faceUV.south.uvSize.second.toDouble(), textureWidth, textureHeight, mirror, Direction.SOUTH, faceCulling?.get(Direction.SOUTH))
             }
         }
 
@@ -304,7 +319,10 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
                 val g = vector3f2.y()
                 val h = vector3f2.z()
 
-                if (vertexConsumer is MeshBuilderVertexConsumer) vertexConsumer.material(quad.material)
+                if (vertexConsumer is MeshBuilderVertexConsumer) {
+                    vertexConsumer.material(quad.material)
+                    vertexConsumer.cullFace(quad.cullDirection)  // 设置面剔除方向
+                }
 
                 for (vertex in quad.vertices) {
                     val i = vertex.pos.x() / 16.0f
@@ -327,7 +345,15 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
     }
 
     @Environment(value = EnvType.CLIENT)
-    internal class Quad(val vertices: Array<Vertex>, val material: String?, u1: Double, v1: Double, u2: Double, v2: Double, squishU: Double, squishV: Double, flip: Boolean, direction: Direction) {
+    internal class Quad(
+        val vertices: Array<Vertex>,
+        val material: String?,
+        u1: Double, v1: Double, u2: Double, v2: Double,
+        squishU: Double, squishV: Double,
+        flip: Boolean,
+        direction: Direction,
+        val cullDirection: Direction? = null  // 面剔除方向：当该方向有完整方块时不渲染此面
+    ) {
         val direction: Vector3f
 
         init {

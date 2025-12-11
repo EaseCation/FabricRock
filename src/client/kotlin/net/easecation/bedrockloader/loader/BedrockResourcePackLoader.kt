@@ -416,10 +416,8 @@ class BedrockResourcePackLoader(
         geometry: ComponentGeometry,
         materialInstances: ComponentMaterialInstances?
     ): BedrockGeometryModel? {
-        val geometryIdentifier = when (geometry) {
-            is ComponentGeometry.ComponentGeometrySimple -> geometry.identifier
-            is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
-        }
+        val geometryIdentifier = geometry.geometryIdentifier()
+        val cullingIdentifier = geometry.getCullingIdentifier()
         val geometryFactory = BedrockAddonsRegistryClient.geometries[geometryIdentifier]
         val materials = materialInstances?.mapValues { (_, material) ->
             val textureKey = material.texture ?: return@mapValues null
@@ -438,8 +436,13 @@ class BedrockResourcePackLoader(
                 )
             )
         } ?: emptyMap()
-        // 使用带identifier的create方法，支持permutations动态材质切换
-        return geometryFactory?.create(materials, identifier)
+        // 获取 culling 规则
+        val cullingRules = cullingIdentifier?.let { context.resource.blockCullingRules[it] }
+        if (cullingIdentifier != null && cullingRules == null) {
+            BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block culling rules not found: $cullingIdentifier for block $identifier")
+        }
+        // 使用带identifier的create方法，支持permutations动态材质切换和culling规则
+        return geometryFactory?.create(materials, identifier, cullingRules = cullingRules)
     }
 
     private fun registerBlockRenderLayer(

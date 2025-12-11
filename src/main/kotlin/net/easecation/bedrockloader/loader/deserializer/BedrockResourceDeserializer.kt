@@ -103,6 +103,20 @@ object BedrockResourceDeserializer : PackDeserializer<BedrockResourceContext> {
                         }
                     }
                 }
+                // block culling rules
+                // 支持 block_culling/ 目录下的 .json 文件
+                if (name.startsWith("block_culling/") && name.endsWith(".json")) {
+                    zip.getInputStream(entry).use { stream ->
+                        try {
+                            val cullingDefinition = GsonUtil.GSON.fromJson(InputStreamReader(stream), BlockCullingDefinition::class.java)
+                            val rules = cullingDefinition.blockCullingRules
+                            context.blockCullingRules[rules.description.identifier] = rules
+                            BedrockLoader.logger.info("[BedrockResourceDeserializer] Loaded block culling rules: ${rules.description.identifier}")
+                        } catch (e: Exception) {
+                            BedrockLoader.logger.error("Error parsing block culling: $name", e)
+                        }
+                    }
+                }
             }
         }
         return context
