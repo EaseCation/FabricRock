@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec
 import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.bedrock.block.component.BlockComponents
 import net.easecation.bedrockloader.bedrock.block.component.ComponentCollisionBox
+import net.easecation.bedrockloader.bedrock.block.component.ComponentGeometry
 import net.easecation.bedrockloader.bedrock.block.component.ComponentMaterialInstances
 import net.easecation.bedrockloader.bedrock.block.component.ComponentSelectionBox
 import net.easecation.bedrockloader.bedrock.block.component.FaceDirectionalType
@@ -89,9 +90,16 @@ data class BlockContext(
                 val settings = Settings.create().hardness(4.0f)  // TODO hardness
 
                 // 面剔除控制：根据是否有自定义 geometry、透明渲染方法或方块实体决定
-                // Full block（无自定义 geometry）：默认启用面剔除，确保性能优化
+                // Full block（无自定义 geometry 或 minecraft:geometry.full_block）：默认启用面剔除，确保性能优化
                 // 有自定义 geometry、透明渲染或方块实体：禁用面剔除
-                val hasCustomGeometry = components.minecraftGeometry != null
+                val hasCustomGeometry = components.minecraftGeometry?.let { geometry ->
+                    val geometryId = when (geometry) {
+                        is ComponentGeometry.ComponentGeometrySimple -> geometry.identifier
+                        is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
+                    }
+                    // minecraft:geometry.full_block 是标准立方体，不算自定义 geometry
+                    geometryId != "minecraft:geometry.full_block"
+                } ?: false
                 val hasBlockEntity = components.neteaseBlockEntity != null
                 val renderMethod = components.minecraftMaterialInstances?.get("*")?.render_method
                 val needsNonOpaque = hasCustomGeometry ||
@@ -379,6 +387,33 @@ data class BlockContext(
             val defaultValue = if (components.neteaseBlockEntity != null) 0 else 15
             val lightDampening = components.minecraftLightDampening ?: defaultValue
             return 1.0f - (lightDampening / 15.0f) * 0.8f
+        }
+
+        /**
+         * 控制面剔除 - 判断方块的剔除形状是否为完整立方体
+         * 当两个相邻方块都返回 true 时，它们接触的面会被剔除
+         */
+        @Deprecated("", ReplaceWith("state.exceedsCube()"))
+        override fun isCullingShapeFullCube(state: BlockState, world: BlockView, pos: BlockPos): Boolean {
+            val components = getComponents(state)
+            val geometry = components.minecraftGeometry
+            val geometryId = when (geometry) {
+                is ComponentGeometry.ComponentGeometrySimple -> geometry.identifier
+                is ComponentGeometry.ComponentGeometryFull -> geometry.identifier
+                null -> null
+            }
+
+            // 检查是否为完整立方体（无 geometry 或 minecraft:geometry.full_block）
+            val isFullBlock = geometryId == null || geometryId == "minecraft:geometry.full_block"
+
+            // 检查渲染方法是否为不透明
+            val renderMethod = components.minecraftMaterialInstances?.get("*")?.render_method
+            val isOpaque = renderMethod == null || renderMethod == ComponentMaterialInstances.RenderMethod.opaque
+
+            // 检查是否有方块实体（方块实体通常需要特殊渲染）
+            val hasBlockEntity = components.neteaseBlockEntity != null
+
+            return isFullBlock && isOpaque && !hasBlockEntity
         }
     }
 }
