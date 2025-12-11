@@ -247,9 +247,10 @@ class BedrockResourcePackLoader(
             BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: $textureKey")
             return
         }
-        val file = namespaceDir.resolve(path + "." + bedrockTexture.type.getExtension())
+        // 统一转换为PNG格式（Minecraft原生纹理系统只支持PNG）
+        val file = namespaceDir.resolve(path + ".png")
         bedrockTexture.image.let { image ->
-            ImageIO.write(image, file.extension, file)
+            ImageIO.write(image, "png", file)
         }
     }
 
@@ -475,9 +476,10 @@ class BedrockResourcePackLoader(
                 BedrockLoader.logger.warn("[BedrockResourcePackLoader] Entity spawn egg texture not found: $spawnEggTexture")
                 return
             }
-            val file = namespaceDir.resolve(path + "." + bedrockTexture.type.getExtension())
+            // 统一转换为PNG格式（Minecraft原生纹理系统只支持PNG）
+            val file = namespaceDir.resolve(path + ".png")
             bedrockTexture.image.let { image ->
-                ImageIO.write(image, file.extension, file)
+                ImageIO.write(image, "png", file)
             }
         }
     }
@@ -776,11 +778,12 @@ class BedrockResourcePackLoader(
                 return
             }
             // 保存到 textures/block/ 目录，使用 entity_ 前缀避免冲突
+            // 统一转换为PNG格式（Minecraft原生纹理系统只支持PNG）
             val fileName = "entity_" + texture.substringAfterLast("/")
-            val file = namespaceDir.resolve("textures/block/$fileName." + bedrockTexture.type.getExtension())
+            val file = namespaceDir.resolve("textures/block/$fileName.png")
             file.parentFile.mkdirs()
             bedrockTexture.image.let { image ->
-                ImageIO.write(image, file.extension, file)
+                ImageIO.write(image, "png", file)
             }
         }
     }
