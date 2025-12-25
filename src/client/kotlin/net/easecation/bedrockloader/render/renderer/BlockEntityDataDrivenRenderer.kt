@@ -126,11 +126,8 @@ class BlockEntityDataDrivenRenderer(
             }
         }
 
-        // 使用固定的时间增量（1/20秒 = 1 tick）
-        val deltaTime = 0.05  // 1 tick = 1/20 秒
-
-        // 更新动画
-        animManager.tick(deltaTime)
+        // 更新动画（EntityAnimationManager 内部计算真实帧间隔）
+        animManager.tick()
 
         // 应用动画变换到模型
         model.applyAnimations(animManager)

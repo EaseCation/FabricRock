@@ -323,7 +323,7 @@ class BedrockGeometryModel private constructor(
      * 应用动画变换到骨骼
      *
      * 这个方法用于方块实体渲染器，在渲染前更新骨骼状态。
-     * 调用此方法前，需要先调用 animManager.tick(deltaTime) 更新动画状态。
+     * 调用此方法前，需要先调用 animManager.tick() 更新动画状态。
      *
      * @param animManager 动画管理器
      */
@@ -407,13 +407,8 @@ class BedrockGeometryModel private constructor(
             }
         }
 
-        // 使用固定的时间增量（1/20秒 = 1 tick）
-        // 注：setAngles 每帧调用一次，但动画使用 tick 更新
-        // 这里用一个小的固定值避免动画过快或卡顿
-        val deltaTime = 0.05  // 1 tick = 1/20 秒
-
-        // 更新动画
-        animManager.tick(deltaTime)
+        // 更新动画（EntityAnimationManager 内部计算真实帧间隔）
+        animManager.tick()
 
         // 重置所有骨骼到原始状态
         for ((boneName, bone) in boneMap) {

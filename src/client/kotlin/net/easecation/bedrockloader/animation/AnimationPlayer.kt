@@ -118,26 +118,36 @@ class AnimationPlayer(
     }
 
     /**
-     * 关键帧线性插值
+     * 关键帧插值（支持 pre/post step 效果）
+     *
+     * 插值语义：
+     * - 从前一帧的 post 值开始
+     * - 线性插值到下一帧的 pre 值
+     * - 在下一帧时间点瞬间跳变到 post 值（step 效果）
      */
     private fun interpolateKeyframes(
         frames: List<AnimationChannel.Keyframe>,
         time: Double
     ): List<Double> {
         if (frames.isEmpty()) return listOf(0.0, 0.0, 0.0)
-        if (frames.size == 1) return frames[0].value
+        if (frames.size == 1) return frames[0].post  // 单帧使用 post 值
 
-        // 找到当前时间所在的两个关键帧
+        // 找到当前时间所在区间
         val nextIndex = frames.indexOfFirst { it.time > time }
 
         return when {
-            nextIndex == -1 -> frames.last().value  // 超过最后一帧
-            nextIndex == 0 -> frames.first().value   // 在第一帧之前
+            // 超过最后一帧：返回最后一帧的 post 值
+            nextIndex == -1 -> frames.last().post
+            // 在第一帧之前：返回第一帧的 pre 值
+            nextIndex == 0 -> frames.first().pre
+            // 正常插值区间
             else -> {
                 val prev = frames[nextIndex - 1]
                 val next = frames[nextIndex]
+                // 关键改变：从 prev.post 插值到 next.pre
+                // 在 next.time 这一刻会瞬间跳变到 next.post
                 val t = (time - prev.time) / (next.time - prev.time)
-                lerp(prev.value, next.value, t)
+                lerp(prev.post, next.pre, t)
             }
         }
     }

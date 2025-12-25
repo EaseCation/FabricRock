@@ -136,11 +136,25 @@ data class AnimationDefinition(
 
         /**
          * 单个关键帧
+         *
+         * 支持 pre/post 格式实现 step 动画效果：
+         * - pre: 进入该时间点前的目标值（从前一帧插值到此）
+         * - post: 离开该时间点后的起始值（从此插值到下一帧）
+         * - 在该时间点瞬间从 pre 跳变到 post
          */
         data class Keyframe(
             val time: Double,
-            val value: List<Double>
-        )
+            val pre: List<Double>,
+            val post: List<Double>
+        ) {
+            /** 是否为阶跃关键帧（pre 和 post 不同） */
+            val isStep: Boolean get() = pre != post
+
+            companion object {
+                /** 创建普通关键帧（pre = post） */
+                fun simple(time: Double, value: List<Double>) = Keyframe(time, value, value)
+            }
+        }
 
         companion object {
             /**
@@ -172,8 +186,8 @@ data class AnimationDefinition(
                                 BedrockLoader.logger.warn("[AnimationDefinition] Invalid keyframe time: $timeStr")
                                 return@mapNotNull null
                             }
-                            val vec = parseVector(value)
-                            Keyframe(time, vec)
+                            val (pre, post) = parseKeyframeValue(value)
+                            Keyframe(time, pre, post)
                         }.sortedBy { it.time }
                         Keyframes(keyframes)
                     }
@@ -205,12 +219,77 @@ data class AnimationDefinition(
             }
 
             /**
+             * 解析关键帧值，返回 (pre, post) 对
+             *
+             * 支持的格式：
+             * - 单值: 45.0 → pre=post=[45,45,45]
+             * - 数组: [x,y,z] → pre=post=[x,y,z]
+             * - pre/post对象: {"pre":[...], "post":[...]} → 分别解析
+             * - 只有pre: {"pre":[...]} → post=pre
+             * - 只有post: {"post":[...]} → pre=post
+             */
+            private fun parseKeyframeValue(json: JsonElement): Pair<List<Double>, List<Double>> {
+                return when {
+                    // 单个数字: 45.0
+                    json.isJsonPrimitive && json.asJsonPrimitive.isNumber -> {
+                        val v = json.asDouble
+                        val vec = listOf(v, v, v)
+                        Pair(vec, vec)
+                    }
+                    // Molang 字符串
+                    json.isJsonPrimitive && json.asJsonPrimitive.isString -> {
+                        val v = parseMolangValue(json.asString)
+                        val vec = listOf(v, v, v)
+                        Pair(vec, vec)
+                    }
+                    // 数组: [x, y, z]
+                    json.isJsonArray -> {
+                        val vec = json.asJsonArray.map { parseNumericValue(it) }
+                        Pair(vec, vec)
+                    }
+                    // 对象: 可能是 pre/post 格式
+                    json.isJsonObject -> {
+                        val obj = json.asJsonObject
+                        val preElement = obj["pre"]
+                        val postElement = obj["post"]
+
+                        when {
+                            // 同时有 pre 和 post
+                            preElement != null && postElement != null -> {
+                                val pre = parseVector(preElement)
+                                val post = parseVector(postElement)
+                                Pair(pre, post)
+                            }
+                            // 只有 pre
+                            preElement != null -> {
+                                val pre = parseVector(preElement)
+                                Pair(pre, pre)
+                            }
+                            // 只有 post
+                            postElement != null -> {
+                                val post = parseVector(postElement)
+                                Pair(post, post)
+                            }
+                            // 都没有（异常情况）
+                            else -> {
+                                val default = listOf(0.0, 0.0, 0.0)
+                                Pair(default, default)
+                            }
+                        }
+                    }
+                    else -> {
+                        val default = listOf(0.0, 0.0, 0.0)
+                        Pair(default, default)
+                    }
+                }
+            }
+
+            /**
              * 解析向量值（支持多种格式）
              *
              * 格式：
              * - 单值: 45.0 → [45, 45, 45]
              * - 数组: [x, y, z]
-             * - 对象（pre/post）: {"pre": [...], "post": [...]} → 使用post值
              */
             private fun parseVector(json: JsonElement): List<Double> {
                 return when {
@@ -224,16 +303,6 @@ data class AnimationDefinition(
                     }
                     json.isJsonArray -> {
                         json.asJsonArray.map { parseNumericValue(it) }
-                    }
-                    json.isJsonObject -> {
-                        // pre/post 格式，优先使用 post
-                        val obj = json.asJsonObject
-                        val postValue = obj["post"] ?: obj["pre"]
-                        if (postValue != null) {
-                            parseVector(postValue)
-                        } else {
-                            listOf(0.0, 0.0, 0.0)
-                        }
                     }
                     else -> listOf(0.0, 0.0, 0.0)
                 }

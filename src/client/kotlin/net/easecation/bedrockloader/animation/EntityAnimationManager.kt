@@ -23,6 +23,7 @@ class EntityAnimationManager(
     private val autoPlayList: List<String>                   // scripts.animate 列表（别名）
 ) {
     private val players = mutableMapOf<String, AnimationPlayer>()
+    private var lastUpdateTime: Long = 0L  // 上次更新时间（纳秒）
 
     init {
         // 为 scripts.animate 中的动画创建播放器
@@ -35,9 +36,17 @@ class EntityAnimationManager(
 
     /**
      * 每帧更新所有动画播放器
-     * @param deltaTime 时间增量（秒）
+     * 使用系统时间计算真实的帧间隔
      */
-    fun tick(deltaTime: Double) {
+    fun tick() {
+        val currentTime = System.nanoTime()
+        val deltaTime = if (lastUpdateTime == 0L) {
+            0.05  // 首次调用使用默认值（1 游戏 tick）
+        } else {
+            (currentTime - lastUpdateTime) / 1_000_000_000.0  // 纳秒转秒
+        }
+        lastUpdateTime = currentTime
+
         players.values.forEach { it.tick(deltaTime) }
     }
 
