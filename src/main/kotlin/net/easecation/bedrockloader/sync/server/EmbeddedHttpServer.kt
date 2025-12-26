@@ -197,8 +197,8 @@ class EmbeddedHttpServer(
             return
         }
 
-        // Check file type (only allow .zip and .mcpack)
-        if (!filename.endsWith(".zip") && !filename.endsWith(".mcpack")) {
+        // Check file type (only allow .zip, .mcpack, and .mcaddon)
+        if (!filename.endsWith(".zip") && !filename.endsWith(".mcpack") && !filename.endsWith(".mcaddon")) {
             logger.warn("Forbidden file type: $filename")
             ctx.status(403)
             ctx.json(mapOf(
