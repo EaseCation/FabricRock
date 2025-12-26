@@ -1,7 +1,6 @@
 package net.easecation.bedrockloader.loader
 
 import com.google.common.io.Files
-import com.google.gson.Gson
 import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.bedrock.pack.BedrockPack
 import net.easecation.bedrockloader.bedrock.pack.PackManifest
@@ -17,7 +16,6 @@ import org.apache.commons.io.FileUtils
 import org.apache.commons.io.filefilter.TrueFileFilter
 import java.io.File
 import java.io.FileOutputStream
-import java.io.IOException
 import java.nio.file.attribute.FileTime
 import java.util.*
 import java.util.zip.Deflater
@@ -32,6 +30,12 @@ import java.util.zip.ZipOutputStream
  * 加载流程:
  * 基岩版行为包/材质包 -> 解码器Deserializer(将来要做自动版本提升) -> 混合到同一个BedrockPackContext ->
  * 材质包加载器(转换为临时java版材质包、准备资源Provider) -> 行为包加载器（注册方块和物品到java服务端）
+ *
+ * 支持的结构:
+ * 1. 单个包目录（包含manifest.json）
+ * 2. 单个包文件（.zip/.mcpack）
+ * 3. Addon目录（包含多个子包目录，每个子包有自己的manifest.json）
+ * 4. .mcaddon文件（包含多个子包的ZIP）
  */
 object BedrockAddonsLoader {
 
@@ -46,7 +50,7 @@ object BedrockAddonsLoader {
             dataFolder.mkdirs()
         }
 
-        // 创建缓存目录（用于存储文件夹包的ZIP）
+        // 创建缓存目录（用于存储文件夹包的ZIP和addon的mcaddon）
         val cacheDir = File(dataFolder, ".cache")
         if (!cacheDir.exists()) {
             cacheDir.mkdirs()
@@ -69,8 +73,8 @@ object BedrockAddonsLoader {
         // 从dataFolder根目录读取手动放置的包（排除remote和.cache目录）
         val rootFiles = dataFolder.listFiles { file: File, name: String ->
             val child = File(file, name)
-            (child.isDirectory && name != ".DS_Store" && name != "remote" && name != ".cache") ||
-            name.endsWith(".zip") || name.endsWith(".mcpack")
+            (child.isDirectory && name != ".DS_Store" && name != "remote" && name != ".cache" && !name.startsWith(".")) ||
+            name.endsWith(".zip") || name.endsWith(".mcpack") || name.endsWith(".mcaddon")
         } ?: emptyArray()
 
         // 从remote/目录读取远程下载的包（仅在客户端、启用远程同步且目录存在时）
@@ -84,7 +88,8 @@ object BedrockAddonsLoader {
                 // 远程同步启用，加载remote目录
                 remoteDir.listFiles { file: File, name: String ->
                     val child = File(file, name)
-                    (child.isDirectory && name != ".DS_Store") || name.endsWith(".zip") || name.endsWith(".mcpack")
+                    (child.isDirectory && name != ".DS_Store" && !name.startsWith(".")) ||
+                    name.endsWith(".zip") || name.endsWith(".mcpack") || name.endsWith(".mcaddon")
                 } ?: emptyArray()
             } else {
                 // 远程同步禁用，跳过remote目录
@@ -108,77 +113,194 @@ object BedrockAddonsLoader {
         BedrockLoader.logger.info("========== 识别到的资源包列表 ==========")
         BedrockLoader.logger.info("手动放置的包 (${rootFiles.size}):")
         for (file in rootFiles) {
-            val type = if (file.isDirectory) "目录" else "文件"
-            BedrockLoader.logger.info("  - $type: ${file.absolutePath}")
+            val structureType = AddonScanner.detectStructureType(file)
+            BedrockLoader.logger.info("  - ${file.name} [$structureType]")
         }
         BedrockLoader.logger.info("远程下载的包 (${remoteFiles.size}):")
         for (file in remoteFiles) {
-            val type = if (file.isDirectory) "目录" else "文件"
-            BedrockLoader.logger.info("  - $type: ${file.absolutePath}")
+            val structureType = AddonScanner.detectStructureType(file)
+            BedrockLoader.logger.info("  - ${file.name} [$structureType]")
         }
         BedrockLoader.logger.info("========================================")
 
         BedrockLoader.logger.info("找到 ${rootFiles.size} 个手动放置的包, ${remoteFiles.size} 个远程下载的包")
         BedrockLoader.logger.info("加载顺序: 先远程包，后手动包（手动包优先覆盖）")
 
-        // 读取zip文件
+        // 加载所有包
         for (file in files) {
             try {
-                var f: File = file
-                var isDirectoryPack = false
+                val structureType = AddonScanner.detectStructureType(file)
 
-                if (file.isDirectory) {
-                    loadDirectoryPack(file, cacheDir)?.let {
-                        f = it
-                        isDirectoryPack = true
-                    } ?: continue
-                }
-
-                val pack: BedrockPack = ZippedBedrockPack(f)
-                val packId = pack.getPackId() ?: continue
-                val packType = pack.getPackType()
-
-                // 先创建PackInfo并注册到统一注册表
-                val packInfo = createPackInfo(pack, f, isDirectoryPack)
-                BedrockPackRegistry.register(packInfo)
-
-                if (packType.equals("resources")) {
-                    // 只添加到材质包管理器中
-                    resourcePackMap[packId] = pack
-
-                    // 为该包创建独立的资源上下文
-                    val resourceContext = BedrockResourceDeserializer.deserialize(ZipFile(f))
-
-                    // 查找或创建对应的SinglePackContext
-                    var singleContext = context.packs.find { it.packId == packId }
-                    if (singleContext == null) {
-                        singleContext = net.easecation.bedrockloader.loader.context.SinglePackContext(packId, packInfo)
-                        context.packs.add(singleContext)
+                when (structureType) {
+                    PackStructureType.SINGLE_PACK -> {
+                        // 单个包目录
+                        val zipFile = loadDirectoryPack(file, cacheDir) ?: continue
+                        loadSinglePack(zipFile, isDirectoryPack = true, addonName = null)
                     }
-                    singleContext.resource.putAll(resourceContext)
-
-                    BedrockLoader.logger.info((("Reading resource pack: " + pack.getPackName()) + "[" + packId) + "]")
-                } else if (packType.equals("data")) {
-                    // 行为包，需要读取内容
-                    behaviourPackMap[packId] = pack
-
-                    // 为该包创建独立的行为上下文
-                    val behaviorContext = BedrockBehaviorDeserializer.deserialize(ZipFile(f))
-
-                    // 查找或创建对应的SinglePackContext
-                    var singleContext = context.packs.find { it.packId == packId }
-                    if (singleContext == null) {
-                        singleContext = net.easecation.bedrockloader.loader.context.SinglePackContext(packId, packInfo)
-                        context.packs.add(singleContext)
+                    PackStructureType.ADDON_DIRECTORY -> {
+                        // Addon目录：整体打包为.mcaddon
+                        val mcaddonFile = AddonScanner.packageAddonDirectory(file, cacheDir)
+                        if (mcaddonFile != null) {
+                            loadMcAddon(mcaddonFile, addonName = file.name)
+                        }
                     }
-                    singleContext.behavior.putAll(behaviorContext)
-
-                    BedrockLoader.logger.info((("Reading behaviour pack: " + pack.getPackName()) + "[" + packId) + "]")
+                    PackStructureType.MCADDON_FILE -> {
+                        // .mcaddon文件
+                        loadMcAddon(file, addonName = file.nameWithoutExtension)
+                    }
+                    PackStructureType.MCPACK_FILE -> {
+                        // .mcpack/.zip文件
+                        loadSinglePack(file, isDirectoryPack = false, addonName = null)
+                    }
+                    PackStructureType.UNKNOWN -> {
+                        BedrockLoader.logger.warn("无法识别的文件/目录: ${file.name}")
+                    }
                 }
 
             } catch (e: Exception) {
                 BedrockLoader.logger.warn("Failed to load pack " + file.name, e)
             }
+        }
+    }
+
+    /**
+     * 加载.mcaddon文件中的所有包
+     */
+    private fun loadMcAddon(mcaddonFile: File, addonName: String) {
+        BedrockLoader.logger.info("加载Addon: $addonName (${mcaddonFile.name})")
+
+        val entries = AddonScanner.loadMcAddon(mcaddonFile)
+        if (entries.isEmpty()) {
+            BedrockLoader.logger.warn("Addon中未找到有效的包: $addonName")
+            return
+        }
+
+        BedrockLoader.logger.info("  发现 ${entries.size} 个子包")
+
+        ZipFile(mcaddonFile).use { zip ->
+            for (entry in entries) {
+                try {
+                    loadPackFromMcAddonEntry(zip, entry, addonName, mcaddonFile)
+                } catch (e: Exception) {
+                    BedrockLoader.logger.warn("加载子包失败: ${entry.packPath}", e)
+                }
+            }
+        }
+    }
+
+    /**
+     * 从.mcaddon中加载单个子包
+     */
+    private fun loadPackFromMcAddonEntry(
+        zip: ZipFile,
+        entry: AddonScanner.McAddonEntry,
+        addonName: String,
+        mcaddonFile: File
+    ) {
+        val manifest = entry.manifest
+        val packId = manifest.header?.uuid?.toString() ?: return
+        val packName = manifest.header?.name ?: "Unknown"
+        val packVersion = manifest.header?.version?.toString() ?: "0.0.0"
+        val packType = manifest.modules.firstOrNull()?.type ?: "resources"
+
+        // 创建PackInfo
+        val packInfo = BedrockPackRegistry.PackInfo(
+            id = packId,
+            name = packName,
+            version = packVersion,
+            type = packType,
+            file = mcaddonFile,
+            md5 = MD5Util.calculateMD5(mcaddonFile),
+            size = mcaddonFile.length(),
+            manifest = manifest,
+            addonName = addonName,
+            isFromAddon = true
+        )
+        BedrockPackRegistry.register(packInfo)
+
+        // 为该包创建独立的上下文
+        var singleContext = context.packs.find { it.packId == packId }
+        if (singleContext == null) {
+            singleContext = net.easecation.bedrockloader.loader.context.SinglePackContext(packId, packInfo)
+            context.packs.add(singleContext)
+        }
+
+        if (packType == "resources") {
+            // 资源包
+            resourcePackMap[packId] = object : net.easecation.bedrockloader.bedrock.pack.AbstractBedrockPack() {
+                init {
+                    this.id = packId
+                    this.manifest = manifest
+                    this.type = packType
+                    this.version = packVersion
+                }
+            }
+
+            val resourceContext = BedrockResourceDeserializer.deserialize(zip, entry.packPath)
+            singleContext.resource.putAll(resourceContext)
+            BedrockLoader.logger.info("  - 资源包: $packName [$packId] (${entry.packPath})")
+
+        } else if (packType == "data") {
+            // 行为包
+            behaviourPackMap[packId] = object : net.easecation.bedrockloader.bedrock.pack.AbstractBedrockPack() {
+                init {
+                    this.id = packId
+                    this.manifest = manifest
+                    this.type = packType
+                    this.version = packVersion
+                }
+            }
+
+            val behaviorContext = BedrockBehaviorDeserializer.deserialize(zip, entry.packPath)
+            singleContext.behavior.putAll(behaviorContext)
+            BedrockLoader.logger.info("  - 行为包: $packName [$packId] (${entry.packPath})")
+        }
+    }
+
+    /**
+     * 加载单个包（ZIP文件）
+     */
+    private fun loadSinglePack(zipFile: File, isDirectoryPack: Boolean, addonName: String?) {
+        val pack: BedrockPack = ZippedBedrockPack(zipFile)
+        val packId = pack.getPackId() ?: return
+        val packType = pack.getPackType()
+
+        // 先创建PackInfo并注册到统一注册表
+        val packInfo = createPackInfo(pack, zipFile, isDirectoryPack, addonName)
+        BedrockPackRegistry.register(packInfo)
+
+        if (packType.equals("resources")) {
+            // 只添加到材质包管理器中
+            resourcePackMap[packId] = pack
+
+            // 为该包创建独立的资源上下文
+            val resourceContext = BedrockResourceDeserializer.deserialize(ZipFile(zipFile))
+
+            // 查找或创建对应的SinglePackContext
+            var singleContext = context.packs.find { it.packId == packId }
+            if (singleContext == null) {
+                singleContext = net.easecation.bedrockloader.loader.context.SinglePackContext(packId, packInfo)
+                context.packs.add(singleContext)
+            }
+            singleContext.resource.putAll(resourceContext)
+
+            BedrockLoader.logger.info((("Reading resource pack: " + pack.getPackName()) + "[" + packId) + "]")
+        } else if (packType.equals("data")) {
+            // 行为包，需要读取内容
+            behaviourPackMap[packId] = pack
+
+            // 为该包创建独立的行为上下文
+            val behaviorContext = BedrockBehaviorDeserializer.deserialize(ZipFile(zipFile))
+
+            // 查找或创建对应的SinglePackContext
+            var singleContext = context.packs.find { it.packId == packId }
+            if (singleContext == null) {
+                singleContext = net.easecation.bedrockloader.loader.context.SinglePackContext(packId, packInfo)
+                context.packs.add(singleContext)
+            }
+            singleContext.behavior.putAll(behaviorContext)
+
+            BedrockLoader.logger.info((("Reading behaviour pack: " + pack.getPackName()) + "[" + packId) + "]")
         }
     }
 
@@ -281,7 +403,7 @@ object BedrockAddonsLoader {
                 BedrockLoader.logger.warn("保存哈希文件失败: ${hashFile.name}", e)
             }
 
-        } catch (e: IOException) {
+        } catch (e: java.io.IOException) {
             BedrockLoader.logger.error("无法打包文件夹资源包: ${directory.name}", e)
             return null
         }
@@ -295,9 +417,15 @@ object BedrockAddonsLoader {
      * @param pack 基岩包对象
      * @param file ZIP文件
      * @param isDirectoryPack 是否是文件夹包
+     * @param addonName 所属Addon名称（如果有）
      * @return PackInfo对象
      */
-    private fun createPackInfo(pack: BedrockPack, file: File, isDirectoryPack: Boolean): BedrockPackRegistry.PackInfo {
+    private fun createPackInfo(
+        pack: BedrockPack,
+        file: File,
+        isDirectoryPack: Boolean,
+        addonName: String?
+    ): BedrockPackRegistry.PackInfo {
         // 从BedrockPack获取包信息（已经解析好的）
         val packId = pack.getPackId() ?: throw IllegalStateException("包ID不能为空")
         val packName = pack.getPackName() ?: "未知包"
@@ -326,7 +454,9 @@ object BedrockAddonsLoader {
             file = file,
             md5 = md5,
             size = size,
-            manifest = manifest
+            manifest = manifest,
+            addonName = addonName,
+            isFromAddon = addonName != null
         )
     }
 

@@ -3,6 +3,7 @@ package net.easecation.bedrockloader.sync.client
 import com.google.gson.reflect.TypeToken
 import net.easecation.bedrockloader.bedrock.pack.PackManifest
 import net.easecation.bedrockloader.sync.common.MD5Util
+import net.easecation.bedrockloader.sync.common.ResourceType
 import net.easecation.bedrockloader.util.GsonUtil
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -13,6 +14,10 @@ import java.util.zip.ZipFile
  * 本地资源包扫描器
  * 扫描本地的资源包文件（包括手动放置的包和remote/目录中远程下载的包）
  * 提取包的UUID、版本信息并计算MD5，用于同步比较和冲突检测
+ *
+ * 支持两种资源类型：
+ * - PACK: 单个包（.zip/.mcpack）
+ * - ADDON: 包含多个子包的addon（.mcaddon）
  */
 class LocalPackScanner(
     private val packDirectory: File
@@ -29,13 +34,19 @@ class LocalPackScanner(
      */
     data class LocalPackInfo(
         val filename: String,
-        val uuid: String?,      // 包的UUID（从manifest.json的header.uuid提取）
+        val uuid: String?,      // 包的UUID（从manifest.json的header.uuid提取，对于addon是第一个子包的UUID）
         val version: String?,   // 包的版本（从manifest.json的header.version提取）
         val md5: String,
         val size: Long,
         val file: File,
-        val isManual: Boolean   // 是否为手动放置的包（非remote/目录）
-    )
+        val isManual: Boolean,  // 是否为手动放置的包（非remote/目录）
+        val type: ResourceType = ResourceType.PACK  // 资源类型：PACK 或 ADDON
+    ) {
+        /**
+         * 是否为addon
+         */
+        fun isAddon(): Boolean = type == ResourceType.ADDON
+    }
 
     /**
      * 扫描所有本地资源包（手动放置的包 + remote/目录中的包）
@@ -109,7 +120,8 @@ class LocalPackScanner(
      * @return 资源包信息
      */
     private fun scanPackFile(file: File, isManual: Boolean): LocalPackInfo {
-        logger.debug("扫描文件: ${file.name} (${if (isManual) "手动" else "远程"})")
+        val resourceType = detectResourceType(file)
+        logger.debug("扫描文件: ${file.name} (${if (isManual) "手动" else "远程"}, ${resourceType})")
 
         // 提取UUID和版本信息
         val (uuid, version) = extractPackMetadata(file)
@@ -117,6 +129,7 @@ class LocalPackScanner(
         val md5 = MD5Util.calculateMD5(file)
         val size = file.length()
 
+        logger.debug("  - 类型: $resourceType")
         logger.debug("  - UUID: ${uuid ?: "无法提取"}")
         logger.debug("  - 版本: ${version ?: "无法提取"}")
         logger.debug("  - MD5: $md5")
@@ -129,12 +142,25 @@ class LocalPackScanner(
             md5 = md5,
             size = size,
             file = file,
-            isManual = isManual
+            isManual = isManual,
+            type = resourceType
         )
     }
 
     /**
+     * 检测资源类型
+     */
+    private fun detectResourceType(file: File): ResourceType {
+        val name = file.name.lowercase()
+        return when {
+            name.endsWith(".mcaddon") -> ResourceType.ADDON
+            else -> ResourceType.PACK
+        }
+    }
+
+    /**
      * 从资源包ZIP文件中提取UUID和版本信息
+     * 支持单包（.zip/.mcpack）和addon（.mcaddon）
      *
      * @param file 资源包文件
      * @return Pair(UUID, Version)，如果提取失败则返回(null, null)
@@ -142,25 +168,27 @@ class LocalPackScanner(
     private fun extractPackMetadata(file: File): Pair<String?, String?> {
         try {
             ZipFile(file).use { zip ->
-                // 查找manifest.json（支持两种可能的名称）
-                val entry = zip.getEntry("manifest.json") ?: zip.getEntry("pack_manifest.json")
-                if (entry == null) {
-                    logger.warn("文件 ${file.name} 中找不到manifest.json")
-                    return Pair(null, null)
+                // 首先尝试在根目录查找manifest.json（单包）
+                val rootEntry = zip.getEntry("manifest.json") ?: zip.getEntry("pack_manifest.json")
+                if (rootEntry != null) {
+                    return parseManifest(zip, rootEntry, file.name)
                 }
 
-                // 使用GSON反序列化
-                val type = object : TypeToken<PackManifest>() {}.type
-                val manifest: PackManifest = GsonUtil.GSON.fromJson(
-                    InputStreamReader(zip.getInputStream(entry)),
-                    type
-                )
+                // 如果根目录没有，查找子目录中的manifest.json（.mcaddon）
+                val subManifestEntry = zip.entries().asSequence()
+                    .filter { entry ->
+                        val name = entry.name
+                        (name.endsWith("manifest.json") || name.endsWith("pack_manifest.json")) &&
+                        name.count { it == '/' } == 1 // 只在第一层子目录中
+                    }
+                    .firstOrNull()
 
-                // 提取header.uuid和header.version
-                val uuid = manifest.header?.uuid?.toString()
-                val version = manifest.header?.version?.toString()
+                if (subManifestEntry != null) {
+                    return parseManifest(zip, subManifestEntry, file.name)
+                }
 
-                return Pair(uuid, version)
+                logger.warn("文件 ${file.name} 中找不到manifest.json")
+                return Pair(null, null)
             }
         } catch (e: Exception) {
             logger.warn("提取 ${file.name} 的metadata失败: ${e.message}")
@@ -169,12 +197,33 @@ class LocalPackScanner(
     }
 
     /**
+     * 解析manifest.json
+     */
+    private fun parseManifest(zip: ZipFile, entry: java.util.zip.ZipEntry, fileName: String): Pair<String?, String?> {
+        return try {
+            val type = object : TypeToken<PackManifest>() {}.type
+            val manifest: PackManifest = GsonUtil.GSON.fromJson(
+                InputStreamReader(zip.getInputStream(entry)),
+                type
+            )
+
+            val uuid = manifest.header?.uuid?.toString()
+            val version = manifest.header?.version?.toString()
+
+            Pair(uuid, version)
+        } catch (e: Exception) {
+            logger.warn("解析 $fileName 中的 ${entry.name} 失败: ${e.message}")
+            Pair(null, null)
+        }
+    }
+
+    /**
      * 判断文件是否为有效的资源包文件
-     * 复用服务端PackScanner的逻辑
+     * 支持 .zip, .mcpack, .mcaddon
      */
     private fun isValidPackFile(file: File, name: String): Boolean {
         return file.isFile
-                && (name.endsWith(".zip") || name.endsWith(".mcpack"))
+                && (name.endsWith(".zip") || name.endsWith(".mcpack") || name.endsWith(".mcaddon"))
                 && !name.startsWith(".")
                 && !name.endsWith(".downloading")
                 && !name.endsWith(".tmp")

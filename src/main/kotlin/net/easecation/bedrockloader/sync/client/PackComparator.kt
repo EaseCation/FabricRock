@@ -178,7 +178,7 @@ class PackComparator(
     fun quickCheck(manifest: RemotePackManifest): Boolean {
         val remoteDirectory = File(packDirectory, "remote")
         val localPackCount = remoteDirectory.listFiles()?.count { file ->
-            file.isFile && (file.name.endsWith(".zip") || file.name.endsWith(".mcpack"))
+            file.isFile && (file.name.endsWith(".zip") || file.name.endsWith(".mcpack") || file.name.endsWith(".mcaddon"))
         } ?: 0
 
         val needSync = localPackCount != manifest.packs.size
