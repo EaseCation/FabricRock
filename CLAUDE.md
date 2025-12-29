@@ -396,6 +396,8 @@ Molang支持：
 - ✅ `query.block_state('property') == 'value'` - 方块自身状态查询（静态，初始化时求值）
 - ✅ `query.block_state('property') != 'value'` - 不等于运算符
 - ✅ 逻辑与运算符：`condition1 && condition2`（多条件组合）
+- ✅ 逻辑或运算符：`condition1 || condition2`（任一条件满足即可）
+- ✅ 运算符优先级：`&&` 高于 `||`（即 `a && b || c && d` 解析为 `(a && b) || (c && d)`）
 
 性能特性：
 - ✅ Permutation条件在初始化时求值（静态预烘焙）
@@ -405,5 +407,5 @@ Molang支持：
 已知问题:
 - 碰撞箱支持有限
 - Permutations仅支持静态条件（不支持邻居查询等动态条件）
-- Molang表达式仅支持block_state查询和&&运算符
+- Molang表达式仅支持block_state查询（不支持括号分组、`!`非运算符等高级语法）
 - 部分基岩特性尚未实现

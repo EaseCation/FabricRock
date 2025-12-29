@@ -159,7 +159,8 @@ data class BlockContext(
 
     inner class BlockDataDriven(settings: Settings) : BlockWithEntity(settings) {
 
-        private val conditionSplitRegex = """\s*&&\s*""".toRegex()
+        private val orSplitRegex = """\s*\|\|\s*""".toRegex()
+        private val andSplitRegex = """\s*&&\s*""".toRegex()
         private val blockStateRegex = """^\s*q(uery)?\s*\.\s*block_state\s*\(\s*'(?<key>[^']+)'\s*\)\s*(?<operator>==|!=)\s*'(?<value>[^']+)'\s*$""".toRegex()
 
         private val componentsByState: Map<BlockState, BlockComponents>
@@ -178,13 +179,31 @@ data class BlockContext(
         private fun bakeComponents(state: BlockState): BlockComponents {
             var activated = behaviour.components
             behaviour.permutations?.forEach { (condition, components) ->
-                val conditions = conditionSplitRegex.split(condition)
-                val satisfied = conditions.all { evalBlockStateCondition(it, state) }
+                val satisfied = evalCondition(condition, state)
                 if (satisfied) {
                     activated = activated.mergeComponents(components)
                 }
             }
             return activated
+        }
+
+        /**
+         * 评估 Molang 条件表达式
+         * 支持 || (或) 和 && (与) 运算符
+         * 运算符优先级: && 高于 ||
+         * 即: a && b || c && d 会被解析为 (a && b) || (c && d)
+         */
+        private fun evalCondition(condition: String, state: BlockState): Boolean {
+            // 按 || 拆分成多个 "或组"
+            val orGroups = orSplitRegex.split(condition)
+
+            // 任意一个或组满足即可 (OR 逻辑)
+            return orGroups.any { orGroup ->
+                // 每个或组内按 && 拆分成多个条件
+                val andConditions = andSplitRegex.split(orGroup)
+                // 组内所有条件都需满足 (AND 逻辑)
+                andConditions.all { evalBlockStateCondition(it.trim(), state) }
+            }
         }
 
         private fun evalBlockStateCondition(condition: String, state: BlockState): Boolean {
