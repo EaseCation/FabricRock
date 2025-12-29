@@ -8,6 +8,8 @@ import net.easecation.bedrockloader.bedrock.pack.ZippedBedrockPack
 import net.easecation.bedrockloader.loader.deserializer.BedrockBehaviorDeserializer
 import net.easecation.bedrockloader.loader.context.BedrockPackContext
 import net.easecation.bedrockloader.loader.deserializer.BedrockResourceDeserializer
+import net.easecation.bedrockloader.loader.error.LoadingError
+import net.easecation.bedrockloader.loader.error.LoadingErrorCollector
 import net.easecation.bedrockloader.sync.client.ClientConfigLoader
 import net.easecation.bedrockloader.sync.common.MD5Util
 import net.fabricmc.api.EnvType
@@ -158,7 +160,12 @@ object BedrockAddonsLoader {
                 }
 
             } catch (e: Exception) {
-                BedrockLoader.logger.warn("Failed to load pack " + file.name, e)
+                LoadingErrorCollector.addError(
+                    source = file.name,
+                    phase = LoadingError.Phase.PACK_LOAD,
+                    message = "加载包失败: ${e.message}",
+                    exception = e
+                )
             }
         }
     }
@@ -182,7 +189,12 @@ object BedrockAddonsLoader {
                 try {
                     loadPackFromMcAddonEntry(zip, entry, addonName, mcaddonFile)
                 } catch (e: Exception) {
-                    BedrockLoader.logger.warn("加载子包失败: ${entry.packPath}", e)
+                    LoadingErrorCollector.addError(
+                        source = "${addonName}/${entry.packPath}",
+                        phase = LoadingError.Phase.PACK_LOAD,
+                        message = "加载子包失败: ${e.message}",
+                        exception = e
+                    )
                 }
             }
         }

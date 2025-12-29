@@ -1,6 +1,9 @@
 package net.easecation.bedrockloader.mixin.client;
 
 import net.easecation.bedrockloader.loader.BedrockPackRegistry;
+import net.easecation.bedrockloader.loader.error.LoadingErrorCollector;
+import net.easecation.bedrockloader.screen.LoadingErrorScreen;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
@@ -10,9 +13,11 @@ import net.minecraft.util.math.MathHelper;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * Mixin to inject custom pack information display into the Minecraft title screen.
@@ -28,6 +33,13 @@ public abstract class TitleScreenMixin extends Screen {
     @Shadow
     @Final
     private long backgroundFadeStart;
+
+    /**
+     * 错误提示文本的边界，用于点击检测
+     * [x1, y1, x2, y2]
+     */
+    @Unique
+    private int[] bedrockLoader_errorTextBounds = null;
 
     protected TitleScreenMixin(Text title) {
         super(title);
@@ -66,7 +78,56 @@ public abstract class TitleScreenMixin extends Screen {
             MathHelper.clamp(fadeProgress - 1.0F, 0.0F, 1.0F) : 1.0F;
         int alphaValue = MathHelper.ceil(alpha * 255.0F) << 24;
 
+        // 渲染错误提示（如果有，在包信息上方）
+        if (LoadingErrorCollector.INSTANCE.hasErrors()) {
+            int errorCount = LoadingErrorCollector.INSTANCE.getErrorCount();
+            int warningCount = LoadingErrorCollector.INSTANCE.getWarningCount();
+            int totalCount = errorCount + warningCount;
+
+            // 构建错误提示文本
+            String errorMessage = "! " + totalCount + " loading issues [click to view]";
+
+            // 计算位置（在包信息上方）
+            int errorTextWidth = this.textRenderer.getWidth(errorMessage);
+            int errorTextX = this.width - errorTextWidth - 2;
+            int errorTextY = textY - 10; // 在包信息上方10像素
+
+            // 颜色：有ERROR时红色，只有WARNING时黄色
+            int color = errorCount > 0 ? 0xFF5555 : 0xFFAA00;
+
+            // 检查鼠标是否悬停
+            boolean isHovered = mouseX >= errorTextX && mouseX <= errorTextX + errorTextWidth &&
+                               mouseY >= errorTextY && mouseY <= errorTextY + 10;
+            if (isHovered) {
+                // 悬停时使用更亮的颜色
+                color = errorCount > 0 ? 0xFF7777 : 0xFFCC00;
+            }
+
+            // 渲染错误提示
+            context.drawTextWithShadow(this.textRenderer, errorMessage, errorTextX, errorTextY, color | alphaValue);
+
+            // 保存边界用于点击检测
+            bedrockLoader_errorTextBounds = new int[]{errorTextX, errorTextY, errorTextX + errorTextWidth, errorTextY + 10};
+        } else {
+            bedrockLoader_errorTextBounds = null;
+        }
+
         // Render text with shadow (white color with calculated alpha)
         context.drawTextWithShadow(this.textRenderer, message, textX, textY, 0xFFFFFF | alphaValue);
+    }
+
+    /**
+     * 处理鼠标点击事件
+     */
+    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
+    private void bedrockLoader_handleErrorClick(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
+        if (button == 0 && bedrockLoader_errorTextBounds != null) {
+            if (mouseX >= bedrockLoader_errorTextBounds[0] && mouseX <= bedrockLoader_errorTextBounds[2] &&
+                mouseY >= bedrockLoader_errorTextBounds[1] && mouseY <= bedrockLoader_errorTextBounds[3]) {
+                // 打开错误详情界面
+                MinecraftClient.getInstance().setScreen(new LoadingErrorScreen((TitleScreen)(Object)this));
+                cir.setReturnValue(true);
+            }
+        }
     }
 }

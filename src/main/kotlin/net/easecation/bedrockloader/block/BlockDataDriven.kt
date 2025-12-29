@@ -17,6 +17,8 @@ import net.easecation.bedrockloader.bedrock.block.traits.TraitPlacementPosition
 import net.easecation.bedrockloader.bedrock.definition.BlockBehaviourDefinition
 import net.easecation.bedrockloader.block.property.*
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
+import net.easecation.bedrockloader.loader.error.LoadingError
+import net.easecation.bedrockloader.loader.error.LoadingErrorCollector
 import net.minecraft.block.*
 import net.minecraft.block.AbstractBlock.Settings
 import net.minecraft.block.entity.BlockEntity
@@ -57,13 +59,29 @@ data class BlockContext(
             val components = behaviour.components
 
             fun calculateProperties(): Map<String, BedrockProperty<*, *>> {
-                val placementDirection: Map<String, BedrockProperty<*, *>> = behaviour.description.traits?.minecraftPlacementDirection?.enabled_states?.map { state ->
+                val placementDirection: Map<String, BedrockProperty<*, *>> = behaviour.description.traits?.minecraftPlacementDirection?.enabled_states?.mapNotNull { state ->
+                    if (state == null) {
+                        LoadingErrorCollector.addWarning(
+                            source = identifier.toString(),
+                            phase = LoadingError.Phase.BLOCK_REGISTER,
+                            message = "minecraft:placement_direction trait 包含未知的 enabled_states 值，将被忽略。支持的值: minecraft:cardinal_direction, minecraft:facing_direction"
+                        )
+                        return@mapNotNull null
+                    }
                     when (state) {
                         TraitPlacementDirection.State.MINECRAFT_CARDINAL_DIRECTION -> MINECRAFT_CARDINAL_DIRECTION
                         TraitPlacementDirection.State.MINECRAFT_FACING_DIRECTION -> MINECRAFT_FACING_DIRECTION
                     }
                 }?.associateBy { it.getBedrockName() } ?: emptyMap()
-                val placementPosition: Map<String, BedrockProperty<*, *>> = behaviour.description.traits?.minecraftPlacementPosition?.enabled_states?.map { state ->
+                val placementPosition: Map<String, BedrockProperty<*, *>> = behaviour.description.traits?.minecraftPlacementPosition?.enabled_states?.mapNotNull { state ->
+                    if (state == null) {
+                        LoadingErrorCollector.addWarning(
+                            source = identifier.toString(),
+                            phase = LoadingError.Phase.BLOCK_REGISTER,
+                            message = "minecraft:placement_position trait 包含未知的 enabled_states 值，将被忽略。支持的值: minecraft:block_face, minecraft:vertical_half"
+                        )
+                        return@mapNotNull null
+                    }
                     when (state) {
                         TraitPlacementPosition.State.MINECRAFT_BLOCK_FACE -> MINECRAFT_BLOCK_FACE
                         TraitPlacementPosition.State.MINECRAFT_VERTICAL_HALF -> MINECRAFT_VERTICAL_HALF
