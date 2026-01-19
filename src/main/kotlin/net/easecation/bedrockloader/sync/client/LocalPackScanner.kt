@@ -162,6 +162,9 @@ class LocalPackScanner(
      * 从资源包ZIP文件中提取UUID和版本信息
      * 支持单包（.zip/.mcpack）和addon（.mcaddon）
      *
+     * 对于addon（.mcaddon），会收集所有子包的UUID并生成组合UUID，
+     * 确保无论子包顺序如何，生成的UUID都是确定性的。
+     *
      * @param file 资源包文件
      * @return Pair(UUID, Version)，如果提取失败则返回(null, null)
      */
@@ -174,26 +177,76 @@ class LocalPackScanner(
                     return parseManifest(zip, rootEntry, file.name)
                 }
 
-                // 如果根目录没有，查找子目录中的manifest.json（.mcaddon）
-                val subManifestEntry = zip.entries().asSequence()
+                // 如果根目录没有，查找子目录中的所有manifest.json（.mcaddon）
+                val subManifestEntries = zip.entries().asSequence()
                     .filter { entry ->
                         val name = entry.name
                         (name.endsWith("manifest.json") || name.endsWith("pack_manifest.json")) &&
                         name.count { it == '/' } == 1 // 只在第一层子目录中
                     }
-                    .firstOrNull()
+                    .toList()
 
-                if (subManifestEntry != null) {
-                    return parseManifest(zip, subManifestEntry, file.name)
+                if (subManifestEntries.isEmpty()) {
+                    logger.warn("文件 ${file.name} 中找不到manifest.json")
+                    return Pair(null, null)
                 }
 
-                logger.warn("文件 ${file.name} 中找不到manifest.json")
-                return Pair(null, null)
+                // 对于addon，收集所有子包的UUID并生成组合UUID
+                if (subManifestEntries.size > 1) {
+                    return extractAddonCombinedMetadata(zip, subManifestEntries, file.name)
+                }
+
+                // 只有一个子包，直接使用其UUID
+                return parseManifest(zip, subManifestEntries.first(), file.name)
             }
         } catch (e: Exception) {
             logger.warn("提取 ${file.name} 的metadata失败: ${e.message}")
             return Pair(null, null)
         }
+    }
+
+    /**
+     * 为addon提取组合UUID
+     * 收集所有子包的UUID，排序后生成确定性的组合UUID
+     *
+     * @param zip ZIP文件
+     * @param entries 所有子包的manifest entries
+     * @param fileName 文件名（用于日志）
+     * @return Pair(组合UUID, 第一个子包的版本)
+     */
+    private fun extractAddonCombinedMetadata(
+        zip: ZipFile,
+        entries: List<java.util.zip.ZipEntry>,
+        fileName: String
+    ): Pair<String?, String?> {
+        val uuids = mutableListOf<String>()
+        var firstVersion: String? = null
+
+        for (entry in entries) {
+            val (uuid, version) = parseManifest(zip, entry, fileName)
+            if (uuid != null) {
+                uuids.add(uuid)
+                if (firstVersion == null) {
+                    firstVersion = version
+                }
+            }
+        }
+
+        if (uuids.isEmpty()) {
+            logger.warn("addon $fileName 中没有找到有效的UUID")
+            return Pair(null, null)
+        }
+
+        // 排序UUID列表，确保顺序一致
+        uuids.sort()
+
+        // 生成组合UUID（使用UUID v5基于名称空间）
+        val combinedString = uuids.joinToString("|")
+        val combinedUUID = java.util.UUID.nameUUIDFromBytes(combinedString.toByteArray()).toString()
+
+        logger.debug("addon $fileName 组合UUID: $combinedUUID (来自 ${uuids.size} 个子包: ${uuids.joinToString(", ")})")
+
+        return Pair(combinedUUID, firstVersion)
     }
 
     /**

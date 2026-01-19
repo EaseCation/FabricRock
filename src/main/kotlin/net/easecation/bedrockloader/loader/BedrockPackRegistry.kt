@@ -86,16 +86,42 @@ object BedrockPackRegistry {
      * 获取所有独立的资源文件（用于远程同步）
      * 对于addon中的包，返回的是.mcaddon文件；对于独立包，返回的是.zip文件
      *
+     * 对于addon类型的包（同一个.mcaddon文件包含多个子包），会生成组合UUID，
+     * 确保与客户端LocalPackScanner生成的UUID一致。
+     *
      * @return 资源文件映射（文件名 -> 文件信息）
      */
     fun getDistinctResourceFiles(): Map<String, PackInfo> {
         val result = mutableMapOf<String, PackInfo>()
+        // 按文件名分组，收集同一个文件的所有子包UUID
+        val fileToUUIDs = mutableMapOf<String, MutableList<String>>()
+        val fileToFirstPack = mutableMapOf<String, PackInfo>()
 
         for (pack in packages.values) {
             val fileName = pack.file.name
-            // 避免重复添加同一个文件（addon中的多个包共享一个.mcaddon文件）
-            if (!result.containsKey(fileName)) {
-                result[fileName] = pack
+            fileToUUIDs.getOrPut(fileName) { mutableListOf() }.add(pack.id)
+            if (!fileToFirstPack.containsKey(fileName)) {
+                fileToFirstPack[fileName] = pack
+            }
+        }
+
+        // 为每个文件生成PackInfo
+        for ((fileName, uuids) in fileToUUIDs) {
+            val firstPack = fileToFirstPack[fileName] ?: continue
+
+            if (uuids.size > 1) {
+                // addon类型：生成组合UUID
+                uuids.sort()
+                val combinedString = uuids.joinToString("|")
+                val combinedUUID = java.util.UUID.nameUUIDFromBytes(combinedString.toByteArray()).toString()
+
+                logger.debug("addon $fileName 组合UUID: $combinedUUID (来自 ${uuids.size} 个子包: ${uuids.joinToString(", ")})")
+
+                // 创建新的PackInfo，使用组合UUID
+                result[fileName] = firstPack.copy(id = combinedUUID)
+            } else {
+                // 单包：直接使用原始UUID
+                result[fileName] = firstPack
             }
         }
 

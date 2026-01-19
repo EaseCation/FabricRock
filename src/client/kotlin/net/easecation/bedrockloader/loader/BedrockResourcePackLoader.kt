@@ -114,7 +114,7 @@ class BedrockResourcePackLoader(
         val material = BedrockAddonsRegistryClient.blockEntityMaterial[identifier] ?: BedrockEntityMaterial.ENTITY
         val spriteId = model.materials["*"]?.spriteId ?: return
         // 实体渲染器需要完整的纹理路径（带 textures/ 前缀和 .png 扩展名）
-        // SpriteIdentifier 的 textureId 格式是 block/entity_xxx（不带 textures/ 和 .png）
+        // SpriteIdentifier 的 textureId 格式是 entity/xxx（不带 textures/ 和 .png）
         val entityTextureId = Identifier(spriteId.textureId.namespace, "textures/" + spriteId.textureId.path + ".png")
         BlockEntityRendererFactories.register(blockEntityType) { context ->
             BlockEntityDataDrivenRenderer.create(context, model, entityTextureId, identifier, material)
@@ -712,10 +712,10 @@ class BedrockResourcePackLoader(
         val textureAlias = textureMolang.substringAfter("texture.").substringAfter("Texture.")
         val texture = clientEntity.textures?.get(textureAlias) ?: return null
         val bedrockTexture = context.resource.textureImages[texture] ?: return null
-        // 使用 block/entity_xxx 路径（不带 textures/ 前缀和 .png 扩展名，Minecraft 会自动添加）
+        // 使用 entity/xxx 路径（不带 textures/ 前缀和 .png 扩展名，Minecraft 会自动添加）
         val spriteId = SpriteIdentifier(
             PlayerScreenHandler.BLOCK_ATLAS_TEXTURE,
-            Identifier(identifier.namespace, "block/entity_" + texture.substringAfterLast("/"))
+            Identifier(identifier.namespace, "entity/" + texture.substringAfterLast("/"))
         )
         val materials = mapOf("*" to BedrockMaterialInstance(spriteId))
         val model = geometryFactory.create(materials)
@@ -763,8 +763,8 @@ class BedrockResourcePackLoader(
 
     /**
      * 从ClientEntity读取需要的贴图，然后将对应的贴图文件保存到java材质包中（对应命名空间）
-     * 纹理保存到 textures/block/ 目录，使用 entity_ 前缀避免与普通方块纹理冲突
-     * 例如：textures/entity/bench.png → textures/block/entity_bench.png
+     * 纹理保存到 textures/entity/ 目录（Minecraft 标准实体贴图位置）
+     * 例如：textures/entity/bench.png → textures/entity/bench.png
      */
     private fun createEntityTextures(
         identifier: Identifier,
@@ -777,10 +777,10 @@ class BedrockResourcePackLoader(
                 BedrockLoader.logger.warn("[BedrockResourcePackLoader] Entity texture not found: $texture")
                 return
             }
-            // 保存到 textures/block/ 目录，使用 entity_ 前缀避免冲突
+            // 保存到 textures/entity/ 目录（Minecraft 标准实体贴图位置）
             // 统一转换为PNG格式（Minecraft原生纹理系统只支持PNG）
-            val fileName = "entity_" + texture.substringAfterLast("/")
-            val file = namespaceDir.resolve("textures/block/$fileName.png")
+            val fileName = texture.substringAfterLast("/")
+            val file = namespaceDir.resolve("textures/entity/$fileName.png")
             file.parentFile.mkdirs()
             bedrockTexture.image.let { image ->
                 ImageIO.write(image, "png", file)
@@ -796,8 +796,11 @@ class BedrockResourcePackLoader(
         val model = BedrockAddonsRegistryClient.entityModel[identifier] ?: return
         val material = BedrockAddonsRegistryClient.entityMaterial[identifier] ?: BedrockEntityMaterial.ENTITY
         val spriteId = model.materials["*"]?.spriteId ?: return
+        // 实体渲染器需要完整的纹理路径（带 textures/ 前缀和 .png 扩展名）
+        // SpriteIdentifier 的 textureId 格式是 entity/xxx（不带 textures/ 和 .png）
+        val entityTextureId = Identifier(spriteId.textureId.namespace, "textures/" + spriteId.textureId.path + ".png")
         EntityRendererRegistry.register(entityType) { context ->
-            EntityDataDrivenRenderer.create(context, model, 0.5f, spriteId.textureId, identifier, material)
+            EntityDataDrivenRenderer.create(context, model, 0.5f, entityTextureId, identifier, material)
         }
     }
 
