@@ -18,6 +18,7 @@ data class BlockComponents(
     @SerializedName("minecraft:light_dampening") val minecraftLightDampening: Int?,
     @SerializedName("minecraft:destructible_by_mining") val minecraftDestructibleByMining: ComponentDestructibleByMining?,
     @SerializedName("minecraft:transformation") val minecraftTransformation: ComponentTransformation?,
+    @SerializedName("minecraft:map_color") val minecraftMapColor: ComponentMapColor?,
     @SerializedName("netease:block_entity") val neteaseBlockEntity: ComponentBlockEntity?,
     @SerializedName("netease:face_directional") val neteaseFaceDirectional: ComponentFaceDirectional?,
 
@@ -43,6 +44,7 @@ data class BlockComponents(
             minecraftLightDampening = components.minecraftLightDampening ?: minecraftLightDampening,
             minecraftDestructibleByMining = components.minecraftDestructibleByMining ?: minecraftDestructibleByMining,
             minecraftTransformation = components.minecraftTransformation ?: minecraftTransformation,
+            minecraftMapColor = components.minecraftMapColor ?: minecraftMapColor,
             neteaseBlockEntity = components.neteaseBlockEntity ?: neteaseBlockEntity,
             neteaseFaceDirectional = components.neteaseFaceDirectional ?: neteaseFaceDirectional,
             tags = this.tags + components.tags  // 合并 tags（集合并集）

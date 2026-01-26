@@ -19,6 +19,7 @@ import net.easecation.bedrockloader.block.property.*
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.easecation.bedrockloader.loader.error.LoadingError
 import net.easecation.bedrockloader.loader.error.LoadingErrorCollector
+import net.easecation.bedrockloader.util.MapColorMatcher
 import net.minecraft.block.*
 import net.minecraft.block.AbstractBlock.Settings
 import net.minecraft.block.entity.BlockEntity
@@ -147,6 +148,12 @@ data class BlockContext(
                 }
                 components.minecraftLightEmission?.let {
                     settings.luminance { _ -> it }
+                }
+                // 应用 map_color: 将基岩版颜色匹配到最接近的 Java 版 MapColor
+                components.minecraftMapColor?.let { mapColor ->
+                    val rgb = mapColor.getColor()
+                    val javaMapColor = MapColorMatcher.findClosestMapColor(rgb)
+                    settings.mapColor(javaMapColor)
                 }
                 return settings
             }

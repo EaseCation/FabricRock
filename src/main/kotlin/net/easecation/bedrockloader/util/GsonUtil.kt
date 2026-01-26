@@ -51,6 +51,7 @@ object GsonUtil {
             .registerTypeAdapter(ComponentCollisionBox::class.java, ComponentCollisionBox.Deserializer())
             .registerTypeAdapter(ComponentPlacementFilter::class.java, ComponentPlacementFilter.Deserializer())
             .registerTypeAdapter(ComponentTransformation::class.java, ComponentTransformation.Deserializer())
+            .registerTypeAdapter(ComponentMapColor::class.java, ComponentMapColor.Deserializer())
             // entity component
             .registerTypeAdapter(ComponentRideable::class.java, ComponentRideable.Deserializer())
             // entity resource
