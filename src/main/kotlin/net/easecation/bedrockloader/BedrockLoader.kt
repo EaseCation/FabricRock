@@ -13,6 +13,8 @@ import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents.ModifyEntries
 import net.fabricmc.loader.api.FabricLoader
+import net.minecraft.block.Block
+import net.minecraft.block.AbstractBlock
 import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
@@ -39,6 +41,10 @@ object BedrockLoader : ModInitializer {
 		logger.info("Loading bedrock addons...")
 		BedrockAddonsLoader.load()
 
+		// 在注册自定义方块之前，先注册占位方块，将 ID 推到安全范围
+		logger.info("Reserving block state ID space...")
+		reserveBlockStateIdSpace()
+
 		// load behaviour pack
 		logger.info("Loading behaviour pack...")
 		val behaviorPackLoader = BedrockBehaviorPackLoader(context)
@@ -56,6 +62,64 @@ object BedrockLoader : ModInitializer {
 		startHttpServerIfNeeded()
 
 		logger.info("BedrockLoader initialized!")
+	}
+
+	/**
+	 * 预留方块状态 ID 空间
+	 *
+	 * 为了避免与 ViaBedrock 的原版方块 ID 冲突（0-29670），
+	 * 我们需要在注册自定义方块之前，先注册一些占位方块，
+	 * 将自定义方块的 ID 推到一个安全的范围（50000+）。
+	 */
+	private fun reserveBlockStateIdSpace() {
+		// 目标起始 ID（确保大于 ViaBedrock 的原版方块 ID 范围）
+		val targetStartId = 50000
+
+		// 获取当前最大的方块状态 ID
+		// 遍历所有已注册的方块，找出最大的状态 ID
+		var currentMaxId = 0
+		for (block in Registries.BLOCK) {
+			for (state in block.stateManager.states) {
+				val id = Block.getRawIdFromState(state)
+				if (id > currentMaxId) {
+					currentMaxId = id
+				}
+			}
+		}
+
+		logger.info("Current max block state ID: $currentMaxId")
+
+		// 如果当前 ID 已经超过目标，则无需预留
+		if (currentMaxId >= targetStartId) {
+			logger.info("Block state ID space already at safe range, no reservation needed")
+			return
+		}
+
+		// 计算需要注册的占位方块数量
+		// 每个方块至少有 1 个状态，所以需要注册 (targetStartId - currentMaxId) 个方块
+		val placeholdersNeeded = targetStartId - currentMaxId
+
+		logger.info("Registering $placeholdersNeeded placeholder blocks to reserve ID space...")
+
+		// 注册占位方块
+		for (i in 0 until placeholdersNeeded) {
+			val placeholderBlock = Block(AbstractBlock.Settings.create())
+			val placeholderId = Identifier.of("bedrock-loader", "placeholder_$i")
+			Registry.register(Registries.BLOCK, placeholderId, placeholderBlock)
+		}
+
+		// 重新计算最大 ID
+		var newMaxId = 0
+		for (block in Registries.BLOCK) {
+			for (state in block.stateManager.states) {
+				val id = Block.getRawIdFromState(state)
+				if (id > newMaxId) {
+					newMaxId = id
+				}
+			}
+		}
+
+		logger.info("Reserved ID space: $currentMaxId -> $newMaxId")
 	}
 
 	/**

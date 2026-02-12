@@ -16,7 +16,10 @@ object BlockStateMappingExporter {
     fun export() {
         try {
             val mappings = JsonObject()
-            val gson = GsonBuilder().setPrettyPrinting().create()
+            val gson = GsonBuilder()
+                .setPrettyPrinting()
+                .disableHtmlEscaping()  // 禁用 HTML 转义，保留 : 和 = 等字符
+                .create()
 
             // 遍历所有注册的方块
             BedrockAddonsRegistry.blockContexts.forEach { (identifier, context) ->
