@@ -28,7 +28,7 @@ data class BlockResourceDefinition(
             val blocks = mutableMapOf<Identifier, Block>()
             for ((key, value) in obj.entrySet()) {
                 if (key == "format_version") continue
-                val identifier = Identifier(key.normalizeIdentifier())
+                val identifier = Identifier.of(key.normalizeIdentifier())
                 blocks[identifier] = context.deserialize(value, Block::class.java)
             }
             val type = object: TypeToken<SemVersion>() {}.type

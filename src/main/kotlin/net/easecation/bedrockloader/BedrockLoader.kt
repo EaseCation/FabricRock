@@ -4,6 +4,7 @@ import net.easecation.bedrockloader.loader.BedrockAddonsLoader
 import net.easecation.bedrockloader.loader.BedrockAddonsLoader.context
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.easecation.bedrockloader.loader.BedrockBehaviorPackLoader
+import net.easecation.bedrockloader.loader.BlockStateMappingExporter
 import net.easecation.bedrockloader.sync.server.ConfigLoader
 import net.easecation.bedrockloader.sync.server.EmbeddedHttpServer
 import net.fabricmc.api.EnvType
@@ -43,6 +44,10 @@ object BedrockLoader : ModInitializer {
 		val behaviorPackLoader = BedrockBehaviorPackLoader(context)
 		behaviorPackLoader.load()
 
+		// 导出方块状态映射（用于 ViaBedrock 同步）
+		logger.info("Exporting block state mappings...")
+		BlockStateMappingExporter.export()
+
 		// 动态创建每个包的创造模式选项卡
 		logger.info("Creating item groups for loaded packs...")
 		createPackItemGroups()
@@ -80,7 +85,7 @@ object BedrockLoader : ModInitializer {
 			// 创建唯一的RegistryKey
 			val groupKey = RegistryKey.of(
 				Registries.ITEM_GROUP.key,
-				Identifier("bedrock-loader", "pack_${packId.substring(0, 8)}")
+				Identifier.of("bedrock-loader", "pack_${packId.substring(0, 8)}")
 			)
 
 			// 创建ItemGroup

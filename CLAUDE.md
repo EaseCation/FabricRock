@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Bedrock Loader** 是一个Minecraft Java版的Fabric模组,用于加载Minecraft基岩版(Bedrock Edition)的插件包,包括自定义方块、实体、模型和纹理等内容。
 
-- **Minecraft版本**: 1.20.6
-- **构建系统**: Gradle + Fabric Loom 1.9-SNAPSHOT
+- **Minecraft版本**: 1.21.1
+- **构建系统**: Gradle + Fabric Loom 1.10
 - **编程语言**: Kotlin (主要) + Java (少量Mixin)
 - **Java版本**: 21
 - **依赖**: Fabric API, Fabric Language Kotlin

@@ -18,14 +18,29 @@ class BedrockLoaderResourcePackProvider : ResourcePackProvider {
             packsFolder.mkdir()
         }
 
-        ResourcePackProfile.create(
+        val info = ResourcePackInfo(
             "bedrock-loader-resource",
             Text.translatable("pack.name.bedrock-loader"),
+            ResourcePackSource.BUILTIN,
+            java.util.Optional.empty()
+        )
+
+        val factory = if (packsFolder.isDirectory)
+            DirectoryBackedFactory(packsFolder.toPath())
+        else
+            ZipBackedFactory(packsFolder)
+
+        val position = ResourcePackPosition(
             true,
-            if (packsFolder.isDirectory) DirectoryBackedFactory(packsFolder.toPath(), false) else ZipBackedFactory(packsFolder, false),
-            ResourceType.CLIENT_RESOURCES,
             ResourcePackProfile.InsertionPosition.TOP,
-            ModResourcePackCreator.RESOURCE_PACK_SOURCE
+            false
+        )
+
+        ResourcePackProfile.create(
+            info,
+            factory,
+            ResourceType.CLIENT_RESOURCES,
+            position
         )?.let { consumer.accept(it) }
     }
 }

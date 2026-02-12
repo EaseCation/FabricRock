@@ -172,6 +172,12 @@ data class BlockContext(
 
         private val componentsByState: Map<BlockState, BlockComponents>
 
+        /**
+         * 获取外部 BlockContext 实例
+         * 用于导出方块状态映射时访问属性定义
+         */
+        fun getBlockContext(): BlockContext = this@BlockContext
+
         init {
             defaultState = stateManager.defaultState
                 .withIfExists(MINECRAFT_CARDINAL_DIRECTION, Direction.SOUTH)

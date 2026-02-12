@@ -256,10 +256,9 @@ class BedrockGeometryModel private constructor(
     override fun bake(
         baker: Baker,
         textureGetter: Function<SpriteIdentifier, Sprite>,
-        rotationContainer: ModelBakeSettings?,
-        modelId: Identifier?
+        rotationContainer: ModelBakeSettings
     ): BakedModel {
-        BedrockLoader.logger.info("Baking model... $modelId ${bedrockModel.description.identifier}")
+        BedrockLoader.logger.info("Baking model... ${bedrockModel.description.identifier}")
         // 获得sprites
         materials.forEach { (key, material) ->
             sprites[key] = textureGetter.apply(material.spriteId)
@@ -315,7 +314,11 @@ class BedrockGeometryModel private constructor(
 
     // EntityModel methods
 
-    override fun render(matrices: MatrixStack, vertices: VertexConsumer, light: Int, overlay: Int, red: Float, green: Float, blue: Float, alpha: Float) {
+    override fun render(matrices: MatrixStack, vertices: VertexConsumer, light: Int, overlay: Int, color: Int) {
+        val alpha = ((color shr 24) and 0xFF) / 255.0f
+        val red = ((color shr 16) and 0xFF) / 255.0f
+        val green = ((color shr 8) and 0xFF) / 255.0f
+        val blue = (color and 0xFF) / 255.0f
         modelPart.render(matrices, vertices, light, overlay, red, green, blue, alpha)
     }
 

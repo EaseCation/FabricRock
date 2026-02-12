@@ -30,10 +30,9 @@ internal class RotatedJsonModel(
     override fun bake(
         baker: Baker,
         textureGetter: Function<SpriteIdentifier, Sprite>,
-        rotationContainer: ModelBakeSettings?,
-        modelId: Identifier?
+        rotationContainer: ModelBakeSettings
     ): BakedModel? {
         // 使用我们的旋转参数，而不是传入的 rotationContainer
-        return baseModel.bake(baker, textureGetter, rotation, modelId)
+        return baseModel.bake(baker, textureGetter, rotation)
     }
 }

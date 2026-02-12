@@ -46,6 +46,11 @@ class BedrockBehaviorPackLoader(
                 Registry.register(Registries.BLOCK, id, block)
                 BedrockAddonsRegistry.blocks[id] = block
 
+                // 保存 BlockContext 用于导出映射
+                if (block is BlockContext.BlockDataDriven) {
+                    BedrockAddonsRegistry.blockContexts[id] = block.getBlockContext()
+                }
+
                 val item = BlockItem(block, Item.Settings())
                 Registry.register(Registries.ITEM, id, item)
                 BedrockAddonsRegistry.items[id] = item
@@ -87,7 +92,7 @@ class BedrockBehaviorPackLoader(
                 if (beh.description.is_spawnable == true) {
                     val clientEntity = packContext.resource.entities[id]?.description
                     val entityName = id.path
-                    val itemIdentifier = Identifier(id.namespace, "${entityName}_spawn_egg")
+                    val itemIdentifier = Identifier.of(id.namespace, "${entityName}_spawn_egg")
                     val spawnEggItem = SpawnEggItem(
                         entityType,
                         clientEntity?.spawn_egg?.base_color?.replace("#", "")?.hexToInt(HexFormat.Default) ?: 0xffffff,

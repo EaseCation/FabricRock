@@ -88,10 +88,10 @@ dependencies {
 	include "org.yaml:snakeyaml:2.0"
 
 	// Config UI - YACL (Yet Another Config Lib)
-	modImplementation "dev.isxander:yet-another-config-lib:3.4.2+1.20.4-fabric"
+	modImplementation "dev.isxander:yet-another-config-lib:3.6.4+1.21.1-fabric"
 
 	// ModMenu - 提供模组列表和配置入口
-	modImplementation "com.terraformersmc:modmenu:9.2.0"
+	modImplementation "com.terraformersmc:modmenu:11.0.3"
 
 	// 注意：不需要单独添加SLF4J实现，Minecraft已经通过Log4j2提供了SLF4J支持
 }
@@ -105,12 +105,12 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 17
+	it.options.release = 21
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 	kotlinOptions {
-		jvmTarget = 17
+		jvmTarget = 21
 	}
 }
 
@@ -120,8 +120,8 @@ java {
 	// If you remove this line, sources will not be generated.
 	withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_17
-	targetCompatibility = JavaVersion.VERSION_17
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
 }
 
 jar {

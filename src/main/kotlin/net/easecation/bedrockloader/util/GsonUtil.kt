@@ -79,7 +79,7 @@ object GsonUtil {
             return JsonPrimitive(src.toString())
         }
         override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): Identifier {
-            return Identifier(json.asString.normalizeIdentifier())
+            return Identifier.of(json.asString.normalizeIdentifier())
         }
     }
 }

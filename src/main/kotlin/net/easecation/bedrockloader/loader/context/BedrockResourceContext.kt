@@ -36,7 +36,7 @@ class BedrockResourceContext {
             BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: $textureKey")
             return null
         }
-        return Identifier(
+        return Identifier.of(
             namespace,
             "block/${texture.substringAfterLast("/")}"
         )
@@ -49,7 +49,7 @@ class BedrockResourceContext {
             BedrockLoader.logger.warn("[BedrockResourcePackLoader] Item texture not found: $textureKey")
             return null
         }
-        return Identifier(
+        return Identifier.of(
             namespace,
             "item/${texture.substringAfterLast("/")}"
         )

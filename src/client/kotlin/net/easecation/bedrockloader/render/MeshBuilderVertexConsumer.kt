@@ -21,54 +21,60 @@ class MeshBuilderVertexConsumer(private val defaultSprite: Sprite, private val s
         this.material = material
     }
 
-    override fun vertex(x: Double, y: Double, z: Double): VertexConsumer {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.vertex($x, $y, $z)")
-        emitter.pos(vertexIndex, x.toFloat(), y.toFloat(), z.toFloat())
+    override fun vertex(x: Float, y: Float, z: Float): VertexConsumer {
+        emitter.pos(vertexIndex, x, y, z)
         return this
     }
 
     override fun color(red: Int, green: Int, blue: Int, alpha: Int): VertexConsumer {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.color($red, $green, $blue, $alpha)")
         emitter.color(vertexIndex, (red and 0xFF) or ((green and 0xFF) shl 8) or ((blue and 0xFF) shl 16) or ((alpha and 0xFF) shl 24))
         return this
     }
 
     override fun texture(u: Float, v: Float): VertexConsumer {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.texture($u, $v)")
         emitter.uv(vertexIndex, u, v)
         return this
     }
 
     override fun overlay(u: Int, v: Int): VertexConsumer {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.overlay($u, $v)")
         return this
     }
 
     override fun overlay(overlay: Int): VertexConsumer {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.overlay($overlay)")
         return this
     }
 
     override fun light(u: Int, v: Int): VertexConsumer {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.light($u, $v)")
         emitter.lightmap(vertexIndex, v)
         return this
     }
 
     override fun light(light: Int): VertexConsumer {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.light($light)")
         emitter.lightmap(vertexIndex, light)
         return this
     }
 
     override fun normal(x: Float, y: Float, z: Float): VertexConsumer {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.normal($x, $y, $z)")
         emitter.normal(vertexIndex, x, y, z)
         return this
     }
 
-    override fun next() {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.next()")
+    /**
+     * 1.21.1 组合 vertex 方法 (11 参数, int color 替代 4 float RGBA)
+     * 这是自定义 ModelPart 的 Cuboid.renderCuboid() 调用路径
+     */
+    override fun vertex(
+        x: Float, y: Float, z: Float,
+        color: Int,
+        u: Float, v: Float,
+        overlay: Int, light: Int,
+        normalX: Float, normalY: Float, normalZ: Float
+    ) {
+        emitter.pos(vertexIndex, x, y, z)
+        emitter.color(vertexIndex, color)
+        emitter.uv(vertexIndex, u, v)
+        emitter.lightmap(vertexIndex, light)
+        emitter.normal(vertexIndex, normalX, normalY, normalZ)
         vertexIndex++
         if (vertexIndex >= 4) {
             val sprite = if (material == null) defaultSprite else sprites[material] ?: defaultSprite
@@ -76,16 +82,6 @@ class MeshBuilderVertexConsumer(private val defaultSprite: Sprite, private val s
             emitter.emit()
             vertexIndex = 0
         }
-    }
-
-    override fun fixedColor(red: Int, green: Int, blue: Int, alpha: Int) {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.fixedColor($red, $green, $blue, $alpha)")
-        emitter.color(vertexIndex, (red and 0xFF) or ((green and 0xFF) shl 8) or ((blue and 0xFF) shl 16) or ((alpha and 0xFF) shl 24))
-    }
-
-    override fun unfixColor() {
-        // BedrockLoader.logger.info("MeshBuilderVertexConsumer.unfixColor()")
-        emitter.color(vertexIndex, -1)
     }
 
     fun build(): Mesh {

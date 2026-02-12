@@ -64,11 +64,11 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
             val id = context.id()
             when {
                 id.path.startsWith("block/") -> {
-                    val identifier = Identifier(id.namespace, id.path.substring("block/".length))
+                    val identifier = Identifier.of(id.namespace, id.path.substring("block/".length))
                     BedrockAddonsRegistryClient.blockModels[identifier]
                 }
                 id.path.startsWith("item/") -> {
-                    val identifier = Identifier(id.namespace, id.path.substring("item/".length))
+                    val identifier = Identifier.of(id.namespace, id.path.substring("item/".length))
                     BedrockAddonsRegistryClient.itemModels[identifier]
                 }
                 else -> null
@@ -85,7 +85,7 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                 // 但 Minecraft 仍然要求每个 blockstate 变体都有对应的模型
                 if (isBlockEntity) {
                     block.stateManager.states.forEach { state ->
-                        context.setModel(state, DelegatingUnbakedModel(Identifier("block/air")))
+                        context.setModel(state, DelegatingUnbakedModel(Identifier.of("block/air")))
                     }
                     return@registerBlockStateResolver
                 }

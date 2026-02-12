@@ -98,7 +98,7 @@ class BlockEntityDataDrivenRenderer(
         val entry = matrices.peek()
         block.applyFaceDirectional(blockState, entry.positionMatrix, entry.normalMatrix)
         matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(180F))
-        model.render(matrices, vertexConsumer, effectiveLight, overlay, 1.0f, 1.0f, 1.0f, 1.0f)
+        model.render(matrices, vertexConsumer, effectiveLight, overlay, -1)
         matrices.pop()
     }
 

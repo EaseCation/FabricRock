@@ -1,6 +1,7 @@
 package net.easecation.bedrockloader.loader
 
 import net.easecation.bedrockloader.bedrock.entity.components.EntityComponents
+import net.easecation.bedrockloader.block.BlockContext
 import net.easecation.bedrockloader.block.entity.BlockEntityDataDriven
 import net.easecation.bedrockloader.entity.EntityDataDriven
 import net.minecraft.block.Block
@@ -19,6 +20,9 @@ object BedrockAddonsRegistry {
 
     // 物品到包的映射（用于按包分组创造模式选项卡）
     val itemToPackMapping: MutableMap<Identifier, String> = mutableMapOf()
+
+    // 方块上下文映射（用于导出方块状态映射）
+    val blockContexts: MutableMap<Identifier, BlockContext> = mutableMapOf()
 
     /**
      * 按包ID获取物品列表

@@ -32,9 +32,9 @@ class EntityDataDriven(
                 val components = BedrockAddonsRegistry.entityComponents[identifier]
                     ?: throw IllegalStateException("[EntityDataDriven] Entity $identifier has no components")
                 EntityDataDriven(identifier, components, type, world)
-            }, SpawnGroup.CREATURE).apply {
-                setDimensions(1f, 1f)
-            }.build()
+            }, SpawnGroup.CREATURE)
+                .dimensions(1f, 1f)
+                .build(identifier.toString())
         }
         fun buildEntityAttributes(components: EntityComponents): DefaultAttributeContainer.Builder {
             val builder = createMobAttributes()

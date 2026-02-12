@@ -7,7 +7,7 @@ import net.minecraft.util.Identifier
 class BedrockResourceReloadListener : SimpleSynchronousResourceReloadListener {
 
     override fun getFabricId(): Identifier {
-        return Identifier("bedrock-loader")
+        return Identifier.of("bedrock-loader")
     }
 
     override fun reload(manager: ResourceManager?) {
@@ -21,9 +21,9 @@ class BedrockResourceReloadListener : SimpleSynchronousResourceReloadListener {
         // 打印manager的class名称
         BedrockLoader.logger.info("Resource manager class: ${manager.javaClass.name}")
         manager.streamResourcePacks().forEach { pack ->
-            BedrockLoader.logger.info("Found resource pack: ${pack.name}, class: ${pack.javaClass.name}")
+            BedrockLoader.logger.info("Found resource pack: ${pack.id}, class: ${pack.javaClass.name}")
         }
-        manager.getResource(Identifier("bedrock-loader", "textures/block/test_block.png")).ifPresent {
+        manager.getResource(Identifier.of("bedrock-loader", "textures/block/test_block.png")).ifPresent {
             resource -> BedrockLoader.logger.info("Found resource: $resource")
         }
     }

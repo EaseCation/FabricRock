@@ -115,7 +115,7 @@ class BedrockResourcePackLoader(
         val spriteId = model.materials["*"]?.spriteId ?: return
         // 实体渲染器需要完整的纹理路径（带 textures/ 前缀和 .png 扩展名）
         // SpriteIdentifier 的 textureId 格式是 block/entity_xxx（不带 textures/ 和 .png）
-        val entityTextureId = Identifier(spriteId.textureId.namespace, "textures/" + spriteId.textureId.path + ".png")
+        val entityTextureId = Identifier.of(spriteId.textureId.namespace, "textures/" + spriteId.textureId.path + ".png")
         BlockEntityRendererFactories.register(blockEntityType) { context ->
             BlockEntityDataDrivenRenderer.create(context, model, entityTextureId, identifier, material)
         }
@@ -131,7 +131,7 @@ class BedrockResourcePackLoader(
         val fileMcMeta = javaResDir.resolve("pack.mcmeta")
         val mcMeta = JavaMCMeta(
                 pack = JavaMCMeta.PackInfo(
-                        pack_format = 8,
+                        pack_format = 34,
                         description = "Bedrock addons loader"
                 )
         )
@@ -310,7 +310,7 @@ class BedrockResourcePackLoader(
             context.resource.terrainTextureToJava(identifier.namespace, blockIcon)?.let {
                 textureMap["layer0"] = Either.left(SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, it))
             }
-            BedrockAddonsRegistryClient.itemModels[identifier] = JsonUnbakedModel(Identifier("item/generated"), emptyList(), textureMap, null, null, ModelTransformation.NONE, emptyList())
+            BedrockAddonsRegistryClient.itemModels[identifier] = JsonUnbakedModel(Identifier.of("item/generated"), emptyList(), textureMap, null, null, ModelTransformation.NONE, emptyList())
         } else {
             val geometry = blockComponents?.minecraftGeometry
             val materialInstances = blockComponents?.minecraftMaterialInstances
@@ -409,7 +409,7 @@ class BedrockResourcePackLoader(
             }
             else -> BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block $identifier has no textures defined.")
         }
-        return JsonUnbakedModel(Identifier("block/cube_all"), emptyList(), textureMap, null, null, ModelTransformation.NONE, emptyList())
+        return JsonUnbakedModel(Identifier.of("block/cube_all"), emptyList(), textureMap, null, null, ModelTransformation.NONE, emptyList())
     }
 
     private fun createGeometryModel(
@@ -428,7 +428,7 @@ class BedrockResourcePackLoader(
             val texture = textures.firstOrNull()?.path ?: return@mapValues null
             val spriteId = SpriteIdentifier(
                 PlayerScreenHandler.BLOCK_ATLAS_TEXTURE,
-                Identifier(identifier.namespace, "block/${texture.substringAfterLast("/")}")
+                Identifier.of(identifier.namespace, "block/${texture.substringAfterLast("/")}")
             )
             return@mapValues BedrockMaterialInstance(spriteId)
         }?.mapValues {
@@ -493,16 +493,16 @@ class BedrockResourcePackLoader(
     ) {
         context.behavior.entities[identifier]?.description?.is_spawnable?.let {
             val entityName = identifier.path
-            val itemIdentifier = Identifier(identifier.namespace, "${entityName}_spawn_egg")
+            val itemIdentifier = Identifier.of(identifier.namespace, "${entityName}_spawn_egg")
             val spawnEggTexture = clientEntity?.spawn_egg?.texture
             if (spawnEggTexture != null) {
                 val textureMap = mutableMapOf<String, Either<SpriteIdentifier, String>>()
                 context.resource.itemTextureToJava(itemIdentifier.namespace, spawnEggTexture)?.let {
                     textureMap["layer0"] = Either.left(SpriteIdentifier(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE, it))
                 }
-                BedrockAddonsRegistryClient.itemModels[itemIdentifier] = JsonUnbakedModel(Identifier("item/generated"), emptyList(), textureMap, null, null, ModelTransformation.NONE, emptyList())
+                BedrockAddonsRegistryClient.itemModels[itemIdentifier] = JsonUnbakedModel(Identifier.of("item/generated"), emptyList(), textureMap, null, null, ModelTransformation.NONE, emptyList())
             } else {
-                BedrockAddonsRegistryClient.itemModels[itemIdentifier] = DelegatingUnbakedModel(Identifier("item/template_spawn_egg"))
+                BedrockAddonsRegistryClient.itemModels[itemIdentifier] = DelegatingUnbakedModel(Identifier.of("item/template_spawn_egg"))
             }
         }
     }
@@ -716,7 +716,7 @@ class BedrockResourcePackLoader(
         // BLOCK_ATLAS 默认只加载 textures/block/ 目录的纹理
         val spriteId = SpriteIdentifier(
             PlayerScreenHandler.BLOCK_ATLAS_TEXTURE,
-            Identifier(identifier.namespace, "block/entity_" + texture.substringAfterLast("/"))
+            Identifier.of(identifier.namespace, "block/entity_" + texture.substringAfterLast("/"))
         )
         val materials = mapOf("*" to BedrockMaterialInstance(spriteId))
         val model = geometryFactory.create(materials)
@@ -800,7 +800,7 @@ class BedrockResourcePackLoader(
         val spriteId = model.materials["*"]?.spriteId ?: return
         // 实体渲染器需要完整的纹理路径（带 textures/ 前缀和 .png 扩展名）
         // SpriteIdentifier 的 textureId 格式是 block/entity_xxx（不带 textures/ 和 .png）
-        val entityTextureId = Identifier(spriteId.textureId.namespace, "textures/" + spriteId.textureId.path + ".png")
+        val entityTextureId = Identifier.of(spriteId.textureId.namespace, "textures/" + spriteId.textureId.path + ".png")
         EntityRendererRegistry.register(entityType) { context ->
             EntityDataDrivenRenderer.create(context, model, 0.5f, entityTextureId, identifier, material)
         }
@@ -875,10 +875,10 @@ class BedrockResourcePackLoader(
         val tagDir = if (path.contains('/')) {
             // 有子目录的情况
             val parentPath = path.substringBeforeLast('/')
-            javaResDir.resolve("data/$namespace/tags/blocks/$parentPath")
+            javaResDir.resolve("data/$namespace/tags/block/$parentPath")
         } else {
             // 无子目录的情况
-            javaResDir.resolve("data/$namespace/tags/blocks")
+            javaResDir.resolve("data/$namespace/tags/block")
         }
 
         // 确保目录存在

@@ -297,6 +297,11 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
         ) {
             val matrix4f = entry.positionMatrix
             val vector3f = Vector3f()
+            // Pack RGBA floats into a single int color (ARGB format)
+            val packedColor = ((alpha * 255).toInt() shl 24) or
+                    ((red * 255).toInt() shl 16) or
+                    ((green * 255).toInt() shl 8) or
+                    (blue * 255).toInt()
 
             for (quad in this.sides) {
                 val vector3f2 = entry.normalMatrix.transform(quad!!.direction, vector3f)
@@ -311,7 +316,7 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
                     val j = vertex.pos.y() / 16.0f
                     val k = vertex.pos.z() / 16.0f
                     val vector3f3 = matrix4f.transformPosition(i.toFloat(), j.toFloat(), k.toFloat(), vector3f)
-                    vertexConsumer.vertex(vector3f3.x(), vector3f3.y(), vector3f3.z(), red, green, blue, alpha, vertex.u.toFloat(), vertex.v.toFloat(), overlay, light, f, g, h)
+                    vertexConsumer.vertex(vector3f3.x(), vector3f3.y(), vector3f3.z(), packedColor, vertex.u.toFloat(), vertex.v.toFloat(), overlay, light, f, g, h)
                 }
             }
         }

@@ -57,7 +57,7 @@ object BedrockMaterialHelper {
             // 创建SpriteIdentifier
             val spriteId = SpriteIdentifier(
                 PlayerScreenHandler.BLOCK_ATLAS_TEXTURE,
-                Identifier(namespace, "block/${texture.substringAfterLast("/")}")
+                Identifier.of(namespace, "block/${texture.substringAfterLast("/")}")
             )
 
             BedrockMaterialInstance(spriteId)
