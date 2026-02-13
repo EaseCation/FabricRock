@@ -98,7 +98,11 @@ class BlockEntityDataDrivenRenderer(
         val entry = matrices.peek()
         block.applyFaceDirectional(blockState, entry.positionMatrix, entry.normalMatrix)
         matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(180F))
-        model.render(matrices, vertexConsumer, effectiveLight, overlay, -1)
+        //? if >=1.21.2 {
+        model.renderCustom(matrices, vertexConsumer, effectiveLight, overlay, -1)
+        //?} else {
+        /*model.render(matrices, vertexConsumer, effectiveLight, overlay, -1)
+        *///?}
         matrices.pop()
     }
 

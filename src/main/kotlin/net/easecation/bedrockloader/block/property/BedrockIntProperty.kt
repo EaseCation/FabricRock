@@ -11,7 +11,11 @@ data class BedrockIntProperty(
     private val name: String,
     private val values: Set<Int>,
     private val specializedTag: Boolean
-) : Property<Int>(bedrockName, Int::class.javaObjectType), BedrockProperty<Int, BedrockIntProperty> {
+//? if >=1.21.2 {
+) : Property<Int>(bedrockName, Int::class.javaObjectType), BedrockProperty<Int> {
+//?} else {
+/*) : Property<Int>(bedrockName, Int::class.javaObjectType), BedrockProperty<Int, BedrockIntProperty> {
+*///?}
     companion object {
         fun of(bedrockName: String, values: Set<Int>, specializedTag: Boolean = true): BedrockIntProperty {
             val name = bedrockName
@@ -38,7 +42,17 @@ data class BedrockIntProperty(
 
     override fun getBedrockValueName(value: Int): String = value.toString()
 
-    override fun getValues(): Collection<Int> = values
+    //? if >=1.21.2 {
+    override fun ordinal(value: Int): Int {
+        return values.toList().sorted().indexOf(value)
+    }
+
+    override fun getValues(): List<Int> {
+        return values.toList().sorted()
+    }
+    //?} else {
+    /*override fun getValues(): Collection<Int> = values
+    *///?}
 
     override fun parse(name: String): Optional<Int> = Optional.ofNullable(values.find { it.toString() == name })
 

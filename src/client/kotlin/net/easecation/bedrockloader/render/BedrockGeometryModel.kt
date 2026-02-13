@@ -9,17 +9,28 @@ import net.easecation.bedrockloader.entity.EntityDataDriven
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistryClient
 import net.easecation.bedrockloader.render.model.ModelPart
 import net.easecation.bedrockloader.render.model.TexturedModelData
+//? if >=1.21.2 {
+import net.easecation.bedrockloader.render.state.EntityDataDrivenRenderState
+import net.minecraft.client.render.entity.state.EntityRenderState
+//?}
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.fabricmc.fabric.api.renderer.v1.mesh.Mesh
 import net.fabricmc.fabric.api.renderer.v1.model.FabricBakedModel
 import net.fabricmc.fabric.api.renderer.v1.model.ModelHelper
-import net.fabricmc.fabric.api.renderer.v1.render.RenderContext
+//? if <1.21.4 {
+/*import net.fabricmc.fabric.api.renderer.v1.render.RenderContext
+*///?} else {
+import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter
+import java.util.function.Predicate
+//?}
 import net.minecraft.block.BlockState
 import net.minecraft.client.render.VertexConsumer
 import net.minecraft.client.render.entity.model.EntityModel
 import net.minecraft.client.render.model.*
-import net.minecraft.client.render.model.json.ModelOverrideList
+//? if <1.21.4 {
+/*import net.minecraft.client.render.model.json.ModelOverrideList
+*///?}
 import net.minecraft.client.render.model.json.ModelTransformation
 import net.minecraft.client.render.model.json.Transformation
 import net.minecraft.client.texture.Sprite
@@ -62,9 +73,22 @@ class BedrockGeometryModel private constructor(
     private val boneMap: Map<String, ModelPart> = emptyMap(),
     // 骨骼原始变换值（用于动画重置）
     private val originalBoneTransforms: Map<String, OriginalBoneTransform> = emptyMap()
-) : EntityModel<EntityDataDriven>(), UnbakedModel, BakedModel, FabricBakedModel {
+//? if >=1.21.2 {
+) : EntityModel<EntityDataDrivenRenderState>(createMinecraftModelPart()), /*? if >=1.21.4 {*/ GroupableModel, /*?} else {*/ /*UnbakedModel, *//*?}*/ BakedModel, FabricBakedModel {
 
     companion object {
+        /**
+         * 创建一个空的Minecraft ModelPart用于EntityModel构造函数
+         * 在1.21.2+中，EntityModel需要一个ModelPart参数
+         */
+        private fun createMinecraftModelPart(): net.minecraft.client.model.ModelPart {
+            return net.minecraft.client.model.ModelPart(emptyList(), emptyMap())
+        }
+//?} else {
+/*) : EntityModel<EntityDataDriven>(), UnbakedModel, BakedModel, FabricBakedModel {
+
+    companion object {
+*///?}
         val MODEL_TRANSFORM_BLOCK: ModelTransformation = ModelTransformation(
             ModelHelper.TRANSFORM_BLOCK_3RD_PERSON_RIGHT,
             ModelHelper.TRANSFORM_BLOCK_3RD_PERSON_RIGHT,
@@ -198,7 +222,11 @@ class BedrockGeometryModel private constructor(
      * @param state 方块状态
      * @return 对应状态的UnbakedModel（可能是this本身或新创建的变体）
      */
-    fun getModelVariant(block: BlockContext.BlockDataDriven, state: BlockState): UnbakedModel {
+    //? if >=1.21.4 {
+    fun getModelVariant(block: BlockContext.BlockDataDriven, state: BlockState): BedrockGeometryModel {
+    //?} else {
+    /*fun getModelVariant(block: BlockContext.BlockDataDriven, state: BlockState): UnbakedModel {
+    *///?}
         val components = block.getComponents(state)
         val newTransformation = components.minecraftTransformation
         val newMaterialInstances = components.minecraftMaterialInstances
@@ -245,7 +273,47 @@ class BedrockGeometryModel private constructor(
         )
     }
 
-    override fun getModelDependencies(): Collection<Identifier> {
+    //? if >=1.21.4 {
+    override fun resolve(resolver: ResolvableModel.Resolver) {
+        BedrockLoader.logger.info("Resolving model... ${bedrockModel.description.identifier}")
+        // resolve方法用于预加载依赖，我们在bake时加载sprites
+    }
+
+    // GroupableModel implementation
+    override fun bake(baker: Baker): BakedModel {
+        BedrockLoader.logger.info("Baking model (GroupableModel)... ${bedrockModel.description.identifier}")
+        val spriteGetter = baker.getSpriteGetter()
+        materials.forEach { (key, material) ->
+            sprites[key] = spriteGetter.get(material.spriteId)
+        }
+        defaultSprite = sprites["*"] ?: sprites.values.firstOrNull()
+        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites, blockTransformation)
+        return this
+    }
+
+    override fun getEqualityGroup(state: BlockState): Any = this
+    //?} elif >=1.21.2 {
+    /*override fun resolve(context: UnbakedModel.Resolver) {
+        BedrockLoader.logger.info("Resolving model... ${bedrockModel.description.identifier}")
+        // resolve方法用于预加载依赖，我们在bake时加载sprites
+    }
+
+    override fun bake(
+        baker: Baker,
+        textureGetter: Function<SpriteIdentifier, Sprite>,
+        rotationContainer: ModelBakeSettings
+    ): BakedModel {
+        BedrockLoader.logger.info("Baking model... ${bedrockModel.description.identifier}")
+        // 获得sprites
+        materials.forEach { (key, material) ->
+            sprites[key] = textureGetter.apply(material.spriteId)
+        }
+        defaultSprite = sprites["*"] ?: sprites.values.firstOrNull()
+        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites, blockTransformation)
+        return this
+    }
+    *///?} else {
+    /*override fun getModelDependencies(): Collection<Identifier> {
         return emptyList() // 模型不依赖于其他模型。
     }
 
@@ -267,6 +335,7 @@ class BedrockGeometryModel private constructor(
         mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites, blockTransformation)
         return this
     }
+    *///?}
 
     override fun getQuads(state: BlockState?, face: Direction?, random: Random?): MutableList<BakedQuad> {
         return mutableListOf() // 不需要，因为我们使用的是 FabricBakedModel
@@ -276,9 +345,11 @@ class BedrockGeometryModel private constructor(
         return true // 环境光遮蔽：我们希望方块在有临近方块时显示阴影
     }
 
-    override fun isBuiltin(): Boolean {
+    //? if <1.21.4 {
+    /*override fun isBuiltin(): Boolean {
         return false
     }
+    *///?}
 
     override fun hasDepth(): Boolean {
         return false
@@ -296,31 +367,69 @@ class BedrockGeometryModel private constructor(
         return false // false 以触发 FabricBakedModel 渲染
     }
 
-    override fun emitBlockQuads(blockRenderView: BlockRenderView, blockState: BlockState, blockPos: BlockPos, supplier: Supplier<Random>, renderContext: RenderContext) {
+    //? if >=1.21.4 {
+    override fun emitBlockQuads(
+        emitter: QuadEmitter,
+        blockView: BlockRenderView,
+        state: BlockState,
+        pos: BlockPos,
+        randomSupplier: Supplier<Random>,
+        cullTest: Predicate<Direction?>
+    ) {
+        mesh?.outputTo(emitter)
+    }
+
+    override fun emitItemQuads(emitter: QuadEmitter, randomSupplier: Supplier<Random>) {
+        mesh?.outputTo(emitter)
+    }
+    //?} else {
+    /*override fun emitBlockQuads(blockRenderView: BlockRenderView, blockState: BlockState, blockPos: BlockPos, supplier: Supplier<Random>, renderContext: RenderContext) {
         mesh?.outputTo(renderContext.emitter)
     }
 
     override fun emitItemQuads(itemStack: ItemStack, supplier: Supplier<Random>, renderContext: RenderContext) {
         mesh?.outputTo(renderContext.emitter)
     }
+    *///?}
 
     override fun getTransformation(): ModelTransformation {
         return transformation
     }
 
-    override fun getOverrides(): ModelOverrideList {
+    //? if <1.21.4 {
+    /*override fun getOverrides(): ModelOverrideList {
         return ModelOverrideList.EMPTY
     }
+    *///?}
 
     // EntityModel methods
 
-    override fun render(matrices: MatrixStack, vertices: VertexConsumer, light: Int, overlay: Int, color: Int) {
+    //? if <1.21.2 {
+    /*override fun render(matrices: MatrixStack, vertices: VertexConsumer, light: Int, overlay: Int, color: Int) {
         val alpha = ((color shr 24) and 0xFF) / 255.0f
         val red = ((color shr 16) and 0xFF) / 255.0f
         val green = ((color shr 8) and 0xFF) / 255.0f
         val blue = (color and 0xFF) / 255.0f
+        // 使用我们自定义的ModelPart进行渲染
         modelPart.render(matrices, vertices, light, overlay, red, green, blue, alpha)
     }
+    *///?}
+
+    //? if >=1.21.2 {
+    /**
+     * 在1.21.2+中，render()方法是final的，不能被override
+     * 我们需要通过其他方式来渲染自定义的ModelPart
+     * 这个方法供外部调用来渲染模型
+     */
+    fun renderCustom(matrices: MatrixStack, vertices: VertexConsumer, light: Int, overlay: Int, color: Int) {
+        val alpha = ((color shr 24) and 0xFF) / 255.0f
+        val red = ((color shr 16) and 0xFF) / 255.0f
+        val green = ((color shr 8) and 0xFF) / 255.0f
+        val blue = (color and 0xFF) / 255.0f
+        // 使用我们自定义的ModelPart进行渲染
+        modelPart.render(matrices, vertices, light, overlay, red, green, blue, alpha)
+    }
+    //?}
 
     /**
      * 应用动画变换到骨骼
@@ -388,7 +497,76 @@ class BedrockGeometryModel private constructor(
         }
     }
 
-    override fun setAngles(entity: EntityDataDriven?, limbAngle: Float, limbDistance: Float, animationProgress: Float, headYaw: Float, headPitch: Float) {
+    //? if >=1.21.2 {
+    override fun setAngles(state: EntityDataDrivenRenderState) {
+        // 从state中获取动画管理器
+        val animManager = state.animationManager as? EntityAnimationManager
+        if (animManager == null) {
+            // 没有动画管理器，跳过动画处理
+            return
+        }
+
+        // 更新动画（EntityAnimationManager 内部计算真实帧间隔）
+        animManager.tick()
+
+        // 重置所有骨骼到原始状态
+        for ((boneName, bone) in boneMap) {
+            val original = originalBoneTransforms[boneName]
+            if (original != null) {
+                bone.pivotX = original.pivotX
+                bone.pivotY = original.pivotY
+                bone.pivotZ = original.pivotZ
+                bone.pitch = original.pitch
+                bone.yaw = original.yaw
+                bone.roll = original.roll
+            } else {
+                bone.pitch = 0.0
+                bone.yaw = 0.0
+                bone.roll = 0.0
+            }
+            bone.resetScale()
+            bone.resetAnimOffset()  // 重置动画位移
+        }
+
+        // 应用骨骼变换
+        for ((boneName, bone) in boneMap) {
+            val transform = animManager.getBoneTransform(boneName) ?: continue
+            val original = originalBoneTransforms[boneName]
+
+            // 应用旋转（基岩版角度单位是度，需要转换为弧度）
+            // 动画旋转是相对于原始旋转的增量
+            transform.rotation?.let { rot ->
+                if (rot.size >= 3) {
+                    val originalPitch = original?.pitch ?: 0.0
+                    val originalYaw = original?.yaw ?: 0.0
+                    val originalRoll = original?.roll ?: 0.0
+                    bone.pitch = originalPitch + Math.toRadians(rot[0])
+                    bone.yaw = originalYaw + Math.toRadians(rot[1])
+                    bone.roll = originalRoll + Math.toRadians(rot[2])
+                }
+            }
+
+            // 应用位移（使用animOffset，不修改pivot）
+            // 基岩版position动画是相对于父骨骼的位移，pivot保持不变用于旋转中心
+            transform.position?.let { pos ->
+                if (pos.size >= 3) {
+                    bone.setAnimOffset(pos[0], -pos[1], pos[2])
+                }
+            }
+
+            // 应用缩放
+            transform.scale?.let { scale ->
+                if (scale.size >= 3) {
+                    bone.setScale(scale[0], scale[1], scale[2])
+                } else if (scale.size == 1) {
+                    // 统一缩放
+                    bone.setScale(scale[0], scale[0], scale[0])
+                }
+            }
+        }
+    }
+    //?} else {
+    /*override fun setAngles(entity: EntityDataDriven?, limbAngle: Float, limbDistance: Float, animationProgress: Float, headYaw: Float, headPitch: Float) {
         if (entity == null) return
 
         // 懒加载创建动画管理器
@@ -469,5 +647,6 @@ class BedrockGeometryModel private constructor(
             }
         }
     }
+    *///?}
 
 }

@@ -4,6 +4,9 @@ import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.minecraft.block.BlockState
 import net.minecraft.block.entity.BlockEntity
 import net.minecraft.block.entity.BlockEntityType
+//? if >=1.21.2 {
+import net.fabricmc.fabric.api.`object`.builder.v1.block.entity.FabricBlockEntityTypeBuilder
+//?}
 import net.minecraft.util.Identifier
 import net.minecraft.util.math.BlockPos
 
@@ -23,10 +26,17 @@ class BlockEntityDataDriven(
     companion object {
         fun buildBlockEntityType(identifier: Identifier): BlockEntityType<BlockEntityDataDriven> {
             val block = BedrockAddonsRegistry.blocks[identifier]!!
-            return BlockEntityType.Builder.create({ pos, state ->
+            //? if >=1.21.2 {
+            return FabricBlockEntityTypeBuilder.create({ pos, state ->
                 val type = BedrockAddonsRegistry.blockEntities[identifier]!!
                 BlockEntityDataDriven(identifier, type, pos, state)
             }, block).build()
+            //?} else {
+            /*return BlockEntityType.Builder.create({ pos, state ->
+                val type = BedrockAddonsRegistry.blockEntities[identifier]!!
+                BlockEntityDataDriven(identifier, type, pos, state)
+            }, block).build()
+            *///?}
         }
     }
 }

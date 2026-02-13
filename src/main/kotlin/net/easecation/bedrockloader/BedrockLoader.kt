@@ -15,6 +15,9 @@ import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents.ModifyEntries
 import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.block.Block
 import net.minecraft.block.AbstractBlock
+//? if >=1.21.4 {
+import net.minecraft.block.Blocks
+//?}
 import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
@@ -103,9 +106,19 @@ object BedrockLoader : ModInitializer {
 
 		// 注册占位方块
 		for (i in 0 until placeholdersNeeded) {
-			val placeholderBlock = Block(AbstractBlock.Settings.create())
 			val placeholderId = Identifier.of("bedrock-loader", "placeholder_$i")
+			//? if >=1.21.4 {
+			// 1.21.4: 对于简单的占位方块，使用传统的Registry.register()
+			// 先创建registry key，然后创建Block，最后注册
+			val registryKey = RegistryKey.of(Registries.BLOCK.key, placeholderId)
+			val settings = AbstractBlock.Settings.create().registryKey(registryKey)
+			val placeholderBlock = Block(settings)
 			Registry.register(Registries.BLOCK, placeholderId, placeholderBlock)
+			logger.debug("Registered placeholder block: $placeholderId -> $placeholderBlock")
+			//?} else {
+			/*val placeholderBlock = Block(AbstractBlock.Settings.create())
+			Registry.register(Registries.BLOCK, placeholderId, placeholderBlock)
+			*///?}
 		}
 
 		// 重新计算最大 ID

@@ -6,8 +6,17 @@ import net.easecation.bedrockloader.bedrock.block.component.ComponentTransformat
 import net.easecation.bedrockloader.block.BlockContext
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistryClient
-import net.fabricmc.fabric.api.client.model.loading.v1.DelegatingUnbakedModel
+//? if <1.21.4 {
+/*import net.fabricmc.fabric.api.client.model.loading.v1.DelegatingUnbakedModel
+*///?}
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin
+//? if >=1.21.4 {
+import net.minecraft.block.BlockState
+import net.minecraft.client.render.model.BakedModel
+import net.minecraft.client.render.model.Baker
+import net.minecraft.client.render.model.GroupableModel
+import net.minecraft.client.render.model.ResolvableModel
+//?}
 import net.minecraft.client.render.model.ModelRotation
 import net.minecraft.client.render.model.json.JsonUnbakedModel
 import net.minecraft.util.Identifier
@@ -59,8 +68,13 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
         return modelRotation
     }
 
-    override fun onInitializeModelLoader(pluginContext: ModelLoadingPlugin.Context) {
-        pluginContext.resolveModel().register { context ->
+    //? if >=1.21.2 {
+    override fun initialize(pluginContext: ModelLoadingPlugin.Context) {
+    //?} else {
+    /*override fun onInitializeModelLoader(pluginContext: ModelLoadingPlugin.Context) {
+    *///?}
+        //? if <1.21.4 {
+        /*pluginContext.resolveModel().register { context ->
             val id = context.id()
             when {
                 id.path.startsWith("block/") -> {
@@ -74,6 +88,42 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                 else -> null
             }
         }
+        *///?} else {
+        pluginContext.modifyModelOnLoad().register { model, context ->
+            val id = context.id()
+            val customModel = when {
+                id.path.startsWith("block/") -> {
+                    val identifier = Identifier.of(id.namespace, id.path.substring("block/".length))
+                    BedrockAddonsRegistryClient.blockModels[identifier]
+                }
+                id.path.startsWith("item/") -> {
+                    val identifier = Identifier.of(id.namespace, id.path.substring("item/".length))
+                    BedrockAddonsRegistryClient.itemModels[identifier]
+                }
+                else -> null
+            }
+            when {
+                customModel is net.minecraft.client.render.model.UnbakedModel -> customModel
+                customModel is BedrockGeometryModel -> {
+                    // 将 GroupableModel 包装为 UnbakedModel 以供物品模型使用
+                    object : net.minecraft.client.render.model.UnbakedModel {
+                        override fun resolve(resolver: ResolvableModel.Resolver) {}
+                        override fun bake(
+                            textures: net.minecraft.client.render.model.ModelTextures,
+                            baker: Baker,
+                            settings: net.minecraft.client.render.model.ModelBakeSettings,
+                            ambientOcclusion: Boolean,
+                            isSideLit: Boolean,
+                            transformation: net.minecraft.client.render.model.json.ModelTransformation
+                        ): BakedModel? {
+                            return customModel.bake(baker)
+                        }
+                    }
+                }
+                else -> model
+            }
+        }
+        //?}
 
         BedrockAddonsRegistry.blocks.forEach { (id, v) ->
             val block = v as? BlockContext.BlockDataDriven ?: return@forEach
@@ -85,7 +135,17 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                 // 但 Minecraft 仍然要求每个 blockstate 变体都有对应的模型
                 if (isBlockEntity) {
                     block.stateManager.states.forEach { state ->
-                        context.setModel(state, DelegatingUnbakedModel(Identifier.of("block/air")))
+                        //? if <1.21.4 {
+                        /*context.setModel(state, net.fabricmc.fabric.api.client.model.loading.v1.DelegatingUnbakedModel(Identifier.of("block/air")))
+                        *///?} else {
+                        context.setModel(state, object : GroupableModel {
+                            override fun resolve(resolver: ResolvableModel.Resolver) {
+                                resolver.resolve(Identifier.of("block/air"))
+                            }
+                            override fun bake(baker: Baker): BakedModel? = baker.bake(Identifier.of("block/air"), ModelRotation.X0_Y0)
+                            override fun getEqualityGroup(state: BlockState): Any = "air"
+                        })
+                        //?}
                     }
                     return@registerBlockStateResolver
                 }
@@ -160,7 +220,27 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
 
                         else -> unbakedModel
                     }
-                    context.setModel(state, finalModel)
+                    //? if <1.21.4 {
+                    /*context.setModel(state, finalModel)
+                    *///?} else {
+                    val groupableModel: GroupableModel = when (finalModel) {
+                        is BedrockGeometryModel -> finalModel
+                        else -> {
+                            val modelId = Identifier.of(id.namespace, "block/${id.path}")
+                            val rotation = if (finalModel is RotatedJsonModel) {
+                                finalModel.rotation
+                            } else ModelRotation.X0_Y0
+                            object : GroupableModel {
+                                override fun resolve(resolver: ResolvableModel.Resolver) {
+                                    resolver.resolve(modelId)
+                                }
+                                override fun bake(baker: Baker): BakedModel? = baker.bake(modelId, rotation)
+                                override fun getEqualityGroup(state: BlockState): Any = Pair(modelId, rotation)
+                            }
+                        }
+                    }
+                    context.setModel(state, groupableModel)
+                    //?}
                 }
             }
         }
