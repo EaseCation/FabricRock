@@ -13,6 +13,9 @@ import net.minecraft.client.render.block.entity.BlockEntityRendererFactory
 import net.minecraft.client.util.math.MatrixStack
 import net.minecraft.util.Identifier
 import net.minecraft.util.math.RotationAxis
+//? if >=1.21.5 {
+import net.minecraft.util.math.Vec3d
+//?}
 
 /**
  * 方块实体渲染器
@@ -65,7 +68,18 @@ class BlockEntityDataDrivenRenderer(
         }
     }
 
+    //? if >=1.21.5 {
     override fun render(
+        entity: BlockEntityDataDriven,
+        tickDelta: Float,
+        matrices: MatrixStack,
+        vertexConsumers: VertexConsumerProvider,
+        light: Int,
+        overlay: Int,
+        cameraPos: Vec3d
+    ) {
+    //?} else {
+    /*override fun render(
         entity: BlockEntityDataDriven,
         tickDelta: Float,
         matrices: MatrixStack,
@@ -73,6 +87,7 @@ class BlockEntityDataDrivenRenderer(
         light: Int,
         overlay: Int
     ) {
+    *///?}
         val blockState = entity.cachedState ?: return
         val block = blockState.block as? BlockContext.BlockDataDriven ?: return
         val renderLayer = getRenderLayer()

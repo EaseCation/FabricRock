@@ -10,13 +10,22 @@ import net.easecation.bedrockloader.loader.BedrockAddonsRegistryClient
 /*import net.fabricmc.fabric.api.client.model.loading.v1.DelegatingUnbakedModel
 *///?}
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin
-//? if >=1.21.4 {
+//? if >=1.21.5 {
 import net.minecraft.block.BlockState
+import net.minecraft.client.render.model.Baker
+import net.minecraft.client.render.model.BlockStateModel
+import net.minecraft.client.render.model.ResolvableModel
+import net.minecraft.client.render.model.SimpleBlockStateModel
+import net.minecraft.client.render.model.SimpleModel
+import net.minecraft.client.render.model.json.ModelVariant
+import net.minecraft.util.math.AxisRotation
+//?} elif >=1.21.4 {
+/*import net.minecraft.block.BlockState
 import net.minecraft.client.render.model.BakedModel
 import net.minecraft.client.render.model.Baker
 import net.minecraft.client.render.model.GroupableModel
 import net.minecraft.client.render.model.ResolvableModel
-//?}
+*///?}
 import net.minecraft.client.render.model.ModelRotation
 import net.minecraft.client.render.model.json.JsonUnbakedModel
 import net.minecraft.util.Identifier
@@ -88,8 +97,8 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                 else -> null
             }
         }
-        *///?} else {
-        pluginContext.modifyModelOnLoad().register { model, context ->
+        *///?} elif <1.21.5 {
+        /*pluginContext.modifyModelOnLoad().register { model, context ->
             val id = context.id()
             val customModel = when {
                 id.path.startsWith("block/") -> {
@@ -105,7 +114,6 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
             when {
                 customModel is net.minecraft.client.render.model.UnbakedModel -> customModel
                 customModel is BedrockGeometryModel -> {
-                    // 将 GroupableModel 包装为 UnbakedModel 以供物品模型使用
                     object : net.minecraft.client.render.model.UnbakedModel {
                         override fun resolve(resolver: ResolvableModel.Resolver) {}
                         override fun bake(
@@ -123,6 +131,20 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                 else -> model
             }
         }
+        *///?}
+
+        //? if >=1.21.5 {
+        // 1.21.5+: 标准立方体和平面图标物品通过物理 models/item/*.json 文件加载（原版管线处理）
+        // 仅 BedrockGeometryModel 类型需要通过 modifyItemModelBeforeBake 拦截
+        pluginContext.modifyItemModelBeforeBake().register { model, context ->
+            val itemId = context.itemId()
+            val customModel = BedrockAddonsRegistryClient.itemModels[itemId]
+            if (customModel is BedrockGeometryModel) {
+                BedrockItemModelUnbaked(customModel)
+            } else {
+                model
+            }
+        }
         //?}
 
         BedrockAddonsRegistry.blocks.forEach { (id, v) ->
@@ -137,14 +159,16 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                     block.stateManager.states.forEach { state ->
                         //? if <1.21.4 {
                         /*context.setModel(state, net.fabricmc.fabric.api.client.model.loading.v1.DelegatingUnbakedModel(Identifier.of("block/air")))
-                        *///?} else {
-                        context.setModel(state, object : GroupableModel {
+                        *///?} elif <1.21.5 {
+                        /*context.setModel(state, object : GroupableModel {
                             override fun resolve(resolver: ResolvableModel.Resolver) {
                                 resolver.resolve(Identifier.of("block/air"))
                             }
                             override fun bake(baker: Baker): BakedModel? = baker.bake(Identifier.of("block/air"), ModelRotation.X0_Y0)
                             override fun getEqualityGroup(state: BlockState): Any = "air"
                         })
+                        *///?} else {
+                        context.setModel(state, SimpleBlockStateModel.Unbaked(ModelVariant(Identifier.of("block/air"))).cached())
                         //?}
                     }
                     return@registerBlockStateResolver
@@ -199,30 +223,42 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                         baseUnbakedModel
                     }
 
-                    // 应用transformation和材质变体
-                    val finalModel = when (unbakedModel) {
-                        // BedrockGeometryModel: 使用现有的变体系统（支持任意角度）
+                    //? if >=1.21.5 {
+                    val unbakedGrouped: BlockStateModel.UnbakedGrouped = when (unbakedModel) {
                         is BedrockGeometryModel -> unbakedModel.getModelVariant(block, state)
-
-                        // JsonUnbakedModel: 应用 ModelRotation（仅支持90度增量）
+                        else -> {
+                            val modelId = Identifier.of(id.namespace, "block/${id.path}")
+                            val components = block.getComponents(state)
+                            val transformation = components?.minecraftTransformation
+                            var variant = ModelVariant(modelId)
+                            if (transformation != null) {
+                                val rotation = transformationToModelRotation(transformation)
+                                variant = when (rotation) {
+                                    ModelRotation.X0_Y90 -> variant.withRotationY(AxisRotation.R90)
+                                    ModelRotation.X0_Y180 -> variant.withRotationY(AxisRotation.R180)
+                                    ModelRotation.X0_Y270 -> variant.withRotationY(AxisRotation.R270)
+                                    else -> variant
+                                }
+                            }
+                            SimpleBlockStateModel.Unbaked(variant).cached()
+                        }
+                    }
+                    context.setModel(state, unbakedGrouped)
+                    //?} elif >=1.21.4 {
+                    /*val finalModel = when (unbakedModel) {
+                        is BedrockGeometryModel -> unbakedModel.getModelVariant(block, state)
                         is JsonUnbakedModel -> {
                             val components = block.getComponents(state)
                             val transformation = components?.minecraftTransformation
-
                             if (transformation != null) {
-                                // 将transformation转换为ModelRotation并包装
                                 val rotation = transformationToModelRotation(transformation)
                                 RotatedJsonModel(unbakedModel, rotation)
                             } else {
                                 unbakedModel
                             }
                         }
-
                         else -> unbakedModel
                     }
-                    //? if <1.21.4 {
-                    /*context.setModel(state, finalModel)
-                    *///?} else {
                     val groupableModel: GroupableModel = when (finalModel) {
                         is BedrockGeometryModel -> finalModel
                         else -> {
@@ -240,7 +276,23 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                         }
                     }
                     context.setModel(state, groupableModel)
-                    //?}
+                    *///?} else {
+                    /*val finalModel = when (unbakedModel) {
+                        is BedrockGeometryModel -> unbakedModel.getModelVariant(block, state)
+                        is JsonUnbakedModel -> {
+                            val components = block.getComponents(state)
+                            val transformation = components?.minecraftTransformation
+                            if (transformation != null) {
+                                val rotation = transformationToModelRotation(transformation)
+                                RotatedJsonModel(unbakedModel, rotation)
+                            } else {
+                                unbakedModel
+                            }
+                        }
+                        else -> unbakedModel
+                    }
+                    context.setModel(state, finalModel)
+                    *///?}
                 }
             }
         }

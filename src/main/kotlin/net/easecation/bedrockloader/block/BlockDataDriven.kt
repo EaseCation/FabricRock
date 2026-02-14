@@ -90,7 +90,8 @@ data class BlockContext(
             val components = behaviour.components
 
             // 复制baseSettings并应用自定义配置
-            val settings = baseSettings.hardness(4.0f)  // TODO hardness
+            val hardness = components.minecraftDestructibleByMining?.seconds_to_destroy ?: 4.0f
+            val settings = baseSettings.hardness(hardness).resistance(hardness)
 
             // 应用所有自定义设置（与calculateSettings()相同的逻辑）
             val hasCustomGeometry = components.minecraftGeometry?.let { geometry ->
@@ -124,6 +125,10 @@ data class BlockContext(
                         }
                     }
                 }
+            }
+
+            components.minecraftLightEmission?.let {
+                settings.luminance { _ -> it }
             }
 
             components.minecraftMapColor?.let { mapColor ->
@@ -268,7 +273,8 @@ data class BlockContext(
             }
 
             fun calculateSettings(): Settings {
-                val settings = Settings.create().hardness(4.0f)  // TODO hardness
+                val hardness = components.minecraftDestructibleByMining?.seconds_to_destroy ?: 4.0f
+                val settings = Settings.create().hardness(hardness).resistance(hardness)
 
                 // 面剔除控制：根据是否有自定义 geometry、透明渲染方法或方块实体决定
                 // Full block（无自定义 geometry 或 minecraft:geometry.full_block）：默认启用面剔除，确保性能优化
@@ -411,12 +417,18 @@ data class BlockContext(
         fun applyFaceDirectionalToBox(state: BlockState, box: Box): Box {
             val faceDirectional = getComponents(state).neteaseFaceDirectional ?: return box
             val direction = when (faceDirectional.type) {
-                //? if >=1.21.4 {
-                FaceDirectionalType.direction -> Direction.byId(state[DIRECTION] + 2)  // 水平方向从NORTH=2开始
-                //?} else {
+                //? if >=1.21.5 {
+                FaceDirectionalType.direction -> Direction.byIndex(state[DIRECTION] + 2)  // 水平方向从NORTH=2开始
+                //?} elif >=1.21.4 {
+                /*FaceDirectionalType.direction -> Direction.byId(state[DIRECTION] + 2)  // 水平方向从NORTH=2开始
+                *///?} else {
                 /*FaceDirectionalType.direction -> Direction.fromHorizontal(state[DIRECTION])
                 *///?}
-                FaceDirectionalType.facing_direction -> Direction.byId(state[FACING_DIRECTION])
+                //? if >=1.21.5 {
+                FaceDirectionalType.facing_direction -> Direction.byIndex(state[FACING_DIRECTION])
+                //?} else {
+                /*FaceDirectionalType.facing_direction -> Direction.byId(state[FACING_DIRECTION])
+                *///?}
             }
             val quaternion = getFaceQuaternion(direction)
             // 使用四元数围绕方块中心 (0.5, 0.5, 0.5) 旋转 Box
@@ -447,12 +459,18 @@ data class BlockContext(
         fun applyFaceDirectional(state: BlockState, position: Matrix4f, normal: Matrix3f) {
             val faceDirectional = getComponents(state).neteaseFaceDirectional ?: return
             val direction = when (faceDirectional.type) {
-                //? if >=1.21.4 {
-                FaceDirectionalType.direction -> Direction.byId(state[DIRECTION] + 2)  // 水平方向从NORTH=2开始
-                //?} else {
+                //? if >=1.21.5 {
+                FaceDirectionalType.direction -> Direction.byIndex(state[DIRECTION] + 2)  // 水平方向从NORTH=2开始
+                //?} elif >=1.21.4 {
+                /*FaceDirectionalType.direction -> Direction.byId(state[DIRECTION] + 2)  // 水平方向从NORTH=2开始
+                *///?} else {
                 /*FaceDirectionalType.direction -> Direction.fromHorizontal(state[DIRECTION])
                 *///?}
-                FaceDirectionalType.facing_direction -> Direction.byId(state[FACING_DIRECTION])
+                //? if >=1.21.5 {
+                FaceDirectionalType.facing_direction -> Direction.byIndex(state[FACING_DIRECTION])
+                //?} else {
+                /*FaceDirectionalType.facing_direction -> Direction.byId(state[FACING_DIRECTION])
+                *///?}
             }
             val faceQuaternion = getFaceQuaternion(direction)
             position.rotateAround(faceQuaternion, 0.5f, 0.5f, 0.5f)
@@ -521,13 +539,19 @@ data class BlockContext(
                     }
                 )
                 .withIfExists(DIRECTION,
-                    //? if >=1.21.4 {
-                    ctx.horizontalPlayerFacing.opposite.id - 2  // 水平方向从NORTH=2开始,减2得到0-3索引
-                    //?} else {
+                    //? if >=1.21.5 {
+                    ctx.horizontalPlayerFacing.opposite.index - 2  // 水平方向从NORTH=2开始,减2得到0-3索引
+                    //?} elif >=1.21.4 {
+                    /*ctx.horizontalPlayerFacing.opposite.id - 2  // 水平方向从NORTH=2开始,减2得到0-3索引
+                    *///?} else {
                     /*ctx.horizontalPlayerFacing.opposite.horizontal
                     *///?}
                 )
-                .withIfExists(FACING_DIRECTION, ctx.playerLookDirection.opposite.id)
+                //? if >=1.21.5 {
+                .withIfExists(FACING_DIRECTION, ctx.playerLookDirection.opposite.index)
+                //?} else {
+                /*.withIfExists(FACING_DIRECTION, ctx.playerLookDirection.opposite.id)
+                *///?}
         }
 
         override fun appendProperties(builder: StateManager.Builder<Block, BlockState>) {

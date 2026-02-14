@@ -16,7 +16,11 @@ import net.minecraft.client.render.entity.state.EntityRenderState
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.fabricmc.fabric.api.renderer.v1.mesh.Mesh
-import net.fabricmc.fabric.api.renderer.v1.model.FabricBakedModel
+//? if >=1.21.5 {
+import net.fabricmc.fabric.api.renderer.v1.model.FabricBlockStateModel
+//?} else {
+/*import net.fabricmc.fabric.api.renderer.v1.model.FabricBakedModel
+*///?}
 import net.fabricmc.fabric.api.renderer.v1.model.ModelHelper
 //? if <1.21.4 {
 /*import net.fabricmc.fabric.api.renderer.v1.render.RenderContext
@@ -73,23 +77,32 @@ class BedrockGeometryModel private constructor(
     private val boneMap: Map<String, ModelPart> = emptyMap(),
     // 骨骼原始变换值（用于动画重置）
     private val originalBoneTransforms: Map<String, OriginalBoneTransform> = emptyMap()
-//? if >=1.21.2 {
-) : EntityModel<EntityDataDrivenRenderState>(createMinecraftModelPart()), /*? if >=1.21.4 {*/ GroupableModel, /*?} else {*/ /*UnbakedModel, *//*?}*/ BakedModel, FabricBakedModel {
-
+//? if >=1.21.5 {
+) : EntityModel<EntityDataDrivenRenderState>(createMinecraftModelPart()), BlockStateModel.UnbakedGrouped, BlockStateModel, FabricBlockStateModel {
     companion object {
-        /**
-         * 创建一个空的Minecraft ModelPart用于EntityModel构造函数
-         * 在1.21.2+中，EntityModel需要一个ModelPart参数
-         */
         private fun createMinecraftModelPart(): net.minecraft.client.model.ModelPart {
             return net.minecraft.client.model.ModelPart(emptyList(), emptyMap())
         }
-//?} else {
+//?} elif >=1.21.4 {
+/*) : EntityModel<EntityDataDrivenRenderState>(createMinecraftModelPart()), GroupableModel, BakedModel, FabricBakedModel {
+    companion object {
+        private fun createMinecraftModelPart(): net.minecraft.client.model.ModelPart {
+            return net.minecraft.client.model.ModelPart(emptyList(), emptyMap())
+        }
+*///?} elif >=1.21.2 {
+/*) : EntityModel<EntityDataDrivenRenderState>(createMinecraftModelPart()), UnbakedModel, BakedModel, FabricBakedModel {
+    companion object {
+        private fun createMinecraftModelPart(): net.minecraft.client.model.ModelPart {
+            return net.minecraft.client.model.ModelPart(emptyList(), emptyMap())
+        }
+*///?} else {
 /*) : EntityModel<EntityDataDriven>(), UnbakedModel, BakedModel, FabricBakedModel {
-
     companion object {
 *///?}
-        val MODEL_TRANSFORM_BLOCK: ModelTransformation = ModelTransformation(
+        //? if >=1.21.5 {
+        val MODEL_TRANSFORM_BLOCK: ModelTransformation = ModelTransformation.NONE
+        //?} else {
+        /*val MODEL_TRANSFORM_BLOCK: ModelTransformation = ModelTransformation(
             ModelHelper.TRANSFORM_BLOCK_3RD_PERSON_RIGHT,
             ModelHelper.TRANSFORM_BLOCK_3RD_PERSON_RIGHT,
             ModelHelper.TRANSFORM_BLOCK_1ST_PERSON_LEFT,
@@ -99,6 +112,7 @@ class BedrockGeometryModel private constructor(
             ModelHelper.TRANSFORM_BLOCK_GROUND,
             ModelHelper.TRANSFORM_BLOCK_FIXED
         )
+        *///?}
     }
 
     class Factory(private val bedrockModel: GeometryDefinition.Model) {
@@ -273,13 +287,30 @@ class BedrockGeometryModel private constructor(
         )
     }
 
-    //? if >=1.21.4 {
+    //? if >=1.21.5 {
     override fun resolve(resolver: ResolvableModel.Resolver) {
         BedrockLoader.logger.info("Resolving model... ${bedrockModel.description.identifier}")
-        // resolve方法用于预加载依赖，我们在bake时加载sprites
     }
 
-    // GroupableModel implementation
+    // BlockStateModel.UnbakedGrouped implementation
+    override fun bake(state: BlockState, baker: Baker): BlockStateModel {
+        BedrockLoader.logger.info("Baking model (BlockStateModel.UnbakedGrouped)... ${bedrockModel.description.identifier}")
+        val spriteGetter = baker.getSpriteGetter()
+        val model = object : SimpleModel { override fun name() = bedrockModel.description.identifier ?: "bedrock_geometry" }
+        materials.forEach { (key, material) ->
+            sprites[key] = spriteGetter.get(material.spriteId, model)
+        }
+        defaultSprite = sprites["*"] ?: sprites.values.firstOrNull()
+        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites, blockTransformation)
+        return this
+    }
+
+    override fun getEqualityGroup(state: BlockState): Any = this
+    //?} elif >=1.21.4 {
+    /*override fun resolve(resolver: ResolvableModel.Resolver) {
+        BedrockLoader.logger.info("Resolving model... ${bedrockModel.description.identifier}")
+    }
+
     override fun bake(baker: Baker): BakedModel {
         BedrockLoader.logger.info("Baking model (GroupableModel)... ${bedrockModel.description.identifier}")
         val spriteGetter = baker.getSpriteGetter()
@@ -292,7 +323,7 @@ class BedrockGeometryModel private constructor(
     }
 
     override fun getEqualityGroup(state: BlockState): Any = this
-    //?} elif >=1.21.2 {
+    *///?} elif >=1.21.2 {
     /*override fun resolve(context: UnbakedModel.Resolver) {
         BedrockLoader.logger.info("Resolving model... ${bedrockModel.description.identifier}")
         // resolve方法用于预加载依赖，我们在bake时加载sprites
@@ -337,37 +368,36 @@ class BedrockGeometryModel private constructor(
     }
     *///?}
 
-    override fun getQuads(state: BlockState?, face: Direction?, random: Random?): MutableList<BakedQuad> {
-        return mutableListOf() // 不需要，因为我们使用的是 FabricBakedModel
+    //? if >=1.21.5 {
+    fun getModelPartForBaking(): ModelPart = modelPart
+    //?}
+
+    //? if >=1.21.5 {
+    // BlockStateModel implementation
+    override fun addParts(random: Random, parts: MutableList<BlockModelPart>) {
+        // Empty - we use FRAPI for rendering
     }
 
-    override fun useAmbientOcclusion(): Boolean {
-        return true // 环境光遮蔽：我们希望方块在有临近方块时显示阴影
-    }
+    override fun particleSprite(): Sprite = defaultSprite!!
 
-    //? if <1.21.4 {
-    /*override fun isBuiltin(): Boolean {
-        return false
+    // FabricBlockStateModel implementation
+    override fun emitQuads(
+        emitter: QuadEmitter,
+        blockView: BlockRenderView,
+        pos: BlockPos,
+        state: BlockState,
+        random: Random,
+        cullTest: Predicate<Direction?>
+    ) {
+        mesh?.outputTo(emitter)
     }
-    *///?}
-
-    override fun hasDepth(): Boolean {
-        return false
-    }
-
-    override fun isSideLit(): Boolean {
-        return true
-    }
-
-    override fun getParticleSprite(): Sprite {
-        return defaultSprite!!
-    }
-
-    override fun isVanillaAdapter(): Boolean {
-        return false // false 以触发 FabricBakedModel 渲染
-    }
-
-    //? if >=1.21.4 {
+    //?} elif >=1.21.4 {
+    /*override fun getQuads(state: BlockState?, face: Direction?, random: Random?): MutableList<BakedQuad> = mutableListOf()
+    override fun useAmbientOcclusion(): Boolean = true
+    override fun hasDepth(): Boolean = false
+    override fun isSideLit(): Boolean = true
+    override fun getParticleSprite(): Sprite = defaultSprite!!
+    override fun isVanillaAdapter(): Boolean = false
     override fun emitBlockQuads(
         emitter: QuadEmitter,
         blockView: BlockRenderView,
@@ -375,31 +405,21 @@ class BedrockGeometryModel private constructor(
         pos: BlockPos,
         randomSupplier: Supplier<Random>,
         cullTest: Predicate<Direction?>
-    ) {
-        mesh?.outputTo(emitter)
-    }
-
-    override fun emitItemQuads(emitter: QuadEmitter, randomSupplier: Supplier<Random>) {
-        mesh?.outputTo(emitter)
-    }
-    //?} else {
-    /*override fun emitBlockQuads(blockRenderView: BlockRenderView, blockState: BlockState, blockPos: BlockPos, supplier: Supplier<Random>, renderContext: RenderContext) {
-        mesh?.outputTo(renderContext.emitter)
-    }
-
-    override fun emitItemQuads(itemStack: ItemStack, supplier: Supplier<Random>, renderContext: RenderContext) {
-        mesh?.outputTo(renderContext.emitter)
-    }
-    *///?}
-
-    override fun getTransformation(): ModelTransformation {
-        return transformation
-    }
-
-    //? if <1.21.4 {
-    /*override fun getOverrides(): ModelOverrideList {
-        return ModelOverrideList.EMPTY
-    }
+    ) { mesh?.outputTo(emitter) }
+    override fun emitItemQuads(emitter: QuadEmitter, randomSupplier: Supplier<Random>) { mesh?.outputTo(emitter) }
+    override fun getTransformation(): ModelTransformation = transformation
+    *///?} else {
+    /*override fun getQuads(state: BlockState?, face: Direction?, random: Random?): MutableList<BakedQuad> = mutableListOf()
+    override fun useAmbientOcclusion(): Boolean = true
+    override fun isBuiltin(): Boolean = false
+    override fun hasDepth(): Boolean = false
+    override fun isSideLit(): Boolean = true
+    override fun getParticleSprite(): Sprite = defaultSprite!!
+    override fun isVanillaAdapter(): Boolean = false
+    override fun emitBlockQuads(blockRenderView: BlockRenderView, blockState: BlockState, blockPos: BlockPos, supplier: Supplier<Random>, renderContext: RenderContext) { mesh?.outputTo(renderContext.emitter) }
+    override fun emitItemQuads(itemStack: ItemStack, supplier: Supplier<Random>, renderContext: RenderContext) { mesh?.outputTo(renderContext.emitter) }
+    override fun getTransformation(): ModelTransformation = transformation
+    override fun getOverrides(): ModelOverrideList = ModelOverrideList.EMPTY
     *///?}
 
     // EntityModel methods

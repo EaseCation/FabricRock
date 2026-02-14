@@ -84,9 +84,11 @@ class EntityDataDriven(
         }
     }
 
-    override fun getArmorItems(): MutableIterable<ItemStack> {
+    //? if <1.21.5 {
+    /*override fun getArmorItems(): MutableIterable<ItemStack> {
         return mutableListOf()
     }
+    *///?}
 
     override fun equipStack(slot: EquipmentSlot?, stack: ItemStack?) {
     }

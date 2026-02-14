@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Bedrock Loader** 是一个Minecraft Java版的Fabric模组,用于加载Minecraft基岩版(Bedrock Edition)的插件包,包括自定义方块、实体、模型和纹理等内容。
 
-- **Minecraft版本**: 1.21.1, 1.21.2, 1.21.3 (多版本支持)
+- **Minecraft版本**: 1.21.1, 1.21.2, 1.21.3, 1.21.4, 1.21.5, 1.21.6 (多版本支持)
 - **构建系统**: Gradle + Fabric Loom 1.13.6 + Stonecutter 0.4.4
 - **编程语言**: Kotlin (主要) + Java (少量Mixin)
 - **Java版本**: 21
@@ -44,6 +44,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew "Set active project to 1.21.1" && ./gradlew :1.21.1:build
 ./gradlew "Set active project to 1.21.2" && ./gradlew :1.21.2:build
 ./gradlew "Set active project to 1.21.3" && ./gradlew :1.21.3:build
+./gradlew "Set active project to 1.21.4" && ./gradlew :1.21.4:build
+./gradlew "Set active project to 1.21.5" && ./gradlew :1.21.5:build
+./gradlew "Set active project to 1.21.6" && ./gradlew :1.21.6:build
 
 # 重置到基准版本 (提交代码前必须执行)
 ./gradlew "Reset active project"
@@ -52,6 +55,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew "Set active project to 1.21.1" && ./gradlew :1.21.1:build && \
 ./gradlew "Set active project to 1.21.2" && ./gradlew :1.21.2:build && \
 ./gradlew "Set active project to 1.21.3" && ./gradlew :1.21.3:build && \
+./gradlew "Set active project to 1.21.4" && ./gradlew :1.21.4:build && \
+./gradlew "Set active project to 1.21.5" && ./gradlew :1.21.5:build && \
+./gradlew "Set active project to 1.21.6" && ./gradlew :1.21.6:build && \
 ./gradlew "Reset active project"
 ```
 
@@ -59,6 +65,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `versions/1.21.1/build/libs/bedrock-loader-mc1.21.1-1.0.0.jar`
 - `versions/1.21.2/build/libs/bedrock-loader-mc1.21.2-1.0.0.jar`
 - `versions/1.21.3/build/libs/bedrock-loader-mc1.21.3-1.0.0.jar`
+- `versions/1.21.4/build/libs/bedrock-loader-mc1.21.4-1.0.0.jar`
+- `versions/1.21.5/build/libs/bedrock-loader-mc1.21.5-1.0.0.jar`
+- `versions/1.21.6/build/libs/bedrock-loader-mc1.21.6-1.0.0.jar`
 
 ### 代码质量
 ```bash
@@ -428,7 +437,7 @@ intermediateVersionCode()
 
 **工作流程**:
 
-1. **开发时**: 在基准版本(1.21.1)上开发,使用条件注释标记版本差异
+1. **开发时**: 在基准版本(1.21.6)上开发,使用条件注释标记版本差异
 2. **切换版本**: 运行`./gradlew "Set active project to X.XX.X"`
    - Stonecutter会修改源文件,注释掉不适用的代码,取消注释适用的代码
 3. **构建**: 运行`./gradlew :X.XX.X:build`生成该版本的jar
@@ -436,7 +445,7 @@ intermediateVersionCode()
 
 **重要注意事项**:
 - ⚠️ Stonecutter会直接修改源文件,不是生成副本
-- ⚠️ 提交代码前必须重置到基准版本(1.21.1)
+- ⚠️ 提交代码前必须重置到基准版本(1.21.6)
 - ⚠️ 不要手动修改`stonecutter.gradle`中的active版本
 - ⚠️ 条件注释的格式必须严格遵守,否则Stonecutter无法识别
 
@@ -444,7 +453,9 @@ intermediateVersionCode()
 - ✅ 1.21.1 - 完全支持
 - ✅ 1.21.2 - 完全支持
 - ✅ 1.21.3 - 完全支持
-- ⚠️ 1.21.4 - 服务端支持,客户端渲染API需要额外工作
+- ✅ 1.21.4 - 完全支持
+- ✅ 1.21.5 - 完全支持
+- ✅ 1.21.6 - 完全支持 (基准版本)
 
 ### 代码风格
 
@@ -461,7 +472,7 @@ intermediateVersionCode()
 - ✅ 实体模型和组件系统
 - ✅ 资源包转换系统
 - ✅ **Permutations静态变体系统 (v1.1)**
-- ✅ **多版本支持 (1.21.1-1.21.3)**
+- ✅ **多版本支持 (1.21.1-1.21.6)**
 
 已完成功能:
 - ✅ 方块状态系统和permutations支持
@@ -491,13 +502,13 @@ Molang支持：
 - Permutations仅支持静态条件（不支持邻居查询等动态条件）
 - Molang表达式仅支持block_state查询（不支持括号分组、`!`非运算符等高级语法）
 - 部分基岩特性尚未实现
-- 1.21.4客户端渲染API需要额外适配工作
+- 1.21.5/1.21.6运行时功能验证尚未完成
 
 ## 多版本支持详情
 
 ### API差异适配
 
-项目使用Stonecutter条件编译处理不同Minecraft版本间的API差异。
+项目使用Stonecutter条件编译处理不同Minecraft版本间的API差异。主要分界点: `>=1.21.2`, `>=1.21.4`, `>=1.21.5`, `>=1.21.6`。
 
 **1.21.2+ 主要API变化**:
 
@@ -531,13 +542,32 @@ Molang支持：
 - `Direction.horizontal`属性移除,使用`Direction.Type.HORIZONTAL`
 - `SpawnEggItem`构造函数参数变化
 
+**1.21.5+ 主要API变化**:
+- `Direction.byId()`→`Direction.byIndex()`, `.id`→`.index`
+- `LivingEntity.getArmorItems()`移除
+- `BlockEntityRenderer.render()`新增`cameraPos: Vec3d`参数
+- 模型系统重构: `BakedModel`移除,`GroupableModel`→`BlockStateModel.UnbakedGrouped`
+- `FabricBakedModel`→`FabricBlockStateModel`(emitBlockQuads→emitQuads,参数变化)
+- `Baker.bake()`→`Baker.getModel()`,`getSpriteGetter()`返回`ErrorCollectingSpriteGetter`
+- `UnbakedModel`变为数据接口(不再有bake方法)
+- `JsonUnbakedModel`构造函数参数顺序完全改变
+- `ModelHelper.TRANSFORM_BLOCK_*`常量移除,使用`ModelTransformation.NONE`
+- 使用`ModelVariant`+`SimpleBlockStateModel.Unbaked`注册方块状态模型
+
+**1.21.6特定变化**:
+- `BlockRenderLayerMap`从`fabric-blockrenderlayer-v1`移到`fabric-rendering-v1`
+- `BlockRenderLayerMap.INSTANCE.putBlock(block, RenderLayer)`→静态`BlockRenderLayerMap.putBlock(block, BlockRenderLayer)`
+- `RenderLayer.getCutout()`→`BlockRenderLayer.CUTOUT`, `RenderLayer.getTranslucent()`→`BlockRenderLayer.TRANSLUCENT`
+
 ### 依赖版本配置
 
 项目在`build.gradle`中为每个Minecraft版本配置了对应的依赖版本:
 
-| Minecraft | Yarn映射 | Fabric API | YACL |
-|-----------|---------|-----------|------|
-| 1.21.1 | 1.21.1+build.3 | 0.104.0+1.21.1 | 3.8.1+1.21.1-fabric |
-| 1.21.2 | 1.21.2+build.1 | 0.106.1+1.21.2 | 3.6.2+1.21.2-fabric |
-| 1.21.3 | 1.21.3+build.2 | 0.114.1+1.21.3 | 3.8.1+1.21.3-fabric |
-| 1.21.4 | 1.21.4+build.8 | 0.114.3+1.21.4 | 3.8.1+1.21.4-fabric |
+| Minecraft | Yarn映射 | Fabric API | YACL | Mod Menu |
+|-----------|---------|-----------|------|----------|
+| 1.21.1 | 1.21.1+build.3 | 0.104.0+1.21.1 | 3.8.1+1.21.1-fabric | 11.0.3 |
+| 1.21.2 | 1.21.2+build.1 | 0.106.1+1.21.2 | 3.6.2+1.21.2-fabric | 12.0.0-beta.1 |
+| 1.21.3 | 1.21.3+build.2 | 0.114.1+1.21.3 | 3.8.1+1.21.3-fabric | 13.0.0-beta.1 |
+| 1.21.4 | 1.21.4+build.8 | 0.114.3+1.21.4 | 3.8.1+1.21.4-fabric | 13.0.3 |
+| 1.21.5 | 1.21.5+build.1 | 0.120.0+1.21.5 | 3.7.1+1.21.5-fabric | 14.0.0 |
+| 1.21.6 | 1.21.6+build.1 | 0.125.2+1.21.6 | 3.7.1+1.21.6-fabric | 15.0.0 |
