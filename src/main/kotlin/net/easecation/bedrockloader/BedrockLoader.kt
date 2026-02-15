@@ -5,6 +5,7 @@ import net.easecation.bedrockloader.loader.BedrockAddonsLoader.context
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.easecation.bedrockloader.loader.BedrockBehaviorPackLoader
 import net.easecation.bedrockloader.loader.BlockStateMappingExporter
+import net.easecation.bedrockloader.loader.EntityTypeMappingExporter
 import net.easecation.bedrockloader.sync.server.ConfigLoader
 import net.easecation.bedrockloader.sync.server.EmbeddedHttpServer
 import net.fabricmc.api.EnvType
@@ -57,6 +58,10 @@ object BedrockLoader : ModInitializer {
 		// 导出方块状态映射（用于 ViaBedrock 同步）
 		logger.info("Exporting block state mappings...")
 		BlockStateMappingExporter.export()
+
+		// 导出实体类型映射（用于 ViaBedrock 同步）
+		logger.info("Exporting entity type mappings...")
+		EntityTypeMappingExporter.export()
 
 		// 动态创建每个包的创造模式选项卡
 		logger.info("Creating item groups for loaded packs...")
