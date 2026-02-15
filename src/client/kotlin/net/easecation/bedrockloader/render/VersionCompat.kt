@@ -1,5 +1,6 @@
 package net.easecation.bedrockloader.render
 
+import net.easecation.bedrockloader.util.identifierOf
 import net.minecraft.util.Identifier
 
 /**
@@ -14,8 +15,8 @@ object VersionCompat {
      * 在1.21.4+中,直接使用Identifier
      */
     //? if >=1.21.4 {
-    val BLOCK_ATLAS_TEXTURE: Identifier = Identifier.of("minecraft", "textures/atlas/blocks.png")
-    //?} else {
-    /*val BLOCK_ATLAS_TEXTURE: Identifier = net.minecraft.screen.PlayerScreenHandler.BLOCK_ATLAS_TEXTURE
-    *///?}
+    /*val BLOCK_ATLAS_TEXTURE: Identifier = identifierOf("minecraft", "textures/atlas/blocks.png")
+    *///?} else {
+    val BLOCK_ATLAS_TEXTURE: Identifier = net.minecraft.screen.PlayerScreenHandler.BLOCK_ATLAS_TEXTURE
+    //?}
 }

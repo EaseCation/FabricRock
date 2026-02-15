@@ -6,21 +6,21 @@ import net.easecation.bedrockloader.render.BedrockEntityMaterial
 import net.easecation.bedrockloader.render.BedrockGeometryModel
 import net.minecraft.client.render.entity.LivingEntityRenderer
 //? if >=1.21.2 {
-import net.easecation.bedrockloader.render.state.EntityDataDrivenRenderState
+/*import net.easecation.bedrockloader.render.state.EntityDataDrivenRenderState
 import net.easecation.bedrockloader.animation.EntityAnimationManager
-//?}
+*///?}
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.render.RenderLayer
 //? if >=1.21.11 {
-import net.minecraft.client.render.RenderLayers
-//?}
-//? if <1.21.9 {
-/*import net.minecraft.client.render.VertexConsumerProvider
+/*import net.minecraft.client.render.RenderLayers
 *///?}
-//? if >=1.21.9 {
-import net.minecraft.client.render.command.OrderedRenderCommandQueue
-import net.minecraft.client.render.state.CameraRenderState
+//? if <1.21.9 {
+import net.minecraft.client.render.VertexConsumerProvider
 //?}
+//? if >=1.21.9 {
+/*import net.minecraft.client.render.command.OrderedRenderCommandQueue
+import net.minecraft.client.render.state.CameraRenderState
+*///?}
 import net.minecraft.client.render.entity.EntityRendererFactory
 import net.minecraft.client.render.entity.MobEntityRenderer
 import net.minecraft.client.render.entity.model.EntityModel
@@ -39,7 +39,7 @@ import net.minecraft.util.math.MathHelper
  * - entity_emissive_alpha: 自发光 + Alpha 测试
  */
 //? if >=1.21.2 {
-class EntityDataDrivenRenderer private constructor(
+/*class EntityDataDrivenRenderer private constructor(
     context: EntityRendererFactory.Context,
     entityModel: EntityModel<EntityDataDrivenRenderState>,
     shadowRadius: Float,
@@ -47,8 +47,8 @@ class EntityDataDrivenRenderer private constructor(
     private val entityIdentifier: Identifier,
     private val material: BedrockEntityMaterial
 ) : MobEntityRenderer<EntityDataDriven, EntityDataDrivenRenderState, EntityModel<EntityDataDrivenRenderState>>(context, entityModel, shadowRadius) {
-//?} else {
-/*class EntityDataDrivenRenderer private constructor(
+*///?} else {
+class EntityDataDrivenRenderer private constructor(
     context: EntityRendererFactory.Context,
     entityModel: EntityModel<EntityDataDriven>,
     shadowRadius: Float,
@@ -56,14 +56,14 @@ class EntityDataDrivenRenderer private constructor(
     private val entityIdentifier: Identifier,
     private val material: BedrockEntityMaterial
 ) : MobEntityRenderer<EntityDataDriven, EntityModel<EntityDataDriven>>(context, entityModel, shadowRadius) {
-*///?}
+//?}
 
     companion object {
         /** 全亮度值 (15, 15) = 0xF000F0 */
         private const val MAX_LIGHT = 0xF000F0
 
         //? if >=1.21.2 {
-        fun create(
+        /*fun create(
             context: EntityRendererFactory.Context,
             model: EntityModel<EntityDataDrivenRenderState>,
             shadowRadius: Float,
@@ -73,8 +73,8 @@ class EntityDataDrivenRenderer private constructor(
         ): EntityDataDrivenRenderer {
             return EntityDataDrivenRenderer(context, model, shadowRadius, texture, entityIdentifier, material)
         }
-        //?} else {
-        /*fun create(
+        *///?} else {
+        fun create(
             context: EntityRendererFactory.Context,
             model: EntityModel<EntityDataDriven>,
             shadowRadius: Float,
@@ -84,11 +84,11 @@ class EntityDataDrivenRenderer private constructor(
         ): EntityDataDrivenRenderer {
             return EntityDataDrivenRenderer(context, model, shadowRadius, texture, entityIdentifier, material)
         }
-        *///?}
+        //?}
     }
 
     //? if >=1.21.2 {
-    override fun createRenderState(): EntityDataDrivenRenderState {
+    /*override fun createRenderState(): EntityDataDrivenRenderState {
         return EntityDataDrivenRenderState()
     }
 
@@ -118,17 +118,17 @@ class EntityDataDrivenRenderer private constructor(
         }
         state.animationManager = animManager
     }
-    //?}
+    *///?}
 
     //? if >=1.21.2 {
-    override fun getTexture(state: EntityDataDrivenRenderState): Identifier {
+    /*override fun getTexture(state: EntityDataDrivenRenderState): Identifier {
         return texture
     }
-    //?} else {
-    /*override fun getTexture(entity: EntityDataDriven): Identifier {
+    *///?} else {
+    override fun getTexture(entity: EntityDataDriven): Identifier {
         return texture
     }
-    *///?}
+    //?}
 
     /**
      * 根据材质类型选择渲染层
@@ -140,7 +140,7 @@ class EntityDataDrivenRenderer private constructor(
      * - 默认: 实心渲染
      */
     //? if >=1.21.11 {
-    override fun getRenderLayer(
+    /*override fun getRenderLayer(
         state: EntityDataDrivenRenderState,
         showBody: Boolean,
         translucent: Boolean,
@@ -157,7 +157,7 @@ class EntityDataDrivenRenderer private constructor(
             else -> RenderLayers.entitySolid(texture)
         }
     }
-    //?} elif >=1.21.2 {
+    *///?} elif >=1.21.2 {
     /*override fun getRenderLayer(
         state: EntityDataDrivenRenderState,
         showBody: Boolean,
@@ -176,7 +176,7 @@ class EntityDataDrivenRenderer private constructor(
         }
     }
     *///?} else {
-    /*override fun getRenderLayer(
+    override fun getRenderLayer(
         entity: EntityDataDriven,
         showBody: Boolean,
         translucent: Boolean,
@@ -193,13 +193,13 @@ class EntityDataDrivenRenderer private constructor(
             else -> RenderLayer.getEntitySolid(texture)
         }
     }
-    *///?}
+    //?}
 
     /**
      * 重写渲染方法，支持自发光材质
      */
     //? if >=1.21.9 {
-    override fun render(
+    /*override fun render(
         state: EntityDataDrivenRenderState,
         matrices: MatrixStack,
         queue: OrderedRenderCommandQueue,
@@ -235,7 +235,7 @@ class EntityDataDrivenRenderer private constructor(
             super.render(state, matrices, queue, cameraRenderState)
         }
     }
-    //?} elif >=1.21.2 {
+    *///?} elif >=1.21.2 {
     /*override fun render(
         state: EntityDataDrivenRenderState,
         matrices: MatrixStack,
@@ -271,7 +271,7 @@ class EntityDataDrivenRenderer private constructor(
             super.render(state, matrices, vertexConsumers, effectiveLight)
         }
     }
-    *///?} else {
+    *///?} elif >=1.21 && <1.21.2 {
     /*override fun render(
         entity: EntityDataDriven,
         yaw: Float,
@@ -286,16 +286,12 @@ class EntityDataDrivenRenderer private constructor(
         if (model is BedrockGeometryModel) {
             matrices.push()
 
-            // 复制 LivingEntityRenderer.render() 的变换管道
-            // 注意：不使用原版的 translate(0, -1.501F, 0)，因为基岩版模型脚部在 model Y=0，
-            // 而原版 Java 模型脚部在 model Y≈24（1.5格），-1.501F 偏移仅适用于原版坐标系
             val bodyYaw = MathHelper.lerpAngleDegrees(tickDelta, entity.prevBodyYaw, entity.bodyYaw)
             val animationProgress = this.getAnimationProgress(entity, tickDelta)
             this.setupTransforms(entity, matrices, animationProgress, bodyYaw, tickDelta, entity.scale)
             matrices.scale(-1.0F, -1.0F, 1.0F)
             this.scale(entity, matrices, tickDelta)
 
-            // 计算肢体动画参数
             var limbSpeed = 0.0F
             var limbPos = 0.0F
             if (!entity.hasVehicle() && entity.isAlive) {
@@ -306,13 +302,11 @@ class EntityDataDrivenRenderer private constructor(
                 }
             }
 
-            // 设置模型动画角度
             val headYaw = MathHelper.lerpAngleDegrees(tickDelta, entity.prevHeadYaw, entity.headYaw) - bodyYaw
             val headPitch = MathHelper.lerp(tickDelta, entity.prevPitch, entity.pitch)
             model.animateModel(entity, limbPos, limbSpeed, tickDelta)
             model.setAngles(entity, limbPos, limbSpeed, animationProgress, headYaw, headPitch)
 
-            // 计算 overlay 和渲染
             val overlay = LivingEntityRenderer.getOverlay(entity, this.getAnimationCounter(entity, tickDelta))
             val client = MinecraftClient.getInstance()
             val visible = this.isVisible(entity)
@@ -327,7 +321,6 @@ class EntityDataDrivenRenderer private constructor(
 
             matrices.pop()
 
-            // 名牌渲染 (来自 EntityRenderer.render())
             if (this.hasLabel(entity)) {
                 this.renderLabelIfPresent(entity, entity.displayName, matrices, vertexConsumers, effectiveLight, tickDelta)
             }
@@ -335,21 +328,81 @@ class EntityDataDrivenRenderer private constructor(
             super.render(entity, yaw, tickDelta, matrices, vertexConsumers, effectiveLight)
         }
     }
-    *///?}
+    *///?} else {
+    override fun render(
+        entity: EntityDataDriven,
+        yaw: Float,
+        tickDelta: Float,
+        matrices: MatrixStack,
+        vertexConsumers: VertexConsumerProvider,
+        light: Int
+    ) {
+        val effectiveLight = if (material.emissive) MAX_LIGHT else light
+
+        val model = this.model
+        if (model is BedrockGeometryModel) {
+            matrices.push()
+
+            val bodyYaw = MathHelper.lerpAngleDegrees(tickDelta, entity.prevBodyYaw, entity.bodyYaw)
+            val animationProgress = this.getAnimationProgress(entity, tickDelta)
+            this.setupTransforms(entity, matrices, animationProgress, bodyYaw, tickDelta)
+            matrices.scale(-1.0F, -1.0F, 1.0F)
+            this.scale(entity, matrices, tickDelta)
+
+            var limbSpeed = 0.0F
+            var limbPos = 0.0F
+            if (!entity.hasVehicle() && entity.isAlive) {
+                limbSpeed = entity.limbAnimator.getSpeed(tickDelta)
+                limbPos = entity.limbAnimator.getPos(tickDelta)
+                if (limbSpeed > 1.0F) {
+                    limbSpeed = 1.0F
+                }
+            }
+
+            val headYaw = MathHelper.lerpAngleDegrees(tickDelta, entity.prevHeadYaw, entity.headYaw) - bodyYaw
+            val headPitch = MathHelper.lerp(tickDelta, entity.prevPitch, entity.pitch)
+            model.animateModel(entity, limbPos, limbSpeed, tickDelta)
+            model.setAngles(entity, limbPos, limbSpeed, animationProgress, headYaw, headPitch)
+
+            val overlay = LivingEntityRenderer.getOverlay(entity, this.getAnimationCounter(entity, tickDelta))
+            val client = MinecraftClient.getInstance()
+            val visible = this.isVisible(entity)
+            val translucent = !visible && !entity.isInvisibleTo(client.player)
+            val hasOutline = client.hasOutline(entity)
+            val renderLayer = this.getRenderLayer(entity, visible, translucent, hasOutline)
+            if (renderLayer != null) {
+                val vertexConsumer = vertexConsumers.getBuffer(renderLayer)
+                if (translucent) {
+                    model.render(matrices, vertexConsumer, effectiveLight, overlay, 1.0f, 1.0f, 1.0f, 0.15f)
+                } else {
+                    model.render(matrices, vertexConsumer, effectiveLight, overlay, 1.0f, 1.0f, 1.0f, 1.0f)
+                }
+            }
+
+            matrices.pop()
+
+            if (this.hasLabel(entity)) {
+                this.renderLabelIfPresent(entity, entity.displayName, matrices, vertexConsumers, effectiveLight)
+            }
+        } else {
+            super.render(entity, yaw, tickDelta, matrices, vertexConsumers, effectiveLight)
+        }
+    }
+    //?}
 
     /**
      * 重写 scale 方法，应用配置的缩放值到 MatrixStack
      */
     //? if >=1.21.2 {
-    override fun scale(state: EntityDataDrivenRenderState, matrices: MatrixStack) {
+    /*override fun scale(state: EntityDataDrivenRenderState, matrices: MatrixStack) {
         val scale = state.scale
         matrices.scale(scale, scale, scale)
     }
-    //?} else {
-    /*override fun scale(entity: EntityDataDriven, matrices: MatrixStack, amount: Float) {
+    *///?} else {
+    override fun scale(entity: EntityDataDriven, matrices: MatrixStack, amount: Float) {
         val scale = BedrockAddonsRegistryClient.entityScaleConfigs[entityIdentifier] ?: 1.0f
         matrices.scale(scale, scale, scale)
     }
-    *///?}
+    //?}
 
 }

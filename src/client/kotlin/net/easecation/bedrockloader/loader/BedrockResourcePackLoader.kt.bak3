@@ -26,8 +26,8 @@ import net.minecraft.client.render.block.entity.BlockEntityRendererFactories
 import net.minecraft.client.render.model.json.JsonUnbakedModel
 import net.minecraft.client.render.model.json.ModelTransformation
 //? if >=1.21.4 {
-import net.minecraft.client.render.model.ModelTextures
-//?}
+/*import net.minecraft.client.render.model.ModelTextures
+*///?}
 import net.minecraft.client.texture.MissingSprite
 import net.minecraft.client.util.SpriteIdentifier
 import net.minecraft.util.Identifier
@@ -167,14 +167,14 @@ class BedrockResourcePackLoader(
         textureMap: Map<String, Either<SpriteIdentifier, String>>
     ): JsonUnbakedModel {
         //? if >=1.21.4 {
-        // 1.21.4: 暂时使用空的ModelTextures
+        /*// 1.21.4: 暂时使用空的ModelTextures
         // TODO: 需要正确实现ModelTextures.Textures的创建
         val emptyTextures = ModelTextures.Textures(emptyMap())
         return JsonUnbakedModel(parent, emptyList(), emptyTextures, null, null, ModelTransformation.NONE)
-        //?} else {
-        /*// 1.21.1-1.21.3: 使用Map
+        *///?} else {
+        // 1.21.1-1.21.3: 使用Map
         return JsonUnbakedModel(parent, emptyList(), textureMap, null, null, ModelTransformation.NONE, emptyList())
-        *///?}
+        //?}
     }
 
     /**
@@ -524,10 +524,10 @@ class BedrockResourcePackLoader(
                 BedrockAddonsRegistryClient.itemModels[itemIdentifier] = createJsonUnbakedModel(Identifier.of("item/generated"), textureMap)
             } else {
                 //? if >=1.21.4 {
-                 1.21.4: DelegatingUnbakedModel已移除，不注册模型以使用默认模型Token(value=
-, type=COMMENT_END)                //?} else {
-                /*BedrockAddonsRegistryClient.itemModels[itemIdentifier] = net.fabricmc.fabric.api.client.model.loading.v1.DelegatingUnbakedModel(Identifier.of("item/template_spawn_egg"))
-                *///?}
+                 /*1.21.4: DelegatingUnbakedModel已移除，不注册模型以使用默认模型Token(value=
+, type=COMMENT_END)                *///?} else {
+                BedrockAddonsRegistryClient.itemModels[itemIdentifier] = net.fabricmc.fabric.api.client.model.loading.v1.DelegatingUnbakedModel(Identifier.of("item/template_spawn_egg"))
+                //?}
             }
         }
     }

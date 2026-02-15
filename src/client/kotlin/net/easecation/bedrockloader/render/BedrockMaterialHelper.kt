@@ -5,6 +5,7 @@ import net.easecation.bedrockloader.bedrock.block.component.ComponentMaterialIns
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistryClient
 import net.minecraft.client.texture.MissingSprite
 import net.minecraft.client.util.SpriteIdentifier
+import net.easecation.bedrockloader.util.identifierOf
 import net.minecraft.util.Identifier
 
 /**
@@ -56,7 +57,7 @@ object BedrockMaterialHelper {
             // 创建SpriteIdentifier
             val spriteId = SpriteIdentifier(
                 VersionCompat.BLOCK_ATLAS_TEXTURE,
-                Identifier.of(namespace, "block/${texture.substringAfterLast("/")}")
+                identifierOf(namespace, "block/${texture.substringAfterLast("/")}")
             )
 
             BedrockMaterialInstance(spriteId)

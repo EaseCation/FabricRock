@@ -53,7 +53,7 @@ internal class RotatedJsonModel(
         return baseModel.bake(baker, textureGetter, rotation)
     }
 }
-*///?} elif <1.21.2 {
+*///?} elif >=1.21 && <1.21.2 {
 /*import net.minecraft.client.render.model.BakedModel
 import net.minecraft.client.render.model.Baker
 import net.minecraft.client.render.model.ModelBakeSettings
@@ -82,4 +82,34 @@ internal class RotatedJsonModel(
         return baseModel.bake(baker, textureGetter, rotation)
     }
 }
-*///?}
+*///?} elif <1.21 {
+import net.minecraft.client.render.model.BakedModel
+import net.minecraft.client.render.model.Baker
+import net.minecraft.client.render.model.ModelBakeSettings
+import net.minecraft.client.render.model.UnbakedModel
+import net.minecraft.client.render.model.json.JsonUnbakedModel
+import net.minecraft.client.texture.Sprite
+import net.minecraft.client.util.SpriteIdentifier
+import net.minecraft.util.Identifier
+import java.util.function.Function
+
+internal class RotatedJsonModel(
+    private val baseModel: JsonUnbakedModel,
+    internal val rotation: ModelBakeSettings
+) : UnbakedModel {
+    override fun getModelDependencies(): Collection<Identifier> = baseModel.modelDependencies
+
+    override fun setParents(modelLoader: Function<Identifier, UnbakedModel>?) {
+        baseModel.setParents(modelLoader)
+    }
+
+    override fun bake(
+        baker: Baker,
+        textureGetter: Function<SpriteIdentifier, Sprite>,
+        rotationContainer: ModelBakeSettings,
+        modelId: Identifier
+    ): BakedModel? {
+        return baseModel.bake(baker, textureGetter, rotation, modelId)
+    }
+}
+//?}

@@ -20,6 +20,11 @@ jobs:
         run: chmod +x ./gradlew
       - name: build all versions
         run: ./gradlew chiseledBuild
+      - name: upload 1.20.4
+        uses: actions/upload-artifact@v4
+        with:
+          name: bedrock-loader-mc1.20.4
+          path: versions/1.20.4/build/libs/bedrock-loader-*[!s].jar
       - name: upload 1.21.1
         uses: actions/upload-artifact@v4
         with:

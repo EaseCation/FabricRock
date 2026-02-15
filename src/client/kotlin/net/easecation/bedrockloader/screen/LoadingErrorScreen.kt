@@ -35,8 +35,8 @@ class LoadingErrorScreen(private val parent: Screen?) : Screen(Text.literal("加
         // 渲染背景和子组件（按钮等）
         // 1.21.11+: super.render() 内部处理背景渲染（含模糊），不能再显式调用 renderBackground()
         //? if <1.21.11 {
-        /*this.renderBackground(context, mouseX, mouseY, delta)
-        *///?}
+        this.renderBackground(context, mouseX, mouseY, delta)
+        //?}
         super.render(context, mouseX, mouseY, delta)
 
         // 标题
@@ -147,7 +147,7 @@ class LoadingErrorScreen(private val parent: Screen?) : Screen(Text.literal("加
     }
 
     //? if >=1.21.9 {
-    override fun mouseClicked(click: net.minecraft.client.gui.Click, doubled: Boolean): Boolean {
+    /*override fun mouseClicked(click: net.minecraft.client.gui.Click, doubled: Boolean): Boolean {
         val mouseX = click.x
         val mouseY = click.y
         if (click.button() == 0) {
@@ -180,8 +180,8 @@ class LoadingErrorScreen(private val parent: Screen?) : Screen(Text.literal("加
 
         return super.mouseClicked(click, doubled)
     }
-    //?} else {
-    /*override fun mouseClicked(mouseX: Double, mouseY: Double, button: Int): Boolean {
+    *///?} else {
+    override fun mouseClicked(mouseX: Double, mouseY: Double, button: Int): Boolean {
         if (button == 0) {
             val listTop = padding + 30
             var y = listTop - scrollOffset
@@ -212,7 +212,7 @@ class LoadingErrorScreen(private val parent: Screen?) : Screen(Text.literal("加
 
         return super.mouseClicked(mouseX, mouseY, button)
     }
-    *///?}
+    //?}
 
     override fun mouseScrolled(mouseX: Double, mouseY: Double, horizontalAmount: Double, verticalAmount: Double): Boolean {
         val listTop = padding + 30

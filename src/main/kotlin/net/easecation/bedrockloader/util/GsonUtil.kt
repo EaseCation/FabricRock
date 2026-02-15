@@ -11,6 +11,7 @@ import net.easecation.bedrockloader.bedrock.definition.GeometryDefinition
 import net.easecation.bedrockloader.bedrock.definition.TextureDataDefinition
 import net.easecation.bedrockloader.bedrock.entity.components.ComponentRideable
 import net.minecraft.util.Identifier
+import net.easecation.bedrockloader.util.identifierOf
 import java.lang.reflect.Type
 import java.util.UUID
 
@@ -79,7 +80,7 @@ object GsonUtil {
             return JsonPrimitive(src.toString())
         }
         override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): Identifier {
-            return Identifier.of(json.asString.normalizeIdentifier())
+            return identifierOf(json.asString.normalizeIdentifier())
         }
     }
 }

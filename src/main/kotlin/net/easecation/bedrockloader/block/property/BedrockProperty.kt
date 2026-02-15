@@ -4,7 +4,7 @@ import net.minecraft.block.BlockState
 import net.minecraft.state.property.Property
 
 //? if >=1.21.2 {
-interface BedrockProperty<T> where T : Comparable<T> {
+/*interface BedrockProperty<T> where T : Comparable<T> {
     val javaProperty: Property<T>
 
     fun getBedrockName(): String
@@ -16,8 +16,8 @@ interface BedrockProperty<T> where T : Comparable<T> {
         return getBedrockValueName(value)
     }
 }
-//?} else {
-/*interface BedrockProperty<T, P> where T : Comparable<T>, P : Property<T>, P : BedrockProperty<T, P> {
+*///?} else {
+interface BedrockProperty<T, P> where T : Comparable<T>, P : Property<T>, P : BedrockProperty<T, P> {
     val javaProperty: P
 
     fun getBedrockName(): String
@@ -29,4 +29,4 @@ interface BedrockProperty<T> where T : Comparable<T> {
         return getBedrockValueName(value)
     }
 }
-*///?}
+//?}

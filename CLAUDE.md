@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Bedrock Loader** 是一个Minecraft Java版的Fabric模组,用于加载Minecraft基岩版(Bedrock Edition)的插件包,包括自定义方块、实体、模型和纹理等内容。
 
-- **Minecraft版本**: 1.21.1, 1.21.2, 1.21.3, 1.21.4, 1.21.5, 1.21.6, 1.21.7, 1.21.8, 1.21.9, 1.21.10, 1.21.11 (多版本支持)
+- **Minecraft版本**: 1.20.4, 1.21.1, 1.21.2, 1.21.3, 1.21.4, 1.21.5, 1.21.6, 1.21.7, 1.21.8, 1.21.9, 1.21.10, 1.21.11 (多版本支持)
 - **构建系统**: Gradle + Fabric Loom 1.13.6 + Stonecutter 0.4.4
 - **编程语言**: Kotlin (主要) + Java (少量Mixin)
 - **Java版本**: 21
@@ -41,6 +41,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew tasks --group stonecutter
 
 # 切换到特定版本并构建
+./gradlew "Set active project to 1.20.4" && ./gradlew :1.20.4:build
 ./gradlew "Set active project to 1.21.1" && ./gradlew :1.21.1:build
 ./gradlew "Set active project to 1.21.2" && ./gradlew :1.21.2:build
 ./gradlew "Set active project to 1.21.3" && ./gradlew :1.21.3:build
@@ -57,6 +58,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew "Reset active project"
 
 # 构建所有版本 (依次执行)
+./gradlew "Set active project to 1.20.4" && ./gradlew :1.20.4:build && \
 ./gradlew "Set active project to 1.21.1" && ./gradlew :1.21.1:build && \
 ./gradlew "Set active project to 1.21.2" && ./gradlew :1.21.2:build && \
 ./gradlew "Set active project to 1.21.3" && ./gradlew :1.21.3:build && \
@@ -72,6 +74,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 
 **构建产物位置**:
+- `versions/1.20.4/build/libs/bedrock-loader-mc1.20.4-1.0.0.jar`
 - `versions/1.21.1/build/libs/bedrock-loader-mc1.21.1-1.0.0.jar`
 - `versions/1.21.2/build/libs/bedrock-loader-mc1.21.2-1.0.0.jar`
 - `versions/1.21.3/build/libs/bedrock-loader-mc1.21.3-1.0.0.jar`
@@ -465,6 +468,7 @@ intermediateVersionCode()
 - ⚠️ 条件注释的格式必须严格遵守,否则Stonecutter无法识别
 
 **当前版本支持状态**:
+- ✅ 1.20.4 - 完全支持
 - ✅ 1.21.1 - 完全支持
 - ✅ 1.21.2 - 完全支持
 - ✅ 1.21.3 - 完全支持
@@ -492,7 +496,7 @@ intermediateVersionCode()
 - ✅ 实体模型和组件系统
 - ✅ 资源包转换系统
 - ✅ **Permutations静态变体系统 (v1.1)**
-- ✅ **多版本支持 (1.21.1-1.21.11)**
+- ✅ **多版本支持 (1.20.4, 1.21.1-1.21.11)**
 
 已完成功能:
 - ✅ 方块状态系统和permutations支持
@@ -528,7 +532,7 @@ Molang支持：
 
 ### API差异适配
 
-项目使用Stonecutter条件编译处理不同Minecraft版本间的API差异。主要分界点: `>=1.21.2`, `>=1.21.4`, `>=1.21.5`, `>=1.21.6`, `>=1.21.9`, `>=1.21.11`。
+项目使用Stonecutter条件编译处理不同Minecraft版本间的API差异。主要分界点: `>=1.21`, `>=1.21.2`, `>=1.21.4`, `>=1.21.5`, `>=1.21.6`, `>=1.21.9`, `>=1.21.11`。
 
 **1.21.2+ 主要API变化**:
 
@@ -603,6 +607,7 @@ Molang支持：
 
 | Minecraft | Yarn映射 | Fabric API | YACL | Mod Menu |
 |-----------|---------|-----------|------|----------|
+| 1.20.4 | 1.20.4+build.3 | 0.97.2+1.20.4 | 3.4.2+1.20.4-fabric | 9.2.0 |
 | 1.21.1 | 1.21.1+build.3 | 0.104.0+1.21.1 | 3.8.1+1.21.1-fabric | 11.0.3 |
 | 1.21.2 | 1.21.2+build.1 | 0.106.1+1.21.2 | 3.6.2+1.21.2-fabric | 12.0.0-beta.1 |
 | 1.21.3 | 1.21.3+build.2 | 0.114.1+1.21.3 | 3.8.1+1.21.3-fabric | 13.0.0-beta.1 |

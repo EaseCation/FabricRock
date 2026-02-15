@@ -6,6 +6,7 @@ import net.easecation.bedrockloader.bedrock.JavaTexturePath
 import net.easecation.bedrockloader.bedrock.data.TextureImage
 import net.easecation.bedrockloader.bedrock.definition.*
 import net.minecraft.util.Identifier
+import net.easecation.bedrockloader.util.identifierOf
 
 class BedrockResourceContext {
 
@@ -36,7 +37,7 @@ class BedrockResourceContext {
             BedrockLoader.logger.warn("[BedrockResourcePackLoader] Block texture not found: $textureKey")
             return null
         }
-        return Identifier.of(
+        return identifierOf(
             namespace,
             "block/${texture.substringAfterLast("/")}"
         )
@@ -49,7 +50,7 @@ class BedrockResourceContext {
             BedrockLoader.logger.warn("[BedrockResourcePackLoader] Item texture not found: $textureKey")
             return null
         }
-        return Identifier.of(
+        return identifierOf(
             namespace,
             "item/${texture.substringAfterLast("/")}"
         )

@@ -11,8 +11,8 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
 //? if >=1.21.9 {
-import net.minecraft.client.gui.Click;
-//?}
+/*import net.minecraft.client.gui.Click;
+*///?}
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -123,7 +123,7 @@ public abstract class TitleScreenMixin extends Screen {
      * 处理鼠标点击事件
      */
     //? if >=1.21.9 {
-    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
+    /*@Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void bedrockLoader_handleErrorClick(Click click, boolean occupied, CallbackInfoReturnable<Boolean> cir) {
         if (click.button() == 0 && bedrockLoader_errorTextBounds != null) {
             double mouseX = click.x();
@@ -135,8 +135,8 @@ public abstract class TitleScreenMixin extends Screen {
             }
         }
     }
-    //?} else {
-    /*@Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
+    *///?} else {
+    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void bedrockLoader_handleErrorClick(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
         if (button == 0 && bedrockLoader_errorTextBounds != null) {
             if (mouseX >= bedrockLoader_errorTextBounds[0] && mouseX <= bedrockLoader_errorTextBounds[2] &&
@@ -146,5 +146,5 @@ public abstract class TitleScreenMixin extends Screen {
             }
         }
     }
-    *///?}
+    //?}
 }

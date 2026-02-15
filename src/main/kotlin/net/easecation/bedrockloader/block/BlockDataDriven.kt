@@ -52,24 +52,24 @@ fun <T : Comparable<T>> BlockState.withIfExists(property: Property<T>, value: T)
 
 // 重载版本：支持BedrockProperty
 //? if >=1.21.2 {
-fun <T : Comparable<T>> BlockState.withIfExists(property: BedrockProperty<T>, value: T): BlockState {
+/*fun <T : Comparable<T>> BlockState.withIfExists(property: BedrockProperty<T>, value: T): BlockState {
     return withIfExists(property.javaProperty, value)
 }
-//?} else {
-/*fun <T : Comparable<T>, P> BlockState.withIfExists(property: BedrockProperty<T, P>, value: T): BlockState
+*///?} else {
+fun <T : Comparable<T>, P> BlockState.withIfExists(property: BedrockProperty<T, P>, value: T): BlockState
     where P : Property<T>, P : BedrockProperty<T, P> {
     return withIfExists(property.javaProperty, value)
 }
-*///?}
+//?}
 
 data class BlockContext(
     val identifier: Identifier,
     val behaviour: BlockBehaviourDefinition.BlockBehaviour,
     //? if >=1.21.2 {
-    val properties: Map<String, BedrockProperty<*>>,
-    //?} else {
-    /*val properties: Map<String, BedrockProperty<*, *>>,
-    *///?}
+    /*val properties: Map<String, BedrockProperty<*>>,
+    *///?} else {
+    val properties: Map<String, BedrockProperty<*, *>>,
+    //?}
 ) {
     companion object {
         // minecraft:placement_direction
@@ -83,9 +83,9 @@ data class BlockContext(
         val FACING_DIRECTION = BedrockIntProperty.of("facing_direction", (0..5).toSet())
 
         //? if >=1.21.4 {
-        /**
+        /*/^*
          * 1.21.4: 使用预配置的settings创建Block（settings已包含registry key）
-         */
+         ^/
         fun createWithSettings(identifier: Identifier, behaviour: BlockBehaviourDefinition.BlockBehaviour, baseSettings: Settings): BlockDataDriven {
             val components = behaviour.components
 
@@ -204,18 +204,18 @@ data class BlockContext(
 
             return BlockContext(identifier, behaviour, properties).BlockDataDriven(settings)
         }
-        //?}
+        *///?}
 
         fun create(identifier: Identifier, behaviour: BlockBehaviourDefinition.BlockBehaviour): BlockDataDriven {
             val components = behaviour.components
 
             //? if >=1.21.2 {
-            fun calculateProperties(): Map<String, BedrockProperty<*>> {
+            /*fun calculateProperties(): Map<String, BedrockProperty<*>> {
                 val placementDirection: Map<String, BedrockProperty<*>> = behaviour.description.traits?.minecraftPlacementDirection?.enabled_states?.mapNotNull { state ->
-            //?} else {
-            /*fun calculateProperties(): Map<String, BedrockProperty<*, *>> {
+            *///?} else {
+            fun calculateProperties(): Map<String, BedrockProperty<*, *>> {
                 val placementDirection: Map<String, BedrockProperty<*, *>> = behaviour.description.traits?.minecraftPlacementDirection?.enabled_states?.mapNotNull { state ->
-            *///?}
+            //?}
                     if (state == null) {
                         LoadingErrorCollector.addWarning(
                             source = identifier.toString(),
@@ -230,10 +230,10 @@ data class BlockContext(
                     }
                 }?.associateBy { it.getBedrockName() } ?: emptyMap()
                 //? if >=1.21.2 {
-                val placementPosition: Map<String, BedrockProperty<*>> = behaviour.description.traits?.minecraftPlacementPosition?.enabled_states?.mapNotNull { state ->
-                //?} else {
-                /*val placementPosition: Map<String, BedrockProperty<*, *>> = behaviour.description.traits?.minecraftPlacementPosition?.enabled_states?.mapNotNull { state ->
-                *///?}
+                /*val placementPosition: Map<String, BedrockProperty<*>> = behaviour.description.traits?.minecraftPlacementPosition?.enabled_states?.mapNotNull { state ->
+                *///?} else {
+                val placementPosition: Map<String, BedrockProperty<*, *>> = behaviour.description.traits?.minecraftPlacementPosition?.enabled_states?.mapNotNull { state ->
+                //?}
                     if (state == null) {
                         LoadingErrorCollector.addWarning(
                             source = identifier.toString(),
@@ -248,20 +248,20 @@ data class BlockContext(
                     }
                 }?.associateBy { it.getBedrockName() } ?: emptyMap()
                 //? if >=1.21.2 {
-                val faceDirectional: Map<String, BedrockProperty<*>> = behaviour.components.neteaseFaceDirectional?.type?.let { type ->
-                //?} else {
-                /*val faceDirectional: Map<String, BedrockProperty<*, *>> = behaviour.components.neteaseFaceDirectional?.type?.let { type ->
-                *///?}
+                /*val faceDirectional: Map<String, BedrockProperty<*>> = behaviour.components.neteaseFaceDirectional?.type?.let { type ->
+                *///?} else {
+                val faceDirectional: Map<String, BedrockProperty<*, *>> = behaviour.components.neteaseFaceDirectional?.type?.let { type ->
+                //?}
                     mapOf(type.name to when (type) {
                         FaceDirectionalType.direction -> DIRECTION
                         FaceDirectionalType.facing_direction -> FACING_DIRECTION
                     })
                 } ?: emptyMap()
                 //? if >=1.21.2 {
-                val properties: Map<String, BedrockProperty<*>> = behaviour.description.states?.mapValues { (key, state) ->
-                //?} else {
-                /*val properties: Map<String, BedrockProperty<*, *>> = behaviour.description.states?.mapValues { (key, state) ->
-                *///?}
+                /*val properties: Map<String, BedrockProperty<*>> = behaviour.description.states?.mapValues { (key, state) ->
+                *///?} else {
+                val properties: Map<String, BedrockProperty<*, *>> = behaviour.description.states?.mapValues { (key, state) ->
+                //?}
                     when (state) {
                         is StateBoolean -> BedrockBooleanProperty.of(key, state.toSet())
                         is StateInt -> BedrockIntProperty.of(key, state.toSet())
@@ -418,17 +418,17 @@ data class BlockContext(
             val faceDirectional = getComponents(state).neteaseFaceDirectional ?: return box
             val direction = when (faceDirectional.type) {
                 //? if >=1.21.5 {
-                FaceDirectionalType.direction -> Direction.byIndex(state[DIRECTION] + 2)  // 水平方向从NORTH=2开始
-                //?} elif >=1.21.4 {
+                /*FaceDirectionalType.direction -> Direction.byIndex(state[DIRECTION] + 2)  // 水平方向从NORTH=2开始
+                *///?} elif >=1.21.4 {
                 /*FaceDirectionalType.direction -> Direction.byId(state[DIRECTION] + 2)  // 水平方向从NORTH=2开始
                 *///?} else {
-                /*FaceDirectionalType.direction -> Direction.fromHorizontal(state[DIRECTION])
-                *///?}
+                FaceDirectionalType.direction -> Direction.fromHorizontal(state[DIRECTION])
+                //?}
                 //? if >=1.21.5 {
-                FaceDirectionalType.facing_direction -> Direction.byIndex(state[FACING_DIRECTION])
-                //?} else {
-                /*FaceDirectionalType.facing_direction -> Direction.byId(state[FACING_DIRECTION])
-                *///?}
+                /*FaceDirectionalType.facing_direction -> Direction.byIndex(state[FACING_DIRECTION])
+                *///?} else {
+                FaceDirectionalType.facing_direction -> Direction.byId(state[FACING_DIRECTION])
+                //?}
             }
             val quaternion = getFaceQuaternion(direction)
             // 使用四元数围绕方块中心 (0.5, 0.5, 0.5) 旋转 Box
@@ -460,17 +460,17 @@ data class BlockContext(
             val faceDirectional = getComponents(state).neteaseFaceDirectional ?: return
             val direction = when (faceDirectional.type) {
                 //? if >=1.21.5 {
-                FaceDirectionalType.direction -> Direction.byIndex(state[DIRECTION] + 2)  // 水平方向从NORTH=2开始
-                //?} elif >=1.21.4 {
+                /*FaceDirectionalType.direction -> Direction.byIndex(state[DIRECTION] + 2)  // 水平方向从NORTH=2开始
+                *///?} elif >=1.21.4 {
                 /*FaceDirectionalType.direction -> Direction.byId(state[DIRECTION] + 2)  // 水平方向从NORTH=2开始
                 *///?} else {
-                /*FaceDirectionalType.direction -> Direction.fromHorizontal(state[DIRECTION])
-                *///?}
+                FaceDirectionalType.direction -> Direction.fromHorizontal(state[DIRECTION])
+                //?}
                 //? if >=1.21.5 {
-                FaceDirectionalType.facing_direction -> Direction.byIndex(state[FACING_DIRECTION])
-                //?} else {
-                /*FaceDirectionalType.facing_direction -> Direction.byId(state[FACING_DIRECTION])
-                *///?}
+                /*FaceDirectionalType.facing_direction -> Direction.byIndex(state[FACING_DIRECTION])
+                *///?} else {
+                FaceDirectionalType.facing_direction -> Direction.byId(state[FACING_DIRECTION])
+                //?}
             }
             val faceQuaternion = getFaceQuaternion(direction)
             position.rotateAround(faceQuaternion, 0.5f, 0.5f, 0.5f)
@@ -540,18 +540,18 @@ data class BlockContext(
                 )
                 .withIfExists(DIRECTION,
                     //? if >=1.21.5 {
-                    ctx.horizontalPlayerFacing.opposite.index - 2  // 水平方向从NORTH=2开始,减2得到0-3索引
-                    //?} elif >=1.21.4 {
+                    /*ctx.horizontalPlayerFacing.opposite.index - 2  // 水平方向从NORTH=2开始,减2得到0-3索引
+                    *///?} elif >=1.21.4 {
                     /*ctx.horizontalPlayerFacing.opposite.id - 2  // 水平方向从NORTH=2开始,减2得到0-3索引
                     *///?} else {
-                    /*ctx.horizontalPlayerFacing.opposite.horizontal
-                    *///?}
+                    ctx.horizontalPlayerFacing.opposite.horizontal
+                    //?}
                 )
                 //? if >=1.21.5 {
-                .withIfExists(FACING_DIRECTION, ctx.playerLookDirection.opposite.index)
-                //?} else {
-                /*.withIfExists(FACING_DIRECTION, ctx.playerLookDirection.opposite.id)
-                *///?}
+                /*.withIfExists(FACING_DIRECTION, ctx.playerLookDirection.opposite.index)
+                *///?} else {
+                .withIfExists(FACING_DIRECTION, ctx.playerLookDirection.opposite.id)
+                //?}
         }
 
         override fun appendProperties(builder: StateManager.Builder<Block, BlockState>) {
@@ -618,7 +618,7 @@ data class BlockContext(
          * 默认值：有方块实体时为 0（接收光照），否则为 15（完全阻挡）
          */
         //? if >=1.21.2 {
-        @Deprecated("", ReplaceWith("state.getOpacity(world, pos)"))
+        /*@Deprecated("", ReplaceWith("state.getOpacity(world, pos)"))
         override fun getOpacity(state: BlockState): Int {
             val components = getComponents(state)
             // 优先使用显式配置的 light_dampening
@@ -626,8 +626,8 @@ data class BlockContext(
             val defaultValue = if (components.neteaseBlockEntity != null) 0 else 15
             return components.minecraftLightDampening ?: defaultValue
         }
-        //?} else {
-        /*@Deprecated("", ReplaceWith("state.getOpacity(world, pos)"))
+        *///?} else {
+        @Deprecated("", ReplaceWith("state.getOpacity(world, pos)"))
         override fun getOpacity(state: BlockState, world: BlockView, pos: BlockPos): Int {
             val components = getComponents(state)
             // 优先使用显式配置的 light_dampening
@@ -635,7 +635,7 @@ data class BlockContext(
             val defaultValue = if (components.neteaseBlockEntity != null) 0 else 15
             return components.minecraftLightDampening ?: defaultValue
         }
-        *///?}
+        //?}
 
         /**
          * 控制环境光遮蔽（AO）- 支持 0-15 渐变控制
@@ -655,7 +655,7 @@ data class BlockContext(
          * 当两个相邻方块都返回 true 时，它们接触的面会被剔除
          */
         //? if <1.21.2 {
-        /*@Deprecated("", ReplaceWith("state.exceedsCube()"))
+        @Deprecated("", ReplaceWith("state.exceedsCube()"))
         override fun isCullingShapeFullCube(state: BlockState, world: BlockView, pos: BlockPos): Boolean {
             val components = getComponents(state)
             val geometry = components.minecraftGeometry
@@ -677,6 +677,6 @@ data class BlockContext(
 
             return isFullBlock && isOpaque && !hasBlockEntity
         }
-        *///?}
+        //?}
     }
 }
