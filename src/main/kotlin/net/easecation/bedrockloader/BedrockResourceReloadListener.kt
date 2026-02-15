@@ -23,10 +23,10 @@ class BedrockResourceReloadListener : SimpleSynchronousResourceReloadListener {
         BedrockLoader.logger.info("Resource manager class: ${manager.javaClass.name}")
         manager.streamResourcePacks().forEach { pack ->
             //? if >=1.21 {
-            /*BedrockLoader.logger.info("Found resource pack: ${pack.id}, class: ${pack.javaClass.name}")
-            *///?} else {
-            BedrockLoader.logger.info("Found resource pack: ${pack.name}, class: ${pack.javaClass.name}")
-            //?}
+            BedrockLoader.logger.info("Found resource pack: ${pack.id}, class: ${pack.javaClass.name}")
+            //?} else {
+            /*BedrockLoader.logger.info("Found resource pack: ${pack.name}, class: ${pack.javaClass.name}")
+            *///?}
         }
         manager.getResource(identifierOf("bedrock-loader", "textures/block/test_block.png")).ifPresent {
             resource -> BedrockLoader.logger.info("Found resource: $resource")

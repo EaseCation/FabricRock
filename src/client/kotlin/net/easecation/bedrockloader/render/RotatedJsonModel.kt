@@ -83,7 +83,7 @@ internal class RotatedJsonModel(
     }
 }
 *///?} elif <1.21 {
-import net.minecraft.client.render.model.BakedModel
+/*import net.minecraft.client.render.model.BakedModel
 import net.minecraft.client.render.model.Baker
 import net.minecraft.client.render.model.ModelBakeSettings
 import net.minecraft.client.render.model.UnbakedModel
@@ -112,4 +112,4 @@ internal class RotatedJsonModel(
         return baseModel.bake(baker, textureGetter, rotation, modelId)
     }
 }
-//?}
+*///?}

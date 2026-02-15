@@ -18,7 +18,7 @@ class BedrockLoaderResourcePackProvider : ResourcePackProvider {
         }
 
         //? if >=1.21 {
-        /*val info = ResourcePackInfo(
+        val info = ResourcePackInfo(
             "bedrock-loader-resource",
             Text.translatable("pack.name.bedrock-loader"),
             ResourcePackSource.BUILTIN,
@@ -42,8 +42,8 @@ class BedrockLoaderResourcePackProvider : ResourcePackProvider {
             ResourceType.CLIENT_RESOURCES,
             position
         )?.let { consumer.accept(it) }
-        *///?} else {
-        ResourcePackProfile.create(
+        //?} else {
+        /*ResourcePackProfile.create(
             "bedrock-loader-resource",
             Text.translatable("pack.name.bedrock-loader"),
             true,
@@ -52,6 +52,6 @@ class BedrockLoaderResourcePackProvider : ResourcePackProvider {
             ResourcePackProfile.InsertionPosition.TOP,
             ResourcePackSource.BUILTIN
         )?.let { consumer.accept(it) }
-        //?}
+        *///?}
     }
 }

@@ -7,11 +7,11 @@ import net.easecation.bedrockloader.block.BlockContext
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistryClient
 //? if <1.21.4 {
-import net.fabricmc.fabric.api.client.model.loading.v1.DelegatingUnbakedModel
-//?}
+/*import net.fabricmc.fabric.api.client.model.loading.v1.DelegatingUnbakedModel
+*///?}
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin
 //? if >=1.21.5 {
-/*import net.minecraft.block.BlockState
+import net.minecraft.block.BlockState
 import net.minecraft.client.render.model.Baker
 import net.minecraft.client.render.model.BlockStateModel
 import net.minecraft.client.render.model.ResolvableModel
@@ -19,7 +19,7 @@ import net.minecraft.client.render.model.SimpleBlockStateModel
 import net.minecraft.client.render.model.SimpleModel
 import net.minecraft.client.render.model.json.ModelVariant
 import net.minecraft.util.math.AxisRotation
-*///?} elif >=1.21.4 {
+//?} elif >=1.21.4 {
 /*import net.minecraft.block.BlockState
 import net.minecraft.client.render.model.BakedModel
 import net.minecraft.client.render.model.Baker
@@ -63,7 +63,7 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
     }
 
     //? if <1.21.11 {
-    private fun transformationToModelRotation(transformation: ComponentTransformation): ModelRotation {
+    /*private fun transformationToModelRotation(transformation: ComponentTransformation): ModelRotation {
         return when (getYRotationDegrees(transformation)) {
             90 -> ModelRotation.X0_Y90
             180 -> ModelRotation.X0_Y180
@@ -71,15 +71,15 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
             else -> ModelRotation.X0_Y0
         }
     }
-    //?}
+    *///?}
 
     //? if >=1.21.2 {
-    /*override fun initialize(pluginContext: ModelLoadingPlugin.Context) {
-    *///?} else {
-    override fun onInitializeModelLoader(pluginContext: ModelLoadingPlugin.Context) {
-    //?}
+    override fun initialize(pluginContext: ModelLoadingPlugin.Context) {
+    //?} else {
+    /*override fun onInitializeModelLoader(pluginContext: ModelLoadingPlugin.Context) {
+    *///?}
         //? if <1.21.4 {
-        pluginContext.resolveModel().register { context ->
+        /*pluginContext.resolveModel().register { context ->
             val id = context.id()
             when {
                 id.path.startsWith("block/") -> {
@@ -93,7 +93,7 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                 else -> null
             }
         }
-        //?} elif <1.21.5 {
+        *///?} elif <1.21.5 {
         /*pluginContext.modifyModelOnLoad().register { model, context ->
             val id = context.id()
             val customModel = when {
@@ -130,7 +130,7 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
         *///?}
 
         //? if >=1.21.5 {
-        /*// 1.21.5+: 标准立方体和平面图标物品通过物理 models/item/^.json 文件加载（原版管线处理）
+        // 1.21.5+: 标准立方体和平面图标物品通过物理 models/item/*.json 文件加载（原版管线处理）
         // 仅 BedrockGeometryModel 类型需要通过 modifyItemModelBeforeBake 拦截
         pluginContext.modifyItemModelBeforeBake().register { model, context ->
             val itemId = context.itemId()
@@ -141,7 +141,7 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                 model
             }
         }
-        *///?}
+        //?}
 
         BedrockAddonsRegistry.blocks.forEach { (id, v) ->
             val block = v as? BlockContext.BlockDataDriven ?: return@forEach
@@ -154,8 +154,8 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                 if (isBlockEntity) {
                     block.stateManager.states.forEach { state ->
                         //? if <1.21.4 {
-                        context.setModel(state, net.fabricmc.fabric.api.client.model.loading.v1.DelegatingUnbakedModel(identifierOf("block/air")))
-                        //?} elif <1.21.5 {
+                        /*context.setModel(state, net.fabricmc.fabric.api.client.model.loading.v1.DelegatingUnbakedModel(identifierOf("block/air")))
+                        *///?} elif <1.21.5 {
                         /*context.setModel(state, object : GroupableModel {
                             override fun resolve(resolver: ResolvableModel.Resolver) {
                                 resolver.resolve(identifierOf("block/air"))
@@ -164,8 +164,8 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                             override fun getEqualityGroup(state: BlockState): Any = "air"
                         })
                         *///?} else {
-                        /*context.setModel(state, SimpleBlockStateModel.Unbaked(ModelVariant(identifierOf("block/air"))).cached())
-                        *///?}
+                        context.setModel(state, SimpleBlockStateModel.Unbaked(ModelVariant(identifierOf("block/air"))).cached())
+                        //?}
                     }
                     return@registerBlockStateResolver
                 }
@@ -220,7 +220,7 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                     }
 
                     //? if >=1.21.5 {
-                    /*val unbakedGrouped: BlockStateModel.UnbakedGrouped = when (unbakedModel) {
+                    val unbakedGrouped: BlockStateModel.UnbakedGrouped = when (unbakedModel) {
                         is BedrockGeometryModel -> unbakedModel.getModelVariant(block, state)
                         else -> {
                             val modelId = identifierOf(id.namespace, "block/${id.path}")
@@ -240,7 +240,7 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                         }
                     }
                     context.setModel(state, unbakedGrouped)
-                    *///?} elif >=1.21.4 {
+                    //?} elif >=1.21.4 {
                     /*val finalModel = when (unbakedModel) {
                         is BedrockGeometryModel -> unbakedModel.getModelVariant(block, state)
                         is JsonUnbakedModel -> {
@@ -273,7 +273,7 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                     }
                     context.setModel(state, groupableModel)
                     *///?} else {
-                    val finalModel = when (unbakedModel) {
+                    /*val finalModel = when (unbakedModel) {
                         is BedrockGeometryModel -> unbakedModel.getModelVariant(block, state)
                         is JsonUnbakedModel -> {
                             val components = block.getComponents(state)
@@ -288,7 +288,7 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                         else -> unbakedModel
                     }
                     context.setModel(state, finalModel)
-                    //?}
+                    *///?}
                 }
             }
         }

@@ -317,10 +317,10 @@ class ModelPart(private val cuboids: List<Cuboid>, private val children: Map<Str
                     val k = vertex.pos.z() / 16.0f
                     val vector3f3 = matrix4f.transformPosition(i.toFloat(), j.toFloat(), k.toFloat(), vector3f)
                     //? if >=1.21 {
-                    /*vertexConsumer.vertex(vector3f3.x(), vector3f3.y(), vector3f3.z(), packedColor, vertex.u.toFloat(), vertex.v.toFloat(), overlay, light, f, g, h)
-                    *///?} else {
-                    vertexConsumer.vertex(vector3f3.x(), vector3f3.y(), vector3f3.z(), red, green, blue, alpha, vertex.u.toFloat(), vertex.v.toFloat(), overlay, light, f, g, h)
-                    //?}
+                    vertexConsumer.vertex(vector3f3.x(), vector3f3.y(), vector3f3.z(), packedColor, vertex.u.toFloat(), vertex.v.toFloat(), overlay, light, f, g, h)
+                    //?} else {
+                    /*vertexConsumer.vertex(vector3f3.x(), vector3f3.y(), vector3f3.z(), red, green, blue, alpha, vertex.u.toFloat(), vertex.v.toFloat(), overlay, light, f, g, h)
+                    *///?}
                 }
             }
         }

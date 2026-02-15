@@ -11,10 +11,10 @@ data class BedrockBooleanProperty(
     private val values: Set<Boolean>,
     private val specializedTag: Boolean
 //? if >=1.21.2 {
-/*) : Property<Boolean>(bedrockName, Boolean::class.javaObjectType), BedrockProperty<Boolean> {
-*///?} else {
-) : Property<Boolean>(bedrockName, Boolean::class.javaObjectType), BedrockProperty<Boolean, BedrockBooleanProperty> {
-//?}
+) : Property<Boolean>(bedrockName, Boolean::class.javaObjectType), BedrockProperty<Boolean> {
+//?} else {
+/*) : Property<Boolean>(bedrockName, Boolean::class.javaObjectType), BedrockProperty<Boolean, BedrockBooleanProperty> {
+*///?}
     companion object {
         fun of(bedrockName: String, values: Set<Boolean>, specializedTag: Boolean = true): BedrockBooleanProperty {
             val name = bedrockName
@@ -42,16 +42,16 @@ data class BedrockBooleanProperty(
     override fun getBedrockValueName(value: Boolean): String = value.toString()
 
     //? if >=1.21.2 {
-    /*override fun ordinal(value: Boolean): Int {
+    override fun ordinal(value: Boolean): Int {
         return values.toList().indexOf(value)
     }
 
     override fun getValues(): List<Boolean> {
         return values.toList()
     }
-    *///?} else {
-    override fun getValues(): Collection<Boolean> = values
-    //?}
+    //?} else {
+    /*override fun getValues(): Collection<Boolean> = values
+    *///?}
 
     override fun parse(name: String): Optional<Boolean> = Optional.ofNullable(values.find { it.toString() == name })
 

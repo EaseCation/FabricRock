@@ -6,21 +6,21 @@ import net.easecation.bedrockloader.render.BedrockEntityMaterial
 import net.easecation.bedrockloader.render.BedrockGeometryModel
 import net.minecraft.client.render.entity.LivingEntityRenderer
 //? if >=1.21.2 {
-/*import net.easecation.bedrockloader.render.state.EntityDataDrivenRenderState
+import net.easecation.bedrockloader.render.state.EntityDataDrivenRenderState
 import net.easecation.bedrockloader.animation.EntityAnimationManager
-*///?}
+//?}
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.render.RenderLayer
 //? if >=1.21.11 {
-/*import net.minecraft.client.render.RenderLayers
-*///?}
-//? if <1.21.9 {
-import net.minecraft.client.render.VertexConsumerProvider
+import net.minecraft.client.render.RenderLayers
 //?}
-//? if >=1.21.9 {
-/*import net.minecraft.client.render.command.OrderedRenderCommandQueue
-import net.minecraft.client.render.state.CameraRenderState
+//? if <1.21.9 {
+/*import net.minecraft.client.render.VertexConsumerProvider
 *///?}
+//? if >=1.21.9 {
+import net.minecraft.client.render.command.OrderedRenderCommandQueue
+import net.minecraft.client.render.state.CameraRenderState
+//?}
 import net.minecraft.client.render.entity.EntityRendererFactory
 import net.minecraft.client.render.entity.MobEntityRenderer
 import net.minecraft.client.render.entity.model.EntityModel
@@ -39,7 +39,7 @@ import net.minecraft.util.math.MathHelper
  * - entity_emissive_alpha: 自发光 + Alpha 测试
  */
 //? if >=1.21.2 {
-/*class EntityDataDrivenRenderer private constructor(
+class EntityDataDrivenRenderer private constructor(
     context: EntityRendererFactory.Context,
     entityModel: EntityModel<EntityDataDrivenRenderState>,
     shadowRadius: Float,
@@ -47,8 +47,8 @@ import net.minecraft.util.math.MathHelper
     private val entityIdentifier: Identifier,
     private val material: BedrockEntityMaterial
 ) : MobEntityRenderer<EntityDataDriven, EntityDataDrivenRenderState, EntityModel<EntityDataDrivenRenderState>>(context, entityModel, shadowRadius) {
-*///?} else {
-class EntityDataDrivenRenderer private constructor(
+//?} else {
+/*class EntityDataDrivenRenderer private constructor(
     context: EntityRendererFactory.Context,
     entityModel: EntityModel<EntityDataDriven>,
     shadowRadius: Float,
@@ -56,14 +56,14 @@ class EntityDataDrivenRenderer private constructor(
     private val entityIdentifier: Identifier,
     private val material: BedrockEntityMaterial
 ) : MobEntityRenderer<EntityDataDriven, EntityModel<EntityDataDriven>>(context, entityModel, shadowRadius) {
-//?}
+*///?}
 
     companion object {
         /** 全亮度值 (15, 15) = 0xF000F0 */
         private const val MAX_LIGHT = 0xF000F0
 
         //? if >=1.21.2 {
-        /*fun create(
+        fun create(
             context: EntityRendererFactory.Context,
             model: EntityModel<EntityDataDrivenRenderState>,
             shadowRadius: Float,
@@ -73,8 +73,8 @@ class EntityDataDrivenRenderer private constructor(
         ): EntityDataDrivenRenderer {
             return EntityDataDrivenRenderer(context, model, shadowRadius, texture, entityIdentifier, material)
         }
-        *///?} else {
-        fun create(
+        //?} else {
+        /*fun create(
             context: EntityRendererFactory.Context,
             model: EntityModel<EntityDataDriven>,
             shadowRadius: Float,
@@ -84,11 +84,11 @@ class EntityDataDrivenRenderer private constructor(
         ): EntityDataDrivenRenderer {
             return EntityDataDrivenRenderer(context, model, shadowRadius, texture, entityIdentifier, material)
         }
-        //?}
+        *///?}
     }
 
     //? if >=1.21.2 {
-    /*override fun createRenderState(): EntityDataDrivenRenderState {
+    override fun createRenderState(): EntityDataDrivenRenderState {
         return EntityDataDrivenRenderState()
     }
 
@@ -118,17 +118,17 @@ class EntityDataDrivenRenderer private constructor(
         }
         state.animationManager = animManager
     }
-    *///?}
+    //?}
 
     //? if >=1.21.2 {
-    /*override fun getTexture(state: EntityDataDrivenRenderState): Identifier {
+    override fun getTexture(state: EntityDataDrivenRenderState): Identifier {
         return texture
     }
-    *///?} else {
-    override fun getTexture(entity: EntityDataDriven): Identifier {
+    //?} else {
+    /*override fun getTexture(entity: EntityDataDriven): Identifier {
         return texture
     }
-    //?}
+    *///?}
 
     /**
      * 根据材质类型选择渲染层
@@ -140,7 +140,7 @@ class EntityDataDrivenRenderer private constructor(
      * - 默认: 实心渲染
      */
     //? if >=1.21.11 {
-    /*override fun getRenderLayer(
+    override fun getRenderLayer(
         state: EntityDataDrivenRenderState,
         showBody: Boolean,
         translucent: Boolean,
@@ -157,7 +157,7 @@ class EntityDataDrivenRenderer private constructor(
             else -> RenderLayers.entitySolid(texture)
         }
     }
-    *///?} elif >=1.21.2 {
+    //?} elif >=1.21.2 {
     /*override fun getRenderLayer(
         state: EntityDataDrivenRenderState,
         showBody: Boolean,
@@ -176,7 +176,7 @@ class EntityDataDrivenRenderer private constructor(
         }
     }
     *///?} else {
-    override fun getRenderLayer(
+    /*override fun getRenderLayer(
         entity: EntityDataDriven,
         showBody: Boolean,
         translucent: Boolean,
@@ -193,13 +193,13 @@ class EntityDataDrivenRenderer private constructor(
             else -> RenderLayer.getEntitySolid(texture)
         }
     }
-    //?}
+    *///?}
 
     /**
      * 重写渲染方法，支持自发光材质
      */
     //? if >=1.21.9 {
-    /*override fun render(
+    override fun render(
         state: EntityDataDrivenRenderState,
         matrices: MatrixStack,
         queue: OrderedRenderCommandQueue,
@@ -235,7 +235,7 @@ class EntityDataDrivenRenderer private constructor(
             super.render(state, matrices, queue, cameraRenderState)
         }
     }
-    *///?} elif >=1.21.2 {
+    //?} elif >=1.21.2 {
     /*override fun render(
         state: EntityDataDrivenRenderState,
         matrices: MatrixStack,
@@ -329,7 +329,7 @@ class EntityDataDrivenRenderer private constructor(
         }
     }
     *///?} else {
-    override fun render(
+    /*override fun render(
         entity: EntityDataDriven,
         yaw: Float,
         tickDelta: Float,
@@ -388,21 +388,21 @@ class EntityDataDrivenRenderer private constructor(
             super.render(entity, yaw, tickDelta, matrices, vertexConsumers, effectiveLight)
         }
     }
-    //?}
+    *///?}
 
     /**
      * 重写 scale 方法，应用配置的缩放值到 MatrixStack
      */
     //? if >=1.21.2 {
-    /*override fun scale(state: EntityDataDrivenRenderState, matrices: MatrixStack) {
+    override fun scale(state: EntityDataDrivenRenderState, matrices: MatrixStack) {
         val scale = state.scale
         matrices.scale(scale, scale, scale)
     }
-    *///?} else {
-    override fun scale(entity: EntityDataDriven, matrices: MatrixStack, amount: Float) {
+    //?} else {
+    /*override fun scale(entity: EntityDataDriven, matrices: MatrixStack, amount: Float) {
         val scale = BedrockAddonsRegistryClient.entityScaleConfigs[entityIdentifier] ?: 1.0f
         matrices.scale(scale, scale, scale)
     }
-    //?}
+    *///?}
 
 }

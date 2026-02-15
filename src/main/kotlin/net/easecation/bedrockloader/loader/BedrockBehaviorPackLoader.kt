@@ -44,7 +44,7 @@ class BedrockBehaviorPackLoader(
             try {
                 BedrockLoader.logger.info("Registering block $id from pack $packName")
                 //? if >=1.21.4 {
-                /*// 1.21.4: 使用Blocks.register()来正确设置registry key
+                // 1.21.4: 使用Blocks.register()来正确设置registry key
                 // 注意：createWithSettings() 内部会在 Block 构造之前预验证属性，
                 // 避免 Block 构造函数部分执行后抛异常导致 intrusive holder 孤立
                 val registryKey = net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.BLOCK, id)
@@ -56,10 +56,10 @@ class BedrockBehaviorPackLoader(
                     net.minecraft.block.AbstractBlock.Settings.create()
                 )
                 BedrockLoader.logger.info("Successfully registered block $id: $block")
-                *///?} else {
-                val block = BlockContext.create(id, beh)
+                //?} else {
+                /*val block = BlockContext.create(id, beh)
                 Registry.register(Registries.BLOCK, id, block)
-                //?}
+                *///?}
                 BedrockAddonsRegistry.blocks[id] = block
 
                 // 保存 BlockContext 用于导出映射
@@ -68,12 +68,12 @@ class BedrockBehaviorPackLoader(
                 }
 
                 //? if >=1.21.4 {
-                /*// 1.21.4: 使用Items.register()来正确注册BlockItem
+                // 1.21.4: 使用Items.register()来正确注册BlockItem
                 val item = net.minecraft.item.Items.register(block)
-                *///?} else {
-                val item = BlockItem(block, Item.Settings())
+                //?} else {
+                /*val item = BlockItem(block, Item.Settings())
                 Registry.register(Registries.ITEM, id, item)
-                //?}
+                *///?}
                 BedrockAddonsRegistry.items[id] = item
 
                 // 关键：记录物品到包的映射
@@ -115,7 +115,7 @@ class BedrockBehaviorPackLoader(
                     val entityName = id.path
                     val itemIdentifier = identifierOf(id.namespace, "${entityName}_spawn_egg")
                     //? if >=1.21.9 {
-                    /*// 1.21.9: SpawnEggItem构造函数不再接受EntityType，改用Settings.spawnEgg()
+                    // 1.21.9: SpawnEggItem构造函数不再接受EntityType，改用Settings.spawnEgg()
                     val spawnEggRegistryKey = net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.ITEM, itemIdentifier)
                     val spawnEggItem = net.minecraft.item.Items.register(
                         spawnEggRegistryKey,
@@ -124,7 +124,7 @@ class BedrockBehaviorPackLoader(
                         },
                         net.minecraft.item.Item.Settings().spawnEgg(entityType)
                     )
-                    *///?} elif >=1.21.4 {
+                    //?} elif >=1.21.4 {
                     /*val spawnEggRegistryKey = net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.ITEM, itemIdentifier)
                     val spawnEggItem = net.minecraft.item.Items.register(
                         spawnEggRegistryKey,
@@ -134,14 +134,14 @@ class BedrockBehaviorPackLoader(
                         net.minecraft.item.Item.Settings()
                     )
                     *///?} else {
-                    val spawnEggItem = SpawnEggItem(
+                    /*val spawnEggItem = SpawnEggItem(
                         entityType,
                         clientEntity?.spawn_egg?.base_color?.replace("#", "")?.hexToInt(HexFormat.Default) ?: 0xffffff,
                         clientEntity?.spawn_egg?.overlay_color?.replace("#", "")?.hexToInt(HexFormat.Default) ?: 0xffffff,
                         Item.Settings()
                     )
                     Registry.register(Registries.ITEM, itemIdentifier, spawnEggItem)
-                    //?}
+                    *///?}
                     BedrockAddonsRegistry.items[itemIdentifier] = spawnEggItem
 
                     // 关键：记录刷怪蛋到包的映射

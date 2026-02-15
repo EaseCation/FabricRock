@@ -77,10 +77,10 @@ object BlockStateMappingExporter {
      * 唯一需要转换的是 Boolean: true/false -> 1/0
      */
     //? if >=1.21.2 {
-    /*private fun toBedrockValue(property: BedrockProperty<*>, javaValue: String): String {
-    *///?} else {
-    private fun toBedrockValue(property: BedrockProperty<*, *>, javaValue: String): String {
-    //?}
+    private fun toBedrockValue(property: BedrockProperty<*>, javaValue: String): String {
+    //?} else {
+    /*private fun toBedrockValue(property: BedrockProperty<*, *>, javaValue: String): String {
+    *///?}
         return when (property) {
             is BedrockBooleanProperty -> if (javaValue == "true") "1" else "0"
             else -> javaValue  // Int, String, Direction 都不需要转换

@@ -5,8 +5,8 @@ import net.easecation.bedrockloader.loader.context.BedrockPackContext
 import net.easecation.bedrockloader.render.BedrockEntityMaterial
 import net.easecation.bedrockloader.render.BedrockGeometryModel
 //? if <1.21.4 {
-import net.minecraft.client.render.model.UnbakedModel
-//?}
+/*import net.minecraft.client.render.model.UnbakedModel
+*///?}
 import net.minecraft.util.Identifier
 
 /**
@@ -21,16 +21,16 @@ data class EntityAnimationConfig(
 object BedrockAddonsRegistryClient {
     val geometries: MutableMap<String, BedrockGeometryModel.Factory> = mutableMapOf()
     //? if >=1.21.4 {
-    /*val blockModels: MutableMap<Identifier, Any> = mutableMapOf()
-    *///?} else {
-    val blockModels: MutableMap<Identifier, UnbakedModel> = mutableMapOf()
-    //?}
+    val blockModels: MutableMap<Identifier, Any> = mutableMapOf()
+    //?} else {
+    /*val blockModels: MutableMap<Identifier, UnbakedModel> = mutableMapOf()
+    *///?}
     val blockEntityModels: MutableMap<Identifier, BedrockGeometryModel> = mutableMapOf()
     //? if >=1.21.4 {
-    /*val itemModels: MutableMap<Identifier, Any> = mutableMapOf()
-    *///?} else {
-    val itemModels: MutableMap<Identifier, UnbakedModel> = mutableMapOf()
-    //?}
+    val itemModels: MutableMap<Identifier, Any> = mutableMapOf()
+    //?} else {
+    /*val itemModels: MutableMap<Identifier, UnbakedModel> = mutableMapOf()
+    *///?}
     val entityModel: MutableMap<Identifier, BedrockGeometryModel> = mutableMapOf()
 
     /**

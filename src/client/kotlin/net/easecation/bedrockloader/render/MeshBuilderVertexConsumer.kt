@@ -1,7 +1,7 @@
 package net.easecation.bedrockloader.render
 
 //? if <1.21 {
-import net.fabricmc.fabric.api.renderer.v1.Renderer
+/*import net.fabricmc.fabric.api.renderer.v1.Renderer
 import net.fabricmc.fabric.api.renderer.v1.RendererAccess
 import net.fabricmc.fabric.api.renderer.v1.mesh.Mesh
 import net.fabricmc.fabric.api.renderer.v1.mesh.MeshBuilder
@@ -102,7 +102,7 @@ class MeshBuilderVertexConsumer(private val defaultSprite: Sprite, private val s
         return meshBuilder.build()
     }
 }
-//?} elif <1.21.4 {
+*///?} elif <1.21.4 {
 /*import net.fabricmc.fabric.api.renderer.v1.Renderer
 import net.fabricmc.fabric.api.renderer.v1.RendererAccess
 import net.fabricmc.fabric.api.renderer.v1.mesh.Mesh
@@ -188,7 +188,7 @@ class MeshBuilderVertexConsumer(private val defaultSprite: Sprite, private val s
     }
 }
 *///?} else {
-/*import net.fabricmc.fabric.api.renderer.v1.Renderer
+import net.fabricmc.fabric.api.renderer.v1.Renderer
 import net.fabricmc.fabric.api.renderer.v1.mesh.Mesh
 import net.fabricmc.fabric.api.renderer.v1.mesh.MutableMesh
 import net.fabricmc.fabric.api.renderer.v1.mesh.MutableQuadView
@@ -219,7 +219,7 @@ class MeshBuilderVertexConsumer(private val defaultSprite: Sprite, private val s
     }
 
     //? if >=1.21.11 {
-    /^override fun color(color: Int): VertexConsumer {
+    override fun color(color: Int): VertexConsumer {
         emitter.color(vertexIndex, color)
         return this
     }
@@ -227,7 +227,7 @@ class MeshBuilderVertexConsumer(private val defaultSprite: Sprite, private val s
     override fun lineWidth(width: Float): VertexConsumer {
         return this
     }
-    ^///?}
+    //?}
 
     override fun texture(u: Float, v: Float): VertexConsumer {
         emitter.uv(vertexIndex, u, v)
@@ -282,4 +282,4 @@ class MeshBuilderVertexConsumer(private val defaultSprite: Sprite, private val s
         return mutableMesh.immutableCopy()
     }
 }
-*///?}
+//?}

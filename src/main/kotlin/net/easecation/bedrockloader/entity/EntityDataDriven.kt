@@ -29,7 +29,7 @@ class EntityDataDriven(
     companion object {
         fun buildEntityType(identifier: Identifier): EntityType<EntityDataDriven> {
             //? if >=1.21.2 {
-            /*val registryKey = net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.ENTITY_TYPE, identifier)
+            val registryKey = net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.ENTITY_TYPE, identifier)
             return EntityType.Builder.create({ type, world ->
                 val components = BedrockAddonsRegistry.entityComponents[identifier]
                     ?: throw IllegalStateException("[EntityDataDriven] Entity $identifier has no components")
@@ -37,7 +37,7 @@ class EntityDataDriven(
             }, SpawnGroup.CREATURE)
                 .dimensions(1f, 1f)
                 .build(registryKey)
-            *///?} elif >=1.21 {
+            //?} elif >=1.21 {
             /*return EntityType.Builder.create({ type, world ->
                 val components = BedrockAddonsRegistry.entityComponents[identifier]
                     ?: throw IllegalStateException("[EntityDataDriven] Entity $identifier has no components")
@@ -46,14 +46,14 @@ class EntityDataDriven(
                 .dimensions(1f, 1f)
                 .build(identifier.toString())
             *///?} else {
-            return EntityType.Builder.create({ type, world ->
+            /*return EntityType.Builder.create({ type, world ->
                 val components = BedrockAddonsRegistry.entityComponents[identifier]
                     ?: throw IllegalStateException("[EntityDataDriven] Entity $identifier has no components")
                 EntityDataDriven(identifier, components, type, world)
             }, SpawnGroup.CREATURE).apply {
                 setDimensions(1f, 1f)
             }.build()
-            //?}
+            *///?}
         }
         fun buildEntityAttributes(components: EntityComponents): DefaultAttributeContainer.Builder {
             val builder = createMobAttributes()
@@ -61,16 +61,16 @@ class EntityDataDriven(
             // Add HealthComponent, KnockbackResistanceComponent, MovementComponent
             components.let {
                 //? if >=1.21.2 {
-                /*it.minecraftHealth?.max?.let { value -> builder.add(EntityAttributes.MAX_HEALTH, value.toDouble()) } ?:
+                it.minecraftHealth?.max?.let { value -> builder.add(EntityAttributes.MAX_HEALTH, value.toDouble()) } ?:
                 it.minecraftHealth?.value?.let { value -> builder.add(EntityAttributes.MAX_HEALTH, value.toDouble()) }
                 it.minecraftKnockbackResistance?.value?.let { value -> builder.add(EntityAttributes.KNOCKBACK_RESISTANCE, value.toDouble()) }
                 it.minecraftMovement?.value?.let { value ->  builder.add(EntityAttributes.MOVEMENT_SPEED, value.toDouble()) }
-                *///?} else {
-                it.minecraftHealth?.max?.let { value -> builder.add(EntityAttributes.GENERIC_MAX_HEALTH, value.toDouble()) } ?:
+                //?} else {
+                /*it.minecraftHealth?.max?.let { value -> builder.add(EntityAttributes.GENERIC_MAX_HEALTH, value.toDouble()) } ?:
                 it.minecraftHealth?.value?.let { value -> builder.add(EntityAttributes.GENERIC_MAX_HEALTH, value.toDouble()) }
                 it.minecraftKnockbackResistance?.value?.let { value -> builder.add(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE, value.toDouble()) }
                 it.minecraftMovement?.value?.let { value ->  builder.add(EntityAttributes.GENERIC_MOVEMENT_SPEED, value.toDouble()) }
-                //?}
+                *///?}
             }
             return builder
         }
@@ -93,10 +93,10 @@ class EntityDataDriven(
     }
 
     //? if <1.21.5 {
-    override fun getArmorItems(): MutableIterable<ItemStack> {
+    /*override fun getArmorItems(): MutableIterable<ItemStack> {
         return mutableListOf()
     }
-    //?}
+    *///?}
 
     override fun equipStack(slot: EquipmentSlot?, stack: ItemStack?) {
     }
@@ -114,7 +114,7 @@ class EntityDataDriven(
     }
 
     //? if >=1.21.2 {
-    /*override fun damage(world: net.minecraft.server.world.ServerWorld, source: DamageSource, amount: Float): Boolean {
+    override fun damage(world: net.minecraft.server.world.ServerWorld, source: DamageSource, amount: Float): Boolean {
         return components.minecraftHealth?.min?.let {
             when {
                 health - amount > 1 && !source.isOf(DamageTypes.OUT_OF_WORLD) -> {
@@ -130,8 +130,8 @@ class EntityDataDriven(
             }
         }?: return super.damage(world, source, amount)
     }
-    *///?} else {
-    override fun damage(source: DamageSource, amount: Float): Boolean {
+    //?} else {
+    /*override fun damage(source: DamageSource, amount: Float): Boolean {
         return components.minecraftHealth?.min?.let {
             when {
                 health - amount > 1 && !source.isOf(DamageTypes.OUT_OF_WORLD) -> {
@@ -147,6 +147,6 @@ class EntityDataDriven(
             }
         }?: return super.damage(source, amount)
     }
-    //?}
+    *///?}
 
 }

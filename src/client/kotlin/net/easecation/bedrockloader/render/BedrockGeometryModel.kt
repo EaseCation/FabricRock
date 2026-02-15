@@ -10,31 +10,31 @@ import net.easecation.bedrockloader.loader.BedrockAddonsRegistryClient
 import net.easecation.bedrockloader.render.model.ModelPart
 import net.easecation.bedrockloader.render.model.TexturedModelData
 //? if >=1.21.2 {
-/*import net.easecation.bedrockloader.render.state.EntityDataDrivenRenderState
+import net.easecation.bedrockloader.render.state.EntityDataDrivenRenderState
 import net.minecraft.client.render.entity.state.EntityRenderState
-*///?}
+//?}
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.fabricmc.fabric.api.renderer.v1.mesh.Mesh
 //? if >=1.21.5 {
-/*import net.fabricmc.fabric.api.renderer.v1.model.FabricBlockStateModel
-*///?} else {
-import net.fabricmc.fabric.api.renderer.v1.model.FabricBakedModel
-//?}
+import net.fabricmc.fabric.api.renderer.v1.model.FabricBlockStateModel
+//?} else {
+/*import net.fabricmc.fabric.api.renderer.v1.model.FabricBakedModel
+*///?}
 import net.fabricmc.fabric.api.renderer.v1.model.ModelHelper
 //? if <1.21.4 {
-import net.fabricmc.fabric.api.renderer.v1.render.RenderContext
-//?} else {
-/*import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter
+/*import net.fabricmc.fabric.api.renderer.v1.render.RenderContext
+*///?} else {
+import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter
 import java.util.function.Predicate
-*///?}
+//?}
 import net.minecraft.block.BlockState
 import net.minecraft.client.render.VertexConsumer
 import net.minecraft.client.render.entity.model.EntityModel
 import net.minecraft.client.render.model.*
 //? if <1.21.4 {
-import net.minecraft.client.render.model.json.ModelOverrideList
-//?}
+/*import net.minecraft.client.render.model.json.ModelOverrideList
+*///?}
 import net.minecraft.client.render.model.json.ModelTransformation
 import net.minecraft.client.render.model.json.Transformation
 import net.minecraft.client.texture.Sprite
@@ -78,12 +78,12 @@ class BedrockGeometryModel private constructor(
     // 骨骼原始变换值（用于动画重置）
     private val originalBoneTransforms: Map<String, OriginalBoneTransform> = emptyMap()
 //? if >=1.21.5 {
-/*) : EntityModel<EntityDataDrivenRenderState>(createMinecraftModelPart()), BlockStateModel.UnbakedGrouped, BlockStateModel, FabricBlockStateModel {
+) : EntityModel<EntityDataDrivenRenderState>(createMinecraftModelPart()), BlockStateModel.UnbakedGrouped, BlockStateModel, FabricBlockStateModel {
     companion object {
         private fun createMinecraftModelPart(): net.minecraft.client.model.ModelPart {
             return net.minecraft.client.model.ModelPart(emptyList(), emptyMap())
         }
-*///?} elif >=1.21.4 {
+//?} elif >=1.21.4 {
 /*) : EntityModel<EntityDataDrivenRenderState>(createMinecraftModelPart()), GroupableModel, BakedModel, FabricBakedModel {
     companion object {
         private fun createMinecraftModelPart(): net.minecraft.client.model.ModelPart {
@@ -96,13 +96,13 @@ class BedrockGeometryModel private constructor(
             return net.minecraft.client.model.ModelPart(emptyList(), emptyMap())
         }
 *///?} else {
-) : EntityModel<EntityDataDriven>(), UnbakedModel, BakedModel, FabricBakedModel {
+/*) : EntityModel<EntityDataDriven>(), UnbakedModel, BakedModel, FabricBakedModel {
     companion object {
-//?}
+*///?}
         //? if >=1.21.5 {
-        /*val MODEL_TRANSFORM_BLOCK: ModelTransformation = ModelTransformation.NONE
-        *///?} else {
-        val MODEL_TRANSFORM_BLOCK: ModelTransformation = ModelTransformation(
+        val MODEL_TRANSFORM_BLOCK: ModelTransformation = ModelTransformation.NONE
+        //?} else {
+        /*val MODEL_TRANSFORM_BLOCK: ModelTransformation = ModelTransformation(
             ModelHelper.TRANSFORM_BLOCK_3RD_PERSON_RIGHT,
             ModelHelper.TRANSFORM_BLOCK_3RD_PERSON_RIGHT,
             ModelHelper.TRANSFORM_BLOCK_1ST_PERSON_LEFT,
@@ -112,7 +112,7 @@ class BedrockGeometryModel private constructor(
             ModelHelper.TRANSFORM_BLOCK_GROUND,
             ModelHelper.TRANSFORM_BLOCK_FIXED
         )
-        //?}
+        *///?}
     }
 
     class Factory(private val bedrockModel: GeometryDefinition.Model) {
@@ -237,10 +237,10 @@ class BedrockGeometryModel private constructor(
      * @return 对应状态的UnbakedModel（可能是this本身或新创建的变体）
      */
     //? if >=1.21.4 {
-    /*fun getModelVariant(block: BlockContext.BlockDataDriven, state: BlockState): BedrockGeometryModel {
-    *///?} else {
-    fun getModelVariant(block: BlockContext.BlockDataDriven, state: BlockState): UnbakedModel {
-    //?}
+    fun getModelVariant(block: BlockContext.BlockDataDriven, state: BlockState): BedrockGeometryModel {
+    //?} else {
+    /*fun getModelVariant(block: BlockContext.BlockDataDriven, state: BlockState): UnbakedModel {
+    *///?}
         val components = block.getComponents(state)
         val newTransformation = components.minecraftTransformation
         val newMaterialInstances = components.minecraftMaterialInstances
@@ -288,7 +288,7 @@ class BedrockGeometryModel private constructor(
     }
 
     //? if >=1.21.5 {
-    /*override fun resolve(resolver: ResolvableModel.Resolver) {
+    override fun resolve(resolver: ResolvableModel.Resolver) {
         BedrockLoader.logger.info("Resolving model... ${bedrockModel.description.identifier}")
     }
 
@@ -306,7 +306,7 @@ class BedrockGeometryModel private constructor(
     }
 
     override fun getEqualityGroup(state: BlockState): Any = this
-    *///?} elif >=1.21.4 {
+    //?} elif >=1.21.4 {
     /*override fun resolve(resolver: ResolvableModel.Resolver) {
         BedrockLoader.logger.info("Resolving model... ${bedrockModel.description.identifier}")
     }
@@ -365,7 +365,7 @@ class BedrockGeometryModel private constructor(
         return this
     }
     *///?} else {
-    override fun getModelDependencies(): Collection<Identifier> {
+    /*override fun getModelDependencies(): Collection<Identifier> {
         return emptyList()
     }
 
@@ -386,14 +386,14 @@ class BedrockGeometryModel private constructor(
         mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites, blockTransformation)
         return this
     }
-    //?}
-
-    //? if >=1.21.5 {
-    /*fun getModelPartForBaking(): ModelPart = modelPart
     *///?}
 
     //? if >=1.21.5 {
-    /*// BlockStateModel implementation
+    fun getModelPartForBaking(): ModelPart = modelPart
+    //?}
+
+    //? if >=1.21.5 {
+    // BlockStateModel implementation
     override fun addParts(random: Random, parts: MutableList<BlockModelPart>) {
         // Empty - we use FRAPI for rendering
     }
@@ -411,7 +411,7 @@ class BedrockGeometryModel private constructor(
     ) {
         mesh?.outputTo(emitter)
     }
-    *///?} elif >=1.21.4 {
+    //?} elif >=1.21.4 {
     /*override fun getQuads(state: BlockState?, face: Direction?, random: Random?): MutableList<BakedQuad> = mutableListOf()
     override fun useAmbientOcclusion(): Boolean = true
     override fun hasDepth(): Boolean = false
@@ -429,7 +429,7 @@ class BedrockGeometryModel private constructor(
     override fun emitItemQuads(emitter: QuadEmitter, randomSupplier: Supplier<Random>) { mesh?.outputTo(emitter) }
     override fun getTransformation(): ModelTransformation = transformation
     *///?} else {
-    override fun getQuads(state: BlockState?, face: Direction?, random: Random?): MutableList<BakedQuad> = mutableListOf()
+    /*override fun getQuads(state: BlockState?, face: Direction?, random: Random?): MutableList<BakedQuad> = mutableListOf()
     override fun useAmbientOcclusion(): Boolean = true
     override fun isBuiltin(): Boolean = false
     override fun hasDepth(): Boolean = false
@@ -440,7 +440,7 @@ class BedrockGeometryModel private constructor(
     override fun emitItemQuads(itemStack: ItemStack, supplier: Supplier<Random>, renderContext: RenderContext) { mesh?.outputTo(renderContext.emitter) }
     override fun getTransformation(): ModelTransformation = transformation
     override fun getOverrides(): ModelOverrideList = ModelOverrideList.EMPTY
-    //?}
+    *///?}
 
     // EntityModel methods
 
@@ -453,17 +453,17 @@ class BedrockGeometryModel private constructor(
         modelPart.render(matrices, vertices, light, overlay, red, green, blue, alpha)
     }
     *///?} elif <1.21 {
-    override fun render(matrices: MatrixStack, vertices: VertexConsumer, light: Int, overlay: Int, red: Float, green: Float, blue: Float, alpha: Float) {
+    /*override fun render(matrices: MatrixStack, vertices: VertexConsumer, light: Int, overlay: Int, red: Float, green: Float, blue: Float, alpha: Float) {
         modelPart.render(matrices, vertices, light, overlay, red, green, blue, alpha)
     }
-    //?}
+    *///?}
 
     //? if >=1.21.2 {
-    /*/^*
+    /**
      * 在1.21.2+中，render()方法是final的，不能被override
      * 我们需要通过其他方式来渲染自定义的ModelPart
      * 这个方法供外部调用来渲染模型
-     ^/
+     */
     fun renderCustom(matrices: MatrixStack, vertices: VertexConsumer, light: Int, overlay: Int, color: Int) {
         val alpha = ((color shr 24) and 0xFF) / 255.0f
         val red = ((color shr 16) and 0xFF) / 255.0f
@@ -472,7 +472,7 @@ class BedrockGeometryModel private constructor(
         // 使用我们自定义的ModelPart进行渲染
         modelPart.render(matrices, vertices, light, overlay, red, green, blue, alpha)
     }
-    *///?}
+    //?}
 
     /**
      * 应用动画变换到骨骼
@@ -541,7 +541,7 @@ class BedrockGeometryModel private constructor(
     }
 
     //? if >=1.21.2 {
-    /*override fun setAngles(state: EntityDataDrivenRenderState) {
+    override fun setAngles(state: EntityDataDrivenRenderState) {
         // 从state中获取动画管理器
         val animManager = state.animationManager as? EntityAnimationManager
         if (animManager == null) {
@@ -608,8 +608,8 @@ class BedrockGeometryModel private constructor(
             }
         }
     }
-    *///?} else {
-    override fun setAngles(entity: EntityDataDriven?, limbAngle: Float, limbDistance: Float, animationProgress: Float, headYaw: Float, headPitch: Float) {
+    //?} else {
+    /*override fun setAngles(entity: EntityDataDriven?, limbAngle: Float, limbDistance: Float, animationProgress: Float, headYaw: Float, headPitch: Float) {
         if (entity == null) return
 
         // 懒加载创建动画管理器
@@ -690,6 +690,6 @@ class BedrockGeometryModel private constructor(
             }
         }
     }
-    //?}
+    *///?}
 
 }
