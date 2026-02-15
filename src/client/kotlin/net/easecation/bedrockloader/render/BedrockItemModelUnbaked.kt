@@ -2,7 +2,9 @@ package net.easecation.bedrockloader.render
 
 //? if >=1.21.5 {
 import com.mojang.serialization.MapCodec
-import net.minecraft.client.render.item.model.BasicItemModel
+//? if <1.21.11 {
+/*import net.minecraft.client.render.item.model.BasicItemModel
+*///?}
 import net.minecraft.client.render.item.model.ItemModel
 import net.minecraft.client.render.model.BakedQuad
 import net.minecraft.client.render.model.ModelSettings
@@ -10,6 +12,15 @@ import net.minecraft.client.render.model.ResolvableModel
 import net.minecraft.client.render.model.SimpleModel
 import net.minecraft.client.texture.Sprite
 import net.minecraft.util.Identifier
+//? if >=1.21.11 {
+import net.minecraft.client.render.TexturedRenderLayers
+import net.minecraft.client.render.item.ItemRenderState
+import net.minecraft.client.item.ItemModelManager
+import net.minecraft.item.ItemDisplayContext
+import net.minecraft.item.ItemStack
+import net.minecraft.client.world.ClientWorld
+import net.minecraft.util.HeldItemContext
+//?}
 
 class BedrockItemModelUnbaked(
     private val geometryModel: BedrockGeometryModel
@@ -50,7 +61,32 @@ class BedrockItemModelUnbaked(
         val transforms = blockBlockModel.getTransformations()
 
         val settings = ModelSettings(true, defaultSprite, transforms)
-        return BasicItemModel(emptyList(), quads, settings)
+        //? if >=1.21.11 {
+        // 直接实现 ItemModel 接口，避免反射访问 BasicItemModel 的包私有构造函数
+        val renderLayer = TexturedRenderLayers.getEntityCutout()
+        return object : ItemModel {
+            override fun update(
+                state: ItemRenderState,
+                stack: ItemStack,
+                resolver: ItemModelManager,
+                displayContext: ItemDisplayContext,
+                world: ClientWorld?,
+                heldItemContext: HeldItemContext?,
+                seed: Int
+            ) {
+                state.addModelKey(this)
+                val layer = state.newLayer()
+                if (stack.hasGlint()) {
+                    layer.setGlint(ItemRenderState.Glint.STANDARD)
+                }
+                layer.setRenderLayer(renderLayer)
+                settings.addSettings(layer, displayContext)
+                layer.getQuads().addAll(quads)
+            }
+        }
+        //?} else {
+        /*return BasicItemModel(emptyList(), quads, settings)
+        *///?}
     }
 }
 //?}

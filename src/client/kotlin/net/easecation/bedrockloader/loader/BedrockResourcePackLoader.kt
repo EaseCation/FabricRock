@@ -138,9 +138,11 @@ class BedrockResourcePackLoader(
         val fileMcMeta = javaResDir.resolve("pack.mcmeta")
         val mcMeta = JavaMCMeta(
                 pack = JavaMCMeta.PackInfo(
-                        //? if >=1.21.4 {
-                        pack_format = 46,
-                        //?} else {
+                        //? if >=1.21.7 {
+                        pack_format = 64,
+                        //?} elif >=1.21.4 {
+                        /*pack_format = 46,
+                        *///?} else {
                         /*pack_format = 34,
                         *///?}
                         description = "Bedrock addons loader"
@@ -318,6 +320,69 @@ class BedrockResourcePackLoader(
             writeItemModelJson(identifier, "block/cube_all", textureJsonMap)
         }
     }
+
+    /**
+     * 为标准立方体方块写 models/block/<id>.json
+     * 在 1.21.5+ 中，BlockStateResolver 使用 ModelVariant(modelId) 引用模型，
+     * 需要物理 JSON 文件才能正确加载。
+     */
+    private fun writeBlockCubeModelJson(
+        identifier: Identifier,
+        textures: BlockResourceDefinition.Textures?,
+        materialInstances: ComponentMaterialInstances?
+    ) {
+        val textureJsonMap = mutableMapOf<String, String>()
+        materialInstances?.forEach { (key, value) ->
+            value.texture?.let { texture ->
+                context.resource.terrainTextureToJava(identifier.namespace, texture)?.let { texturePath ->
+                    when (key) {
+                        "*" -> textureJsonMap["all"] = texturePath.toString()
+                        "side" -> {
+                            val path = texturePath.toString()
+                            textureJsonMap["north"] = path
+                            textureJsonMap["south"] = path
+                            textureJsonMap["east"] = path
+                            textureJsonMap["west"] = path
+                        }
+                        "north", "south", "east", "west", "up", "down" ->
+                            textureJsonMap[key] = texturePath.toString()
+                    }
+                }
+            }
+        }
+        when (textures) {
+            is BlockResourceDefinition.Textures.TexturesAllFace -> {
+                context.resource.terrainTextureToJava(identifier.namespace, textures.all)?.let {
+                    textureJsonMap["all"] = it.toString()
+                }
+            }
+            is BlockResourceDefinition.Textures.TexturesMultiFace -> {
+                val directions = mapOf(
+                    "up" to textures.up, "down" to textures.down,
+                    "north" to textures.north, "south" to textures.south,
+                    "east" to textures.east, "west" to textures.west
+                )
+                for ((direction, textureKey) in directions) {
+                    textureKey?.let {
+                        context.resource.terrainTextureToJava(identifier.namespace, it)?.let { texturePath ->
+                            textureJsonMap[direction] = texturePath.toString()
+                        }
+                    }
+                }
+            }
+            else -> {}
+        }
+        if (textureJsonMap.isNotEmpty()) {
+            val namespaceDir = namespaceDir(identifier.namespace)
+            val modelsBlockDir = namespaceDir.resolve("models/block")
+            if (!modelsBlockDir.exists()) modelsBlockDir.mkdirs()
+            val texturesStr = textureJsonMap.entries.joinToString(",") { (k, v) ->
+                """"$k":"$v""""
+            }
+            val json = """{"parent":"block/cube_all","textures":{$texturesStr}}"""
+            modelsBlockDir.resolve("${identifier.path}.json").writeText(json)
+        }
+    }
     //?}
 
     /**
@@ -410,6 +475,10 @@ class BedrockResourcePackLoader(
             val textures = block?.textures
             val model = createCubeModel(identifier, textures, materialInstances)
             BedrockAddonsRegistryClient.blockModels[identifier] = model
+            //? if >=1.21.5 {
+            // 写物理 JSON 文件，让 ModelVariant 引用的模型能被找到
+            writeBlockCubeModelJson(identifier, textures, materialInstances)
+            //?}
         }
     }
 
@@ -431,6 +500,10 @@ class BedrockResourcePackLoader(
                     if (result != null) {
                         val (model, _) = result
                         BedrockAddonsRegistryClient.itemModels[identifier] = model
+                        //? if >=1.21.5 {
+                        // 写 dummy JSON 文件，modifyItemModelBeforeBake() 会在烘焙时替换为几何体模型
+                        writeItemModelJson(identifier, "block/block", emptyMap())
+                        //?}
                         //? if >=1.21.4 {
                         createItemDefinition(identifier, "${identifier.namespace}:item/${identifier.path}")
                         //?}
@@ -468,6 +541,10 @@ class BedrockResourcePackLoader(
                 // 自定义几何体：通过行为包定义模型和贴图
                 val model = createGeometryModel(identifier, geometry!!, materialInstances) ?: return
                 BedrockAddonsRegistryClient.itemModels[identifier] = model
+                //? if >=1.21.5 {
+                // 写 dummy JSON 文件，modifyItemModelBeforeBake() 会在烘焙时替换为几何体模型
+                writeItemModelJson(identifier, "block/block", emptyMap())
+                //?}
             } else {
                 // 标准立方体：使用cube模型
                 val textures = block?.carried_textures ?: block?.textures

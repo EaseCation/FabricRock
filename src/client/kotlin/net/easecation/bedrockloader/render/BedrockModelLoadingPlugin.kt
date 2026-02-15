@@ -32,50 +32,45 @@ import net.minecraft.util.Identifier
 
 object BedrockModelLoadingPlugin : ModelLoadingPlugin {
     /**
-     * 将基岩版的 ComponentTransformation 转换为 Minecraft 的 ModelRotation
-     *
-     * 限制：
-     * - 仅支持 Y 轴旋转
-     * - 仅支持 90 度增量（0°/90°/180°/270°）
-     * - 忽略缩放和平移
+     * 从 ComponentTransformation 提取归一化的 Y 轴旋转角度
+     * 仅支持 90 度增量（0°/90°/180°/270°），忽略缩放和平移
      */
-    private fun transformationToModelRotation(transformation: ComponentTransformation): ModelRotation {
+    private fun getYRotationDegrees(transformation: ComponentTransformation): Int {
         val rotation = transformation.rotation
-
-        // 提取Y轴旋转角度（rotation[1]是Y轴）
         val yRotation = if (rotation != null && rotation.size >= 2) {
             rotation[1].toInt()
         } else {
             0
         }
-
-        // 归一化到0-360范围
         val normalizedY = ((yRotation % 360 + 360) % 360)
-
-        // 转换为 ModelRotation 枚举
-        val modelRotation = when (normalizedY) {
-            0 -> ModelRotation.X0_Y0
-            90 -> ModelRotation.X0_Y90
-            180 -> ModelRotation.X0_Y180
-            270 -> ModelRotation.X0_Y270
+        return when (normalizedY) {
+            0, 90, 180, 270 -> normalizedY
             else -> {
-                // 非90度增量，使用最接近的值
                 BedrockLoader.logger.warn(
                     "[BedrockModelLoadingPlugin] Transformation Y rotation $yRotation " +
                     "is not a multiple of 90°, using closest match"
                 )
                 when {
-                    normalizedY < 45 -> ModelRotation.X0_Y0
-                    normalizedY < 135 -> ModelRotation.X0_Y90
-                    normalizedY < 225 -> ModelRotation.X0_Y180
-                    normalizedY < 315 -> ModelRotation.X0_Y270
-                    else -> ModelRotation.X0_Y0
+                    normalizedY < 45 -> 0
+                    normalizedY < 135 -> 90
+                    normalizedY < 225 -> 180
+                    normalizedY < 315 -> 270
+                    else -> 0
                 }
             }
         }
-
-        return modelRotation
     }
+
+    //? if <1.21.11 {
+    /*private fun transformationToModelRotation(transformation: ComponentTransformation): ModelRotation {
+        return when (getYRotationDegrees(transformation)) {
+            90 -> ModelRotation.X0_Y90
+            180 -> ModelRotation.X0_Y180
+            270 -> ModelRotation.X0_Y270
+            else -> ModelRotation.X0_Y0
+        }
+    }
+    *///?}
 
     //? if >=1.21.2 {
     override fun initialize(pluginContext: ModelLoadingPlugin.Context) {
@@ -232,11 +227,11 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
                             val transformation = components?.minecraftTransformation
                             var variant = ModelVariant(modelId)
                             if (transformation != null) {
-                                val rotation = transformationToModelRotation(transformation)
-                                variant = when (rotation) {
-                                    ModelRotation.X0_Y90 -> variant.withRotationY(AxisRotation.R90)
-                                    ModelRotation.X0_Y180 -> variant.withRotationY(AxisRotation.R180)
-                                    ModelRotation.X0_Y270 -> variant.withRotationY(AxisRotation.R270)
+                                val yDeg = getYRotationDegrees(transformation)
+                                variant = when (yDeg) {
+                                    90 -> variant.withRotationY(AxisRotation.R90)
+                                    180 -> variant.withRotationY(AxisRotation.R180)
+                                    270 -> variant.withRotationY(AxisRotation.R270)
                                     else -> variant
                                 }
                             }

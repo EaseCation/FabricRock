@@ -1,7 +1,6 @@
 package net.easecation.bedrockloader.resourcepack
 
 import net.easecation.bedrockloader.BedrockLoader
-import net.fabricmc.fabric.impl.resource.loader.ModResourcePackCreator
 import net.minecraft.resource.*
 import net.minecraft.resource.DirectoryResourcePack.DirectoryBackedFactory
 import net.minecraft.resource.ZipResourcePack.ZipBackedFactory

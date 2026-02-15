@@ -47,6 +47,36 @@ def versionConfig = [
 		fabricApi: '0.125.2+1.21.6',
 		yacl: '3.7.1+1.21.6-fabric',
 		modmenu: '15.0.0'
+	],
+	'1.21.7': [
+		yarn: '1.21.7+build.1',
+		fabricApi: '0.128.1+1.21.7',
+		yacl: '3.7.1+1.21.6-fabric',
+		modmenu: '15.0.0'
+	],
+	'1.21.8': [
+		yarn: '1.21.8+build.1',
+		fabricApi: '0.134.0+1.21.8',
+		yacl: '3.7.1+1.21.6-fabric',
+		modmenu: '15.0.0'
+	],
+	'1.21.9': [
+		yarn: '1.21.9+build.1',
+		fabricApi: '0.134.1+1.21.9',
+		yacl: '3.8.0+1.21.9-fabric',
+		modmenu: '16.0.0'
+	],
+	'1.21.10': [
+		yarn: '1.21.10+build.3',
+		fabricApi: '0.138.4+1.21.10',
+		yacl: '3.8.1+1.21.10-fabric',
+		modmenu: '16.0.0'
+	],
+	'1.21.11': [
+		yarn: '1.21.11+build.4',
+		fabricApi: '0.141.3+1.21.11',
+		yacl: '3.8.1+1.21.11-fabric',
+		modmenu: '17.0.0-beta.2'
 	]
 ][mcVersion]
 

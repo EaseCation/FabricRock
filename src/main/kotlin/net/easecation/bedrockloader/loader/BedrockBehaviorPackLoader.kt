@@ -113,9 +113,18 @@ class BedrockBehaviorPackLoader(
                     val clientEntity = packContext.resource.entities[id]?.description
                     val entityName = id.path
                     val itemIdentifier = Identifier.of(id.namespace, "${entityName}_spawn_egg")
-                    //? if >=1.21.4 {
-                    // 1.21.4: 使用Items.register()来正确注册SpawnEggItem
+                    //? if >=1.21.9 {
+                    // 1.21.9: SpawnEggItem构造函数不再接受EntityType，改用Settings.spawnEgg()
                     val spawnEggRegistryKey = net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.ITEM, itemIdentifier)
+                    val spawnEggItem = net.minecraft.item.Items.register(
+                        spawnEggRegistryKey,
+                        java.util.function.Function { settings: net.minecraft.item.Item.Settings ->
+                            SpawnEggItem(settings)
+                        },
+                        net.minecraft.item.Item.Settings().spawnEgg(entityType)
+                    )
+                    //?} elif >=1.21.4 {
+                    /*val spawnEggRegistryKey = net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.ITEM, itemIdentifier)
                     val spawnEggItem = net.minecraft.item.Items.register(
                         spawnEggRegistryKey,
                         java.util.function.Function { settings: net.minecraft.item.Item.Settings ->
@@ -123,7 +132,7 @@ class BedrockBehaviorPackLoader(
                         },
                         net.minecraft.item.Item.Settings()
                     )
-                    //?} else {
+                    *///?} else {
                     /*val spawnEggItem = SpawnEggItem(
                         entityType,
                         clientEntity?.spawn_egg?.base_color?.replace("#", "")?.hexToInt(HexFormat.Default) ?: 0xffffff,

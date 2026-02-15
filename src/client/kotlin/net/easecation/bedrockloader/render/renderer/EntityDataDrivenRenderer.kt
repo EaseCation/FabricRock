@@ -11,7 +11,16 @@ import net.easecation.bedrockloader.animation.EntityAnimationManager
 //?}
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.render.RenderLayer
-import net.minecraft.client.render.VertexConsumerProvider
+//? if >=1.21.11 {
+import net.minecraft.client.render.RenderLayers
+//?}
+//? if <1.21.9 {
+/*import net.minecraft.client.render.VertexConsumerProvider
+*///?}
+//? if >=1.21.9 {
+import net.minecraft.client.render.command.OrderedRenderCommandQueue
+import net.minecraft.client.render.state.CameraRenderState
+//?}
 import net.minecraft.client.render.entity.EntityRendererFactory
 import net.minecraft.client.render.entity.MobEntityRenderer
 import net.minecraft.client.render.entity.model.EntityModel
@@ -130,8 +139,26 @@ class EntityDataDrivenRenderer private constructor(
      * - alphaTest: 单面镂空（如 entity_alphatest_one_sided）
      * - 默认: 实心渲染
      */
-    //? if >=1.21.2 {
+    //? if >=1.21.11 {
     override fun getRenderLayer(
+        state: EntityDataDrivenRenderState,
+        showBody: Boolean,
+        translucent: Boolean,
+        showOutline: Boolean
+    ): RenderLayer? {
+        val texture = getTexture(state)
+        return when {
+            !showBody -> null
+            translucent -> RenderLayers.itemEntityTranslucentCull(texture)
+            showOutline -> RenderLayers.outlineNoCull(texture)
+            material.blending -> RenderLayers.entityTranslucent(texture)
+            material.alphaTest && material.disableCulling -> RenderLayers.entityCutoutNoCull(texture)
+            material.alphaTest -> RenderLayers.entityCutout(texture)
+            else -> RenderLayers.entitySolid(texture)
+        }
+    }
+    //?} elif >=1.21.2 {
+    /*override fun getRenderLayer(
         state: EntityDataDrivenRenderState,
         showBody: Boolean,
         translucent: Boolean,
@@ -148,7 +175,7 @@ class EntityDataDrivenRenderer private constructor(
             else -> RenderLayer.getEntitySolid(texture)
         }
     }
-    //?} else {
+    *///?} else {
     /*override fun getRenderLayer(
         entity: EntityDataDriven,
         showBody: Boolean,
@@ -171,8 +198,45 @@ class EntityDataDrivenRenderer private constructor(
     /**
      * 重写渲染方法，支持自发光材质
      */
-    //? if >=1.21.2 {
+    //? if >=1.21.9 {
     override fun render(
+        state: EntityDataDrivenRenderState,
+        matrices: MatrixStack,
+        queue: OrderedRenderCommandQueue,
+        cameraRenderState: CameraRenderState
+    ) {
+        val model = this.model
+        if (model is BedrockGeometryModel) {
+            matrices.push()
+
+            this.setupTransforms(state, matrices, state.bodyYaw, state.baseScale)
+            matrices.scale(-1.0F, -1.0F, 1.0F)
+            this.scale(state, matrices)
+
+            model.setAngles(state)
+
+            val overlay = LivingEntityRenderer.getOverlay(state, this.getAnimationCounter(state))
+            val effectiveLight = if (material.emissive) MAX_LIGHT else state.light
+            val renderLayer = this.getRenderLayer(state, true, state.invisibleToPlayer, state.hasOutline())
+            if (renderLayer != null) {
+                queue.submitCustom(matrices, renderLayer) { matrixEntry, vertexConsumer ->
+                    val tmpMatrices = MatrixStack()
+                    tmpMatrices.peek().copy(matrixEntry)
+                    model.renderCustom(tmpMatrices, vertexConsumer, effectiveLight, overlay, -1)
+                }
+            }
+
+            matrices.pop()
+
+            if (state.displayName != null) {
+                this.renderLabelIfPresent(state, matrices, queue, cameraRenderState)
+            }
+        } else {
+            super.render(state, matrices, queue, cameraRenderState)
+        }
+    }
+    //?} elif >=1.21.2 {
+    /*override fun render(
         state: EntityDataDrivenRenderState,
         matrices: MatrixStack,
         vertexConsumers: VertexConsumerProvider,
@@ -184,20 +248,14 @@ class EntityDataDrivenRenderer private constructor(
         if (model is BedrockGeometryModel) {
             matrices.push()
 
-            // 复制 LivingEntityRenderer.render() 的变换管道
-            // 注意：不使用原版的 translate(0, -1.501F, 0)，因为基岩版模型脚部在 model Y=0，
-            // 而原版 Java 模型脚部在 model Y≈24（1.5格），-1.501F 偏移仅适用于原版坐标系
             this.setupTransforms(state, matrices, state.bodyYaw, state.baseScale)
             matrices.scale(-1.0F, -1.0F, 1.0F)
             this.scale(state, matrices)
 
-            // 设置模型动画角度
             model.setAngles(state)
 
-            // 正确计算 overlay：受伤时显示红色，受击时白色闪烁
             val overlay = LivingEntityRenderer.getOverlay(state, this.getAnimationCounter(state))
 
-            // 正确传递隐身和发光状态到渲染层
             val renderLayer = this.getRenderLayer(state, true, state.invisibleToPlayer, state.hasOutline)
             if (renderLayer != null) {
                 val vertexConsumer = vertexConsumers.getBuffer(renderLayer)
@@ -206,7 +264,6 @@ class EntityDataDrivenRenderer private constructor(
 
             matrices.pop()
 
-            // 名牌渲染 (来自 EntityRenderer.render())
             if (state.displayName != null) {
                 this.renderLabelIfPresent(state, state.displayName, matrices, vertexConsumers, light)
             }
@@ -214,7 +271,7 @@ class EntityDataDrivenRenderer private constructor(
             super.render(state, matrices, vertexConsumers, effectiveLight)
         }
     }
-    //?} else {
+    *///?} else {
     /*override fun render(
         entity: EntityDataDriven,
         yaw: Float,

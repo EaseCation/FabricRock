@@ -10,6 +10,9 @@ import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.text.Text;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
+//? if >=1.21.9 {
+import net.minecraft.client.gui.Click;
+//?}
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -119,15 +122,29 @@ public abstract class TitleScreenMixin extends Screen {
     /**
      * 处理鼠标点击事件
      */
+    //? if >=1.21.9 {
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
-    private void bedrockLoader_handleErrorClick(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
-        if (button == 0 && bedrockLoader_errorTextBounds != null) {
+    private void bedrockLoader_handleErrorClick(Click click, boolean occupied, CallbackInfoReturnable<Boolean> cir) {
+        if (click.button() == 0 && bedrockLoader_errorTextBounds != null) {
+            double mouseX = click.x();
+            double mouseY = click.y();
             if (mouseX >= bedrockLoader_errorTextBounds[0] && mouseX <= bedrockLoader_errorTextBounds[2] &&
                 mouseY >= bedrockLoader_errorTextBounds[1] && mouseY <= bedrockLoader_errorTextBounds[3]) {
-                // 打开错误详情界面
                 MinecraftClient.getInstance().setScreen(new LoadingErrorScreen((TitleScreen)(Object)this));
                 cir.setReturnValue(true);
             }
         }
     }
+    //?} else {
+    /*@Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
+    private void bedrockLoader_handleErrorClick(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
+        if (button == 0 && bedrockLoader_errorTextBounds != null) {
+            if (mouseX >= bedrockLoader_errorTextBounds[0] && mouseX <= bedrockLoader_errorTextBounds[2] &&
+                mouseY >= bedrockLoader_errorTextBounds[1] && mouseY <= bedrockLoader_errorTextBounds[3]) {
+                MinecraftClient.getInstance().setScreen(new LoadingErrorScreen((TitleScreen)(Object)this));
+                cir.setReturnValue(true);
+            }
+        }
+    }
+    *///?}
 }

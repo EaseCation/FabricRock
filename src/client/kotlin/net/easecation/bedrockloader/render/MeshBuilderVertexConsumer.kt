@@ -120,6 +120,17 @@ class MeshBuilderVertexConsumer(private val defaultSprite: Sprite, private val s
         return this
     }
 
+    //? if >=1.21.11 {
+    override fun color(color: Int): VertexConsumer {
+        emitter.color(vertexIndex, color)
+        return this
+    }
+
+    override fun lineWidth(width: Float): VertexConsumer {
+        return this
+    }
+    //?}
+
     override fun texture(u: Float, v: Float): VertexConsumer {
         emitter.uv(vertexIndex, u, v)
         return this

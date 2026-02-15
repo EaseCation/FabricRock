@@ -32,18 +32,21 @@ class LoadingErrorScreen(private val parent: Screen?) : Screen(Text.literal("加
     }
 
     override fun render(context: DrawContext, mouseX: Int, mouseY: Int, delta: Float) {
-        // 渲染背景
-        this.renderBackground(context, mouseX, mouseY, delta)
+        // 渲染背景和子组件（按钮等）
+        // 1.21.11+: super.render() 内部处理背景渲染（含模糊），不能再显式调用 renderBackground()
+        //? if <1.21.11 {
+        /*this.renderBackground(context, mouseX, mouseY, delta)
+        *///?}
+        super.render(context, mouseX, mouseY, delta)
 
         // 标题
         val titleText = "加载问题 (${errors.size})"
-        context.drawCenteredTextWithShadow(textRenderer, titleText, width / 2, padding + 5, 0xFFFFFF)
+        context.drawCenteredTextWithShadow(textRenderer, titleText, width / 2, padding + 5, 0xFFFFFFFF.toInt())
 
         // 渲染错误列表
         val listTop = padding + 30
         val listBottom = height - padding
         val listHeight = listBottom - listTop
-        val visibleItems = listHeight / itemHeight
 
         // 启用裁剪
         context.enableScissor(padding, listTop, width - padding, listBottom)
@@ -70,8 +73,6 @@ class LoadingErrorScreen(private val parent: Screen?) : Screen(Text.literal("加
             context.fill(width - padding - 6, listTop, width - padding - 2, listBottom, 0x40FFFFFF)
             context.fill(width - padding - 6, scrollBarY, width - padding - 2, scrollBarY + scrollBarHeight, 0xFFAAAAAA.toInt())
         }
-
-        super.render(context, mouseX, mouseY, delta)
     }
 
     private fun calculateTotalHeight(): Int {
@@ -93,16 +94,16 @@ class LoadingErrorScreen(private val parent: Screen?) : Screen(Text.literal("加
 
         // 级别图标和文字
         val levelIcon = if (error.level == LoadingError.Level.ERROR) "X" else "!"
-        val levelColor = if (error.level == LoadingError.Level.ERROR) 0xFF5555 else 0xFFAA00
+        val levelColor = if (error.level == LoadingError.Level.ERROR) 0xFFFF5555.toInt() else 0xFFFFAA00.toInt()
         context.drawTextWithShadow(textRenderer, levelIcon, x + 5, y + 5, levelColor)
 
         // 级别和阶段
         val headerText = "${error.getLevelDisplayName()} - ${error.phase.displayName}"
-        context.drawTextWithShadow(textRenderer, headerText, x + 20, y + 5, 0xFFFFFF)
+        context.drawTextWithShadow(textRenderer, headerText, x + 20, y + 5, 0xFFFFFFFF.toInt())
 
         // 来源
         val sourceText = "来源: ${error.source}"
-        context.drawTextWithShadow(textRenderer, sourceText, x + 20, y + 18, 0xAAAAAA)
+        context.drawTextWithShadow(textRenderer, sourceText, x + 20, y + 18, 0xFFAAAAAA.toInt())
 
         // 消息
         val messageText = error.message
@@ -116,7 +117,7 @@ class LoadingErrorScreen(private val parent: Screen?) : Screen(Text.literal("加
         } else {
             messageText
         }
-        context.drawTextWithShadow(textRenderer, trimmedMessage, x + 20, y + 31, 0xDDDDDD)
+        context.drawTextWithShadow(textRenderer, trimmedMessage, x + 20, y + 31, 0xFFDDDDDD.toInt())
 
         // 展开/收起按钮
         val exception = error.exception
@@ -126,7 +127,7 @@ class LoadingErrorScreen(private val parent: Screen?) : Screen(Text.literal("加
             val expandY = y + 44
             val isHovered = mouseX >= expandX && mouseX <= expandX + textRenderer.getWidth(expandText) &&
                            mouseY >= expandY && mouseY <= expandY + 10
-            context.drawTextWithShadow(textRenderer, expandText, expandX, expandY, if (isHovered) 0x55FF55 else 0x55FFFF)
+            context.drawTextWithShadow(textRenderer, expandText, expandX, expandY, if (isHovered) 0xFF55FF55.toInt() else 0xFF55FFFF.toInt())
 
             // 展开的堆栈信息
             if (index == expandedIndex) {
@@ -138,14 +139,49 @@ class LoadingErrorScreen(private val parent: Screen?) : Screen(Text.literal("加
                     } else {
                         line
                     }
-                    context.drawTextWithShadow(textRenderer, trimmedLine, x + 25, stackY, 0x888888)
+                    context.drawTextWithShadow(textRenderer, trimmedLine, x + 25, stackY, 0xFF888888.toInt())
                     stackY += 12
                 }
             }
         }
     }
 
-    override fun mouseClicked(mouseX: Double, mouseY: Double, button: Int): Boolean {
+    //? if >=1.21.9 {
+    override fun mouseClicked(click: net.minecraft.client.gui.Click, doubled: Boolean): Boolean {
+        val mouseX = click.x
+        val mouseY = click.y
+        if (click.button() == 0) {
+            val listTop = padding + 30
+            var y = listTop - scrollOffset
+
+            for ((index, error) in errors.withIndex()) {
+                val currentItemHeight = if (index == expandedIndex && error.exception != null) {
+                    itemHeight + 80
+                } else {
+                    itemHeight
+                }
+
+                if (mouseY >= y && mouseY < y + currentItemHeight) {
+                    if (error.exception != null) {
+                        val expandX = padding + 20
+                        val expandY = y + 44
+                        val expandText = if (index == expandedIndex) "[收起详情]" else "[展开详情]"
+                        if (mouseX >= expandX && mouseX <= expandX + textRenderer.getWidth(expandText) &&
+                            mouseY >= expandY && mouseY <= expandY + 10) {
+                            expandedIndex = if (expandedIndex == index) -1 else index
+                            return true
+                        }
+                    }
+                }
+
+                y += currentItemHeight
+            }
+        }
+
+        return super.mouseClicked(click, doubled)
+    }
+    //?} else {
+    /*override fun mouseClicked(mouseX: Double, mouseY: Double, button: Int): Boolean {
         if (button == 0) {
             val listTop = padding + 30
             var y = listTop - scrollOffset
@@ -158,7 +194,6 @@ class LoadingErrorScreen(private val parent: Screen?) : Screen(Text.literal("加
                 }
 
                 if (mouseY >= y && mouseY < y + currentItemHeight) {
-                    // 检查是否点击了展开按钮
                     if (error.exception != null) {
                         val expandX = padding + 20
                         val expandY = y + 44
@@ -177,6 +212,7 @@ class LoadingErrorScreen(private val parent: Screen?) : Screen(Text.literal("加
 
         return super.mouseClicked(mouseX, mouseY, button)
     }
+    *///?}
 
     override fun mouseScrolled(mouseX: Double, mouseY: Double, horizontalAmount: Double, verticalAmount: Double): Boolean {
         val listTop = padding + 30

@@ -7,14 +7,37 @@ import net.easecation.bedrockloader.loader.BedrockAddonsRegistryClient
 import net.easecation.bedrockloader.render.BedrockEntityMaterial
 import net.easecation.bedrockloader.render.BedrockGeometryModel
 import net.minecraft.client.render.RenderLayer
-import net.minecraft.client.render.VertexConsumerProvider
+//? if >=1.21.11 {
+import net.minecraft.client.render.RenderLayers
+//?}
+//? if <1.21.9 {
+/*import net.minecraft.client.render.VertexConsumerProvider
+*///?}
 import net.minecraft.client.render.block.entity.BlockEntityRenderer
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactory
 import net.minecraft.client.util.math.MatrixStack
 import net.minecraft.util.Identifier
 import net.minecraft.util.math.RotationAxis
-//? if >=1.21.5 {
+//? if >=1.21.9 {
+import net.minecraft.client.render.block.entity.state.BlockEntityRenderState
+import net.minecraft.client.render.command.OrderedRenderCommandQueue
+import net.minecraft.client.render.state.CameraRenderState
+import net.minecraft.client.render.OverlayTexture
 import net.minecraft.util.math.Vec3d
+import net.minecraft.client.render.command.ModelCommandRenderer
+//?} elif >=1.21.5 {
+/*import net.minecraft.util.math.Vec3d
+*///?}
+
+//? if >=1.21.9 {
+/**
+ * 方块实体渲染状态 (1.21.9+)
+ */
+class BlockEntityDataDrivenRenderState : BlockEntityRenderState() {
+    var block: BlockContext.BlockDataDriven? = null
+    var animationManager: Any? = null
+    var blockIdentifierForScale: Identifier? = null
+}
 //?}
 
 /**
@@ -33,7 +56,11 @@ class BlockEntityDataDrivenRenderer(
     private val texture: Identifier,
     private val blockIdentifier: Identifier,
     private val material: BedrockEntityMaterial
-) : BlockEntityRenderer<BlockEntityDataDriven> {
+//? if >=1.21.9 {
+) : BlockEntityRenderer<BlockEntityDataDriven, BlockEntityDataDrivenRenderState> {
+//?} else {
+/*) : BlockEntityRenderer<BlockEntityDataDriven> {
+*///?}
 
     companion object {
         /** 全亮度值 (15, 15) = 0xF000F0 */
@@ -59,7 +86,17 @@ class BlockEntityDataDrivenRenderer(
      * - alphaTest: 单面镂空（如 entity_alphatest_one_sided）
      * - 默认: 实心渲染
      */
+    //? if >=1.21.11 {
     private fun getRenderLayer(): RenderLayer {
+        return when {
+            material.blending -> RenderLayers.entityTranslucent(texture)
+            material.alphaTest && material.disableCulling -> RenderLayers.entityCutoutNoCull(texture)
+            material.alphaTest -> RenderLayers.entityCutout(texture)
+            else -> RenderLayers.entitySolid(texture)
+        }
+    }
+    //?} else {
+    /*private fun getRenderLayer(): RenderLayer {
         return when {
             material.blending -> RenderLayer.getEntityTranslucent(texture)
             material.alphaTest && material.disableCulling -> RenderLayer.getEntityCutoutNoCull(texture)
@@ -67,44 +104,59 @@ class BlockEntityDataDrivenRenderer(
             else -> RenderLayer.getEntitySolid(texture)
         }
     }
-
-    //? if >=1.21.5 {
-    override fun render(
-        entity: BlockEntityDataDriven,
-        tickDelta: Float,
-        matrices: MatrixStack,
-        vertexConsumers: VertexConsumerProvider,
-        light: Int,
-        overlay: Int,
-        cameraPos: Vec3d
-    ) {
-    //?} else {
-    /*override fun render(
-        entity: BlockEntityDataDriven,
-        tickDelta: Float,
-        matrices: MatrixStack,
-        vertexConsumers: VertexConsumerProvider,
-        light: Int,
-        overlay: Int
-    ) {
     *///?}
-        val blockState = entity.cachedState ?: return
-        val block = blockState.block as? BlockContext.BlockDataDriven ?: return
-        val renderLayer = getRenderLayer()
-        val vertexConsumer = vertexConsumers.getBuffer(renderLayer)
 
-        // 如果材质是自发光类型，使用全亮度
-        val effectiveLight = if (material.emissive) MAX_LIGHT else light
+    //? if >=1.21.9 {
+    override fun createRenderState(): BlockEntityDataDrivenRenderState {
+        return BlockEntityDataDrivenRenderState()
+    }
+
+    override fun updateRenderState(
+        entity: BlockEntityDataDriven,
+        state: BlockEntityDataDrivenRenderState,
+        tickDelta: Float,
+        cameraPos: Vec3d,
+        crumblingOverlay: ModelCommandRenderer.CrumblingOverlayCommand?
+    ) {
+        super.updateRenderState(entity, state, tickDelta, cameraPos, crumblingOverlay)
+        state.block = entity.cachedState?.block as? BlockContext.BlockDataDriven
+        state.blockIdentifierForScale = blockIdentifier
 
         // 更新动画
-        updateAnimations(entity)
+        var animManager = entity.animationManager as? EntityAnimationManager
+        if (animManager == null) {
+            val config = BedrockAddonsRegistryClient.blockEntityAnimationConfigs[blockIdentifier]
+            if (config != null) {
+                animManager = EntityAnimationManager(
+                    config.animationMap,
+                    config.animations,
+                    config.autoPlayList
+                )
+                entity.animationManager = animManager
+            }
+        }
+        animManager?.tick()
+        animManager?.let { model.applyAnimations(it) }
+        state.animationManager = animManager
+    }
+
+    override fun render(
+        state: BlockEntityDataDrivenRenderState,
+        matrices: MatrixStack,
+        queue: OrderedRenderCommandQueue,
+        cameraRenderState: CameraRenderState
+    ) {
+        val blockState = state.blockState ?: return
+        val block = state.block ?: return
+        val renderLayer = getRenderLayer()
+        val light = if (material.emissive) MAX_LIGHT else state.lightmapCoordinates
+        val overlay = OverlayTexture.DEFAULT_UV
 
         matrices.push()
 
         // 应用缩放
         val scale = BedrockAddonsRegistryClient.blockEntityScaleConfigs[blockIdentifier] ?: 1.0f
         if (scale != 1.0f) {
-            // 移动到方块中心，缩放，再移回
             matrices.translate(0.5, 0.0, 0.5)
             matrices.scale(scale, scale, scale)
             matrices.translate(-0.5, 0.0, -0.5)
@@ -113,24 +165,116 @@ class BlockEntityDataDrivenRenderer(
         val entry = matrices.peek()
         block.applyFaceDirectional(blockState, entry.positionMatrix, entry.normalMatrix)
         matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(180F))
-        //? if >=1.21.2 {
-        model.renderCustom(matrices, vertexConsumer, effectiveLight, overlay, -1)
-        //?} else {
-        /*model.render(matrices, vertexConsumer, effectiveLight, overlay, -1)
-        *///?}
+
+        queue.submitCustom(matrices, renderLayer) { matrixEntry, vertexConsumer ->
+            // 创建临时MatrixStack包含当前变换
+            val tmpMatrices = MatrixStack()
+            tmpMatrices.peek().copy(matrixEntry)
+            model.renderCustom(tmpMatrices, vertexConsumer, light, overlay, -1)
+        }
+
         matrices.pop()
     }
+    //?} elif >=1.21.5 {
+    /*override fun render(
+        entity: BlockEntityDataDriven,
+        tickDelta: Float,
+        matrices: MatrixStack,
+        vertexConsumers: VertexConsumerProvider,
+        light: Int,
+        overlay: Int,
+        cameraPos: Vec3d
+    ) {
+        val blockState = entity.cachedState ?: return
+        val block = blockState.block as? BlockContext.BlockDataDriven ?: return
+        val renderLayer = getRenderLayer()
+        val vertexConsumer = vertexConsumers.getBuffer(renderLayer)
+        val effectiveLight = if (material.emissive) MAX_LIGHT else light
+        updateAnimations(entity)
 
-    /**
-     * 更新方块实体的动画状态
-     *
-     * 懒加载创建动画管理器，并在每帧更新动画。
-     */
-    private fun updateAnimations(entity: BlockEntityDataDriven) {
-        // 懒加载创建动画管理器
+        matrices.push()
+
+        val scale = BedrockAddonsRegistryClient.blockEntityScaleConfigs[blockIdentifier] ?: 1.0f
+        if (scale != 1.0f) {
+            matrices.translate(0.5, 0.0, 0.5)
+            matrices.scale(scale, scale, scale)
+            matrices.translate(-0.5, 0.0, -0.5)
+        }
+
+        val entry = matrices.peek()
+        block.applyFaceDirectional(blockState, entry.positionMatrix, entry.normalMatrix)
+        matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(180F))
+        model.renderCustom(matrices, vertexConsumer, effectiveLight, overlay, -1)
+        matrices.pop()
+    }
+    *///?} elif >=1.21.2 {
+    /*override fun render(
+        entity: BlockEntityDataDriven,
+        tickDelta: Float,
+        matrices: MatrixStack,
+        vertexConsumers: VertexConsumerProvider,
+        light: Int,
+        overlay: Int
+    ) {
+        val blockState = entity.cachedState ?: return
+        val block = blockState.block as? BlockContext.BlockDataDriven ?: return
+        val renderLayer = getRenderLayer()
+        val vertexConsumer = vertexConsumers.getBuffer(renderLayer)
+        val effectiveLight = if (material.emissive) MAX_LIGHT else light
+        updateAnimations(entity)
+
+        matrices.push()
+
+        val scale = BedrockAddonsRegistryClient.blockEntityScaleConfigs[blockIdentifier] ?: 1.0f
+        if (scale != 1.0f) {
+            matrices.translate(0.5, 0.0, 0.5)
+            matrices.scale(scale, scale, scale)
+            matrices.translate(-0.5, 0.0, -0.5)
+        }
+
+        val entry = matrices.peek()
+        block.applyFaceDirectional(blockState, entry.positionMatrix, entry.normalMatrix)
+        matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(180F))
+        model.renderCustom(matrices, vertexConsumer, effectiveLight, overlay, -1)
+        matrices.pop()
+    }
+    *///?} else {
+    /*override fun render(
+        entity: BlockEntityDataDriven,
+        tickDelta: Float,
+        matrices: MatrixStack,
+        vertexConsumers: VertexConsumerProvider,
+        light: Int,
+        overlay: Int
+    ) {
+        val blockState = entity.cachedState ?: return
+        val block = blockState.block as? BlockContext.BlockDataDriven ?: return
+        val renderLayer = getRenderLayer()
+        val vertexConsumer = vertexConsumers.getBuffer(renderLayer)
+        val effectiveLight = if (material.emissive) MAX_LIGHT else light
+        updateAnimations(entity)
+
+        matrices.push()
+
+        val scale = BedrockAddonsRegistryClient.blockEntityScaleConfigs[blockIdentifier] ?: 1.0f
+        if (scale != 1.0f) {
+            matrices.translate(0.5, 0.0, 0.5)
+            matrices.scale(scale, scale, scale)
+            matrices.translate(-0.5, 0.0, -0.5)
+        }
+
+        val entry = matrices.peek()
+        block.applyFaceDirectional(blockState, entry.positionMatrix, entry.normalMatrix)
+        matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(180F))
+        model.render(matrices, vertexConsumer, effectiveLight, overlay, -1)
+        matrices.pop()
+    }
+    *///?}
+
+    //? if <1.21.9 {
+    /*private fun updateAnimations(entity: BlockEntityDataDriven) {
         var animManager = entity.animationManager as? EntityAnimationManager
         if (animManager == null) {
-            // 尝试从注册表获取动画配置并创建动画管理器
             val config = BedrockAddonsRegistryClient.blockEntityAnimationConfigs[blockIdentifier]
             if (config != null) {
                 animManager = EntityAnimationManager(
@@ -140,15 +284,11 @@ class BlockEntityDataDrivenRenderer(
                 )
                 entity.animationManager = animManager
             } else {
-                // 没有动画配置，跳过动画处理
                 return
             }
         }
-
-        // 更新动画（EntityAnimationManager 内部计算真实帧间隔）
         animManager.tick()
-
-        // 应用动画变换到模型
         model.applyAnimations(animManager)
     }
+    *///?}
 }
