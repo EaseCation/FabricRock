@@ -3,12 +3,18 @@ package net.easecation.bedrockloader.loader
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import net.easecation.bedrockloader.BedrockLoader
+import net.easecation.bedrockloader.bedrock.block.component.FaceDirectionalType
 import net.easecation.bedrockloader.block.property.BedrockBooleanProperty
 import net.easecation.bedrockloader.block.property.BedrockProperty
 import net.minecraft.block.Block
 import java.io.File
 
 object BlockStateMappingExporter {
+
+    //? if >=1.21.4 {
+    // Java direction 约定 (N=0,S=1,W=2,E=3) → Bedrock 约定 (S=0,W=1,N=2,E=3)
+    private val JAVA_TO_BEDROCK_DIRECTION = intArrayOf(2, 0, 1, 3)
+    //?}
     /**
      * 导出所有自定义方块的状态映射到 JSON 文件
      * 格式：Bedrock 格式方块状态 -> Java 格式方块状态 + Java 状态 ID
@@ -25,6 +31,10 @@ object BlockStateMappingExporter {
             BedrockAddonsRegistry.blockContexts.forEach { (identifier, context) ->
                 val block = BedrockAddonsRegistry.blocks[identifier] ?: return@forEach
 
+                // 检测方块是否使用 netease:face_directional 的 direction 类型
+                val hasFaceDirectionalDirection =
+                    context.behaviour.components.neteaseFaceDirectional?.type == FaceDirectionalType.direction
+
                 // 遍历该方块的所有状态
                 block.stateManager.states.forEach { state ->
                     val bedrockProps = mutableMapOf<String, String>()
@@ -36,7 +46,17 @@ object BlockStateMappingExporter {
                         val javaProperty = prop.javaProperty as net.minecraft.state.property.Property<Comparable<Any>>
                         val propertyValue = state.get(javaProperty)
                         val javaValue = javaProperty.name(propertyValue)
-                        val bedrockValue = toBedrockValue(prop, javaValue)
+                        val bedrockValue = when {
+                            // netease:face_directional direction 属性需要从 Java 约定转换为 Bedrock 约定
+                            hasFaceDirectionalDirection && bedrockName == "direction" -> {
+                                //? if >=1.21.4 {
+                                JAVA_TO_BEDROCK_DIRECTION[javaValue.toInt()].toString()
+                                //?} else {
+                                /*toBedrockValue(prop, javaValue)  // pre-1.21.4 已经是 Bedrock 约定
+                                *///?}
+                            }
+                            else -> toBedrockValue(prop, javaValue)
+                        }
                         bedrockProps[bedrockName] = bedrockValue
                         javaProps[bedrockName] = javaValue
                     }
@@ -46,10 +66,17 @@ object BlockStateMappingExporter {
                     val javaStateStr = formatBlockState(identifier.toString(), javaProps)
                     val javaStateId = Block.getRawIdFromState(state)
 
+                    // 计算光照属性
+                    val lightEmission = context.behaviour.components.minecraftLightEmission ?: 0
+                    val defaultDampening = if (context.behaviour.components.neteaseBlockEntity != null) 0 else 15
+                    val lightFilter = context.behaviour.components.minecraftLightDampening ?: defaultDampening
+
                     // 添加到映射表
                     val mapping = JsonObject()
                     mapping.addProperty("java_state", javaStateStr)
                     mapping.addProperty("java_state_id", javaStateId)
+                    mapping.addProperty("light_emission", lightEmission)
+                    mapping.addProperty("light_filter", lightFilter)
                     mappings.add(bedrockStateStr, mapping)
                 }
             }
