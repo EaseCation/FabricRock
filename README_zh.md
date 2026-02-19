@@ -81,6 +81,27 @@ autoCleanupRemovedPacks: true
 5. 如果启用，从服务器删除的资源包将从 `remote/` 目录中移除
 6. 所有资源包（手动和远程）都会加载到游戏中
 
+## 独立资源包分发服务器
+
+Bedrock Loader 包含一个独立的 HTTP 服务器，用于在不运行 Minecraft 服务器的情况下分发资源包。它支持嵌入式服务器的所有功能，包括 AES-256-CFB8 加密。
+
+### 构建与运行
+
+```bash
+# 构建
+./gradlew :standalone-server:shadowJar
+
+# 运行
+java -jar standalone-server/build/libs/bedrock-pack-server-1.0.0.jar
+
+# 指定资源包目录和端口
+java -jar bedrock-pack-server-1.0.0.jar -d /srv/packs -p 9090
+```
+
+将 `.mcpack`、`.mcaddon`、`.zip` 文件或资源包文件夹放入资源包目录。服务器会自动扫描、打包文件夹资源包，并通过 HTTP 提供服务。
+
+完整文档请参阅 [docs/standalone-server.md](docs/standalone-server.md)。
+
 ## 从源代码运行和打包
 
 要运行和打包 Bedrock Loader 以供分发，请使用以下 Gradle 任务：

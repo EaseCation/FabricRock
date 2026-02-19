@@ -24,3 +24,5 @@ stonecutter {
 	}
 	create(rootProject)
 }
+
+include ':standalone-server'

@@ -81,6 +81,27 @@ autoCleanupRemovedPacks: true
 5. If enabled, packs deleted from the server are removed from `remote/`
 6. All packs (both manual and remote) are loaded into the game
 
+## Standalone Pack Distribution Server
+
+Bedrock Loader includes a standalone HTTP server for distributing resource packs without running a Minecraft server. It supports all features of the embedded server, including AES-256-CFB8 encryption.
+
+### Build & Run
+
+```bash
+# Build
+./gradlew :standalone-server:shadowJar
+
+# Run
+java -jar standalone-server/build/libs/bedrock-pack-server-1.0.0.jar
+
+# Run with custom pack directory and port
+java -jar bedrock-pack-server-1.0.0.jar -d /srv/packs -p 9090
+```
+
+Place your `.mcpack`, `.mcaddon`, `.zip` files or pack folders in the pack directory. The server automatically scans, packages folder packs, and serves them via HTTP.
+
+For full documentation, see [docs/standalone-server.md](docs/standalone-server.md).
+
 ## Running and Packaging from Source
 
 To run and package Bedrock Loader for distribution, use the following Gradle tasks:
