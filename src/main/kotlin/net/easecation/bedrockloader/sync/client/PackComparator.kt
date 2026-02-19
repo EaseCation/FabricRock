@@ -160,7 +160,8 @@ class PackComparator(
                     localPackName = manual.filename,
                     localIsManual = manual.isManual
                 )
-            }
+            },
+            manifest = manifest
         )
 
         logger.info("对比完成: 下载=${toDownload.size}, 更新=${toUpdate.size}, 最新=${upToDate.size}, UUID冲突=${uuidConflicts.size}")

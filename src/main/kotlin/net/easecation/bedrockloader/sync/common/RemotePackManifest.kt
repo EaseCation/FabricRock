@@ -11,14 +11,32 @@ import com.google.gson.annotations.SerializedName
  * - 1.0: 初始版本，只支持单个包
  * - 2.0: 支持addon（.mcaddon文件），添加type字段
  */
+/**
+ * 加密配置（manifest 级别）
+ */
+data class EncryptionConfig(
+    /** 是否启用加密 */
+    @SerializedName("enabled")
+    val enabled: Boolean = false,
+
+    /** 加密算法 */
+    @SerializedName("algorithm")
+    val algorithm: String = "AES-256-CFB8",
+
+    /** 服务端公开令牌（客户端用于派生 shared_secret） */
+    @SerializedName("server_token")
+    val serverToken: String = ""
+)
+
 data class RemotePackManifest(
     /**
      * 清单格式版本
      * - "1.0": 旧版本，不支持addon
-     * - "2.0": 新版本，支持addon和type字段
+     * - "2.0": 支持addon和type字段
+     * - "3.0": 支持加密配置
      */
     @SerializedName("version")
-    val version: String = "2.0",
+    val version: String = "3.0",
 
     /**
      * 清单生成时间戳（Unix时间戳，毫秒）
@@ -36,13 +54,26 @@ data class RemotePackManifest(
      * 资源包列表（包含单个包和addon）
      */
     @SerializedName("packs")
-    val packs: List<RemotePackInfo>
+    val packs: List<RemotePackInfo>,
+
+    /**
+     * 加密配置（可选）
+     * 仅在服务端启用加密时包含
+     */
+    @SerializedName("encryption")
+    val encryption: EncryptionConfig? = null
 ) {
     companion object {
         const val VERSION_1_0 = "1.0"
         const val VERSION_2_0 = "2.0"
-        const val CURRENT_VERSION = VERSION_2_0
+        const val VERSION_3_0 = "3.0"
+        const val CURRENT_VERSION = VERSION_3_0
     }
+
+    /**
+     * 服务端是否启用了加密
+     */
+    fun isEncrypted(): Boolean = encryption?.enabled == true
 
     /**
      * 获取包的总数量

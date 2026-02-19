@@ -15,12 +15,19 @@ import java.lang.reflect.Type
  */
 class EmbeddedHttpServer(
     private val config: ServerConfig,
-    private val packDirectory: File
+    private val packDirectory: File,
+    private val keyManager: PackKeyManager? = null,
+    private val encryptedPackCache: EncryptedPackCache? = null,
+    private val challengeManager: ChallengeManager? = null,
+    private val serverToken: String? = null
 ) {
     private val logger = LoggerFactory.getLogger("BedrockLoader/HttpServer")
     private val gson = GsonBuilder().setPrettyPrinting().create()
     private var app: Javalin? = null
-    private val manifestGenerator = ManifestGenerator(packDirectory, config)
+    private val manifestGenerator = ManifestGenerator(packDirectory, config, encryptedPackCache, serverToken)
+
+    private val isEncryptionEnabled: Boolean
+        get() = config.encryptionEnabled && keyManager != null && encryptedPackCache != null && challengeManager != null
 
     /**
      * Start HTTP server
@@ -105,6 +112,21 @@ class EmbeddedHttpServer(
         // GET /packs/{filename} - Download resource pack
         javalin.get("/packs/{filename}") { ctx ->
             handleDownloadPack(ctx)
+        }
+
+        // 加密相关路由（仅在启用加密时注册）
+        if (isEncryptionEnabled) {
+            // POST /keys/challenge - 获取 challenge
+            javalin.post("/keys/challenge") { ctx ->
+                handleChallenge(ctx)
+            }
+
+            // POST /keys/exchange - 提交 HMAC 换取密钥
+            javalin.post("/keys/exchange") { ctx ->
+                handleKeyExchange(ctx)
+            }
+
+            logger.info("Encryption routes registered: POST /keys/challenge, POST /keys/exchange")
         }
 
         // 404 handler
@@ -209,13 +231,16 @@ class EmbeddedHttpServer(
         }
 
         try {
-            // Send file
             ctx.contentType("application/octet-stream")
             ctx.header("Content-Disposition", "attachment; filename=\"$filename\"")
 
-            // For resource pack files (typically a few MB), reading into memory is safe
-            // This avoids stream lifecycle management issues
-            ctx.result(file.readBytes())
+            // 加密模式：返回缓存的加密数据
+            if (isEncryptionEnabled) {
+                val cached = encryptedPackCache!!.getEncryptedPack(filename, file)
+                ctx.result(cached.encryptedData)
+            } else {
+                ctx.result(file.readBytes())
+            }
 
         } catch (e: Exception) {
             logger.error("Failed to transfer file: $filename", e)
@@ -224,6 +249,84 @@ class EmbeddedHttpServer(
                 "error" to "Internal Server Error",
                 "message" to "File transfer failed: ${e.message}"
             ))
+        }
+    }
+
+    /**
+     * 处理 Challenge 请求
+     * POST /keys/challenge
+     *
+     * 请求体: { "client_id": "<random>" }（可选）
+     * 响应: { "challenge": "<hex>", "expires_at": <timestamp> }
+     */
+    private fun handleChallenge(ctx: Context) {
+        val manager = challengeManager ?: run {
+            ctx.status(503)
+            ctx.json(mapOf("error" to "Encryption not enabled"))
+            return
+        }
+
+        try {
+            val (challenge, expiresAt) = manager.createChallenge()
+            ctx.json(mapOf(
+                "challenge" to challenge,
+                "expires_at" to expiresAt
+            ))
+        } catch (e: Exception) {
+            logger.error("Failed to create challenge", e)
+            ctx.status(500)
+            ctx.json(mapOf("error" to "Internal Server Error"))
+        }
+    }
+
+    /**
+     * 处理密钥交换请求
+     * POST /keys/exchange
+     *
+     * 请求体: { "challenge": "<hex>", "filename": "<name>", "hmac": "<hex>" }
+     * 响应: { "key": "<hex>" }
+     */
+    private fun handleKeyExchange(ctx: Context) {
+        val manager = challengeManager ?: run {
+            ctx.status(503)
+            ctx.json(mapOf("error" to "Encryption not enabled"))
+            return
+        }
+
+        try {
+            val body = gson.fromJson(ctx.body(), Map::class.java)
+            val challenge = body["challenge"] as? String
+            val filename = body["filename"] as? String
+            val hmac = body["hmac"] as? String
+
+            if (challenge == null || filename == null || hmac == null) {
+                ctx.status(400)
+                ctx.json(mapOf("error" to "Missing required fields: challenge, filename, hmac"))
+                return
+            }
+
+            // 验证 HMAC 并消费 challenge
+            if (!manager.verifyAndConsume(challenge, filename, hmac)) {
+                ctx.status(403)
+                ctx.json(mapOf("error" to "Authentication failed"))
+                return
+            }
+
+            // 验证通过，返回密钥
+            val key = keyManager?.getOrCreateKey(filename)
+            if (key == null) {
+                ctx.status(500)
+                ctx.json(mapOf("error" to "Key not available"))
+                return
+            }
+
+            ctx.json(mapOf("key" to key))
+            logger.debug("Key exchanged for: $filename")
+
+        } catch (e: Exception) {
+            logger.error("Key exchange failed", e)
+            ctx.status(500)
+            ctx.json(mapOf("error" to "Internal Server Error"))
         }
     }
 

@@ -1,7 +1,11 @@
 package net.easecation.bedrockloader.sync.client
 
+import net.easecation.bedrockloader.loader.InMemoryPackStore
+import net.easecation.bedrockloader.loader.InMemoryZipPack
 import net.easecation.bedrockloader.sync.client.listener.SyncListener
 import net.easecation.bedrockloader.sync.client.model.*
+import net.easecation.bedrockloader.sync.common.PackEncryption
+import net.easecation.bedrockloader.sync.common.RemotePackManifest
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.IOException
@@ -300,6 +304,74 @@ class RemotePackSyncManager(
             is IOException -> SyncError.NetworkError("Network IO error", e)
             else -> SyncError.UnknownError(e.message ?: "Unknown error", e)
         }
+    }
+
+    /**
+     * 解密本地缓存的密文包到内存
+     *
+     * 流程:
+     * 1. 从 manifest 中提取 server_token
+     * 2. 构造 KeyExchangeClient，通过 Challenge-Response 握手获取每包密钥
+     * 3. 从 remote/ 读取密文文件
+     * 4. 解密到内存 -> 存入 InMemoryPackStore
+     *
+     * @param manifest 远程清单（包含加密配置和包列表）
+     * @return 解密成功的包数量
+     */
+    fun decryptLocalPacksToMemory(manifest: RemotePackManifest): Int {
+        val encryption = manifest.encryption ?: return 0
+        if (!encryption.enabled) return 0
+
+        logger.info("Starting pack decryption (${manifest.packs.size} pack(s))...")
+
+        val config = ClientConfigLoader.loadClientConfig(configFile)
+        val serverToken = encryption.serverToken
+        val keyExchangeClient = KeyExchangeClient(config.serverUrl, serverToken, config.timeoutSeconds)
+
+        val remoteDir = File(packDirectory, "remote")
+        val encryptedPacks = manifest.packs.filter { it.encrypted }
+
+        if (encryptedPacks.isEmpty()) {
+            logger.info("No encrypted packs to decrypt")
+            return 0
+        }
+
+        // 批量获取密钥
+        val filenames = encryptedPacks.map { it.name }
+        logger.info("Requesting decryption keys for ${filenames.size} pack(s)...")
+        val keys = keyExchangeClient.fetchKeys(filenames)
+
+        // 解密每个包到内存
+        var decryptedCount = 0
+        for (packInfo in encryptedPacks) {
+            val file = File(remoteDir, packInfo.name)
+            if (!file.exists()) {
+                logger.warn("Encrypted pack file not found: ${packInfo.name}")
+                continue
+            }
+
+            val key = keys[packInfo.name]
+            if (key == null) {
+                logger.error("No decryption key for: ${packInfo.name}")
+                continue
+            }
+
+            try {
+                logger.info("Decrypting: ${packInfo.name} (${formatBytes(file.length())})")
+                val encryptedData = file.readBytes()
+                val decryptedData = PackEncryption.decrypt(encryptedData, key)
+                val memoryPack = InMemoryZipPack(decryptedData)
+                InMemoryPackStore.store(packInfo.name, memoryPack)
+                decryptedCount++
+                logger.info("Decrypted to memory: ${packInfo.name} (${memoryPack.entryNames.size} entries)")
+            } catch (e: Exception) {
+                logger.error("Failed to decrypt: ${packInfo.name}", e)
+            }
+        }
+
+        InMemoryPackStore.logMemoryUsage()
+        logger.info("Decryption complete: $decryptedCount/${encryptedPacks.size} pack(s)")
+        return decryptedCount
     }
 
     /**

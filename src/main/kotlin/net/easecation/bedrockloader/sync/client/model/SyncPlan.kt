@@ -1,6 +1,7 @@
 package net.easecation.bedrockloader.sync.client.model
 
 import net.easecation.bedrockloader.sync.common.RemotePackInfo
+import net.easecation.bedrockloader.sync.common.RemotePackManifest
 
 /**
  * 同步计划
@@ -38,7 +39,12 @@ data class SyncPlan(
      * UUID冲突列表
      * 远程包与本地手动包的UUID相同，优先使用本地包
      */
-    val uuidConflicts: List<UUIDConflict> = emptyList()
+    val uuidConflicts: List<UUIDConflict> = emptyList(),
+
+    /**
+     * 原始 manifest 引用（用于加密模式下的解密流程）
+     */
+    val manifest: RemotePackManifest? = null
 ) {
     /**
      * UUID冲突信息

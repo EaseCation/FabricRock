@@ -12,12 +12,14 @@ import net.easecation.bedrockloader.loader.error.LoadingError
 import net.easecation.bedrockloader.loader.error.LoadingErrorCollector
 import net.easecation.bedrockloader.sync.client.ClientConfigLoader
 import net.easecation.bedrockloader.sync.common.MD5Util
+import net.easecation.bedrockloader.util.GsonUtil
 import net.fabricmc.api.EnvType
 import net.fabricmc.loader.api.FabricLoader
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.filefilter.TrueFileFilter
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStreamReader
 import java.nio.file.attribute.FileTime
 import java.util.*
 import java.util.zip.Deflater
@@ -168,6 +170,9 @@ object BedrockAddonsLoader {
                 )
             }
         }
+
+        // 从内存加载解密的包（加密模式下由 PreLaunch 阶段解密后存入 InMemoryPackStore）
+        loadInMemoryPacks()
     }
 
     /**
@@ -470,6 +475,163 @@ object BedrockAddonsLoader {
             addonName = addonName,
             isFromAddon = addonName != null
         )
+    }
+
+    /**
+     * 从 InMemoryPackStore 加载解密后的内存包
+     *
+     * 加密模式下，PreLaunch 阶段将密文解密到内存并存入 InMemoryPackStore。
+     * 此方法在 load() 末尾调用，从内存中读取并反序列化这些包。
+     */
+    private fun loadInMemoryPacks() {
+        val memoryPacks = InMemoryPackStore.getAll()
+        if (memoryPacks.isEmpty()) return
+
+        BedrockLoader.logger.info("========== 加载内存中的解密包 (${memoryPacks.size}) ==========")
+
+        for ((filename, pack) in memoryPacks) {
+            try {
+                // 检测是否为 mcaddon（包含多个子包）
+                val isMcAddon = filename.endsWith(".mcaddon", ignoreCase = true) || !pack.hasEntry("manifest.json")
+
+                if (isMcAddon && !pack.hasEntry("manifest.json")) {
+                    // mcaddon: 查找所有子包（目录中包含 manifest.json 的路径前缀）
+                    loadInMemoryMcAddon(filename, pack)
+                } else {
+                    // 单个包：manifest.json 在根目录
+                    loadInMemorySinglePack(filename, pack)
+                }
+            } catch (e: Exception) {
+                LoadingErrorCollector.addError(
+                    source = "[内存] $filename",
+                    phase = LoadingError.Phase.PACK_LOAD,
+                    message = "加载内存包失败: ${e.message}",
+                    exception = e
+                )
+            }
+        }
+
+        BedrockLoader.logger.info("========================================")
+    }
+
+    /**
+     * 从内存加载单个包
+     */
+    private fun loadInMemorySinglePack(filename: String, pack: InMemoryZipPack) {
+        val manifestStream = pack.getInputStream("manifest.json")
+            ?: throw IllegalStateException("manifest.json not found in memory pack: $filename")
+
+        val manifest = manifestStream.use { stream ->
+            GsonUtil.GSON.fromJson(InputStreamReader(stream), PackManifest::class.java)
+        }
+
+        val packId = manifest.header?.uuid?.toString() ?: return
+        val packName = manifest.header?.name ?: "Unknown"
+        val packVersion = manifest.header?.version?.toString() ?: "0.0.0"
+        val packType = manifest.modules.firstOrNull()?.type ?: "resources"
+
+        // 创建 PackInfo（内存包没有实际文件，使用空占位）
+        val packInfo = BedrockPackRegistry.PackInfo(
+            id = packId,
+            name = packName,
+            version = packVersion,
+            type = packType,
+            file = File(filename), // 占位文件引用
+            md5 = "in-memory",
+            size = pack.getMemorySize(),
+            manifest = manifest,
+            addonName = null,
+            isFromAddon = false
+        )
+        BedrockPackRegistry.register(packInfo)
+
+        var singleContext = context.packs.find { it.packId == packId }
+        if (singleContext == null) {
+            singleContext = net.easecation.bedrockloader.loader.context.SinglePackContext(packId, packInfo)
+            context.packs.add(singleContext)
+        }
+
+        if (packType == "resources") {
+            val resourceContext = BedrockResourceDeserializer.deserialize(pack)
+            singleContext.resource.putAll(resourceContext)
+            BedrockLoader.logger.info("  [内存] 资源包: $packName [$packId]")
+        } else if (packType == "data") {
+            val behaviorContext = BedrockBehaviorDeserializer.deserialize(pack)
+            singleContext.behavior.putAll(behaviorContext)
+            BedrockLoader.logger.info("  [内存] 行为包: $packName [$packId]")
+        }
+    }
+
+    /**
+     * 从内存加载 mcaddon（包含多个子包）
+     */
+    private fun loadInMemoryMcAddon(filename: String, pack: InMemoryZipPack) {
+        BedrockLoader.logger.info("加载内存Addon: $filename")
+
+        // 查找所有子包的 manifest.json
+        val manifestEntries = pack.entryNames.filter {
+            it.endsWith("manifest.json") && it.contains("/")
+        }
+
+        if (manifestEntries.isEmpty()) {
+            BedrockLoader.logger.warn("内存Addon中未找到子包的manifest.json: $filename")
+            return
+        }
+
+        for (manifestPath in manifestEntries) {
+            try {
+                // 路径前缀（如 "behavior_pack/"）
+                val pathPrefix = manifestPath.substringBeforeLast("manifest.json")
+
+                val manifest = pack.getInputStream(manifestPath)?.use { stream ->
+                    GsonUtil.GSON.fromJson(InputStreamReader(stream), PackManifest::class.java)
+                } ?: continue
+
+                val packId = manifest.header?.uuid?.toString() ?: continue
+                val packName = manifest.header?.name ?: "Unknown"
+                val packVersion = manifest.header?.version?.toString() ?: "0.0.0"
+                val packType = manifest.modules.firstOrNull()?.type ?: "resources"
+
+                val addonName = filename.substringBeforeLast(".")
+
+                val packInfo = BedrockPackRegistry.PackInfo(
+                    id = packId,
+                    name = packName,
+                    version = packVersion,
+                    type = packType,
+                    file = File(filename),
+                    md5 = "in-memory",
+                    size = pack.getMemorySize(),
+                    manifest = manifest,
+                    addonName = addonName,
+                    isFromAddon = true
+                )
+                BedrockPackRegistry.register(packInfo)
+
+                var singleContext = context.packs.find { it.packId == packId }
+                if (singleContext == null) {
+                    singleContext = net.easecation.bedrockloader.loader.context.SinglePackContext(packId, packInfo)
+                    context.packs.add(singleContext)
+                }
+
+                if (packType == "resources") {
+                    val resourceContext = BedrockResourceDeserializer.deserialize(pack, pathPrefix)
+                    singleContext.resource.putAll(resourceContext)
+                    BedrockLoader.logger.info("  [内存] 资源包: $packName [$packId] ($pathPrefix)")
+                } else if (packType == "data") {
+                    val behaviorContext = BedrockBehaviorDeserializer.deserialize(pack, pathPrefix)
+                    singleContext.behavior.putAll(behaviorContext)
+                    BedrockLoader.logger.info("  [内存] 行为包: $packName [$packId] ($pathPrefix)")
+                }
+            } catch (e: Exception) {
+                LoadingErrorCollector.addError(
+                    source = "[内存] $filename/$manifestPath",
+                    phase = LoadingError.Phase.PACK_LOAD,
+                    message = "加载内存子包失败: ${e.message}",
+                    exception = e
+                )
+            }
+        }
     }
 
 }

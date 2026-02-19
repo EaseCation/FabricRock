@@ -45,12 +45,16 @@ object ConfigLoader {
         val port = (data["port"] as? Number)?.toInt() ?: 8080
         val host = data["host"] as? String ?: "0.0.0.0"
         val baseUrl = data["baseUrl"] as? String
+        val encryptionEnabled = data["encryption-enabled"] as? Boolean ?: false
+        val encryptionServerSecret = data["encryption-server-secret"] as? String ?: "auto"
 
         return ServerConfig(
             enabled = enabled,
             port = port,
             host = host,
-            baseUrl = baseUrl
+            baseUrl = baseUrl,
+            encryptionEnabled = encryptionEnabled,
+            encryptionServerSecret = encryptionServerSecret
         )
     }
 
@@ -78,6 +82,15 @@ object ConfigLoader {
             # 如果不设置，将自动生成为 http://<host>:<port>
             # 如果服务器在内网，建议手动配置为外网可访问的地址
             # baseUrl: "http://your-server-ip:8080"
+
+            # 是否启用资源包加密
+            # 启用后，客户端下载的资源包将被加密，明文不会写入客户端磁盘
+            encryption-enabled: false
+
+            # 加密用的服务端密钥
+            # - "auto": 启动时自动生成并持久化（推荐）
+            # - 手动指定: 使用自定义的密钥字符串
+            encryption-server-secret: "auto"
         """.trimIndent()
 
         Files.newBufferedWriter(configFile.toPath(), StandardCharsets.UTF_8).use { writer ->

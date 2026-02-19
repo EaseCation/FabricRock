@@ -1,6 +1,7 @@
 package net.easecation.bedrockloader.sync.server
 
 import net.easecation.bedrockloader.loader.BedrockPackRegistry
+import net.easecation.bedrockloader.sync.common.EncryptionConfig
 import net.easecation.bedrockloader.sync.common.RemotePackInfo
 import net.easecation.bedrockloader.sync.common.RemotePackManifest
 import net.easecation.bedrockloader.sync.common.ResourceType
@@ -19,7 +20,9 @@ import java.io.File
  */
 class ManifestGenerator(
     private val packDirectory: File,
-    private val config: ServerConfig
+    private val config: ServerConfig,
+    private val encryptedPackCache: EncryptedPackCache? = null,
+    private val serverToken: String? = null
 ) {
     private val logger = LoggerFactory.getLogger("BedrockLoader/ManifestGenerator")
 
@@ -40,6 +43,8 @@ class ManifestGenerator(
             logger.warn("No resource packs found")
         }
 
+        val isEncrypted = config.encryptionEnabled && encryptedPackCache != null
+
         // Convert to RemotePackInfo
         val packInfoList = distinctFiles.map { (fileName, packInfo) ->
             // 判断资源类型
@@ -49,15 +54,41 @@ class ManifestGenerator(
                 else -> ResourceType.PACK
             }
 
+            // 加密模式下使用密文的 MD5/size
+            val (md5, size) = if (isEncrypted) {
+                val packDir = File(packDirectory, ".cache")
+                var file = File(packDir, fileName)
+                if (!file.exists()) file = File(packDirectory, fileName)
+                if (file.exists()) {
+                    val cached = encryptedPackCache!!.getEncryptedPack(fileName, file)
+                    Pair(cached.md5, cached.size)
+                } else {
+                    Pair(packInfo.md5, packInfo.size)
+                }
+            } else {
+                Pair(packInfo.md5, packInfo.size)
+            }
+
             RemotePackInfo(
                 name = fileName,
                 type = resourceType,
-                uuid = packInfo.id,           // Get UUID from registry
-                version = packInfo.version,   // Get version from registry
-                md5 = packInfo.md5,
-                size = packInfo.size,
-                url = generateDownloadUrl(fileName)
+                uuid = packInfo.id,
+                version = packInfo.version,
+                md5 = md5,
+                size = size,
+                url = generateDownloadUrl(fileName),
+                encrypted = isEncrypted
             )
+        }
+
+        // 构建加密配置（仅在启用时）
+        val encryptionConfig = if (isEncrypted && serverToken != null) {
+            EncryptionConfig(
+                enabled = true,
+                serverToken = serverToken
+            )
+        } else {
+            null
         }
 
         // Create manifest object
@@ -65,13 +96,15 @@ class ManifestGenerator(
             version = RemotePackManifest.CURRENT_VERSION,
             generatedAt = System.currentTimeMillis(),
             serverVersion = getServerVersion(),
-            packs = packInfoList
+            packs = packInfoList,
+            encryption = encryptionConfig
         )
 
         // 打印统计信息
         val addonCount = manifest.getAddons().size
         val packCount = manifest.getSinglePacks().size
-        logger.info("Manifest generated: $addonCount addon(s), $packCount pack(s), total size ${formatFileSize(manifest.getTotalSize())}")
+        val encryptedStr = if (isEncrypted) " [ENCRYPTED]" else ""
+        logger.info("Manifest generated: $addonCount addon(s), $packCount pack(s), total size ${formatFileSize(manifest.getTotalSize())}$encryptedStr")
 
         return manifest
     }

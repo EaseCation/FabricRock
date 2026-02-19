@@ -7,8 +7,8 @@ import net.easecation.bedrockloader.loader.BedrockBehaviorPackLoader
 import net.easecation.bedrockloader.loader.BlockStateMappingExporter
 import net.easecation.bedrockloader.loader.BlockEntityTypeMappingExporter
 import net.easecation.bedrockloader.loader.EntityTypeMappingExporter
-import net.easecation.bedrockloader.sync.server.ConfigLoader
-import net.easecation.bedrockloader.sync.server.EmbeddedHttpServer
+import net.easecation.bedrockloader.sync.common.PackEncryption
+import net.easecation.bedrockloader.sync.server.*
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup
@@ -250,9 +250,51 @@ object BedrockLoader : ModInitializer {
 				return
 			}
 
-			// 创建并启动HTTP服务器
 			val packDirectory = File(getGameDir(), "config/bedrock-loader")
-			httpServer = EmbeddedHttpServer(config, packDirectory)
+
+			// 初始化加密组件（如果启用）
+			var keyManager: PackKeyManager? = null
+			var encryptedPackCache: EncryptedPackCache? = null
+			var challengeManager: ChallengeManager? = null
+			var serverToken: String? = null
+
+			if (config.encryptionEnabled) {
+				logger.info("初始化资源包加密系统...")
+
+				// 处理 server_secret（"auto" 模式自动生成并持久化）
+				val serverSecret = if (config.encryptionServerSecret == "auto") {
+					val secretFile = File(configDir, ".server_secret")
+					if (secretFile.exists()) {
+						secretFile.readText().trim()
+					} else {
+						val generated = PackEncryption.generateKey()
+						secretFile.writeText(generated)
+						logger.info("已自动生成 server_secret 并保存到: ${secretFile.absolutePath}")
+						generated
+					}
+				} else {
+					config.encryptionServerSecret
+				}
+
+				// 生成 server_token（公开）和 shared_secret（内部使用）
+				serverToken = PackEncryption.generateServerToken(serverSecret)
+				val sharedSecret = PackEncryption.deriveSharedSecretFromServerSecret(serverSecret)
+
+				// 初始化密钥管理器
+				val keyFile = File(configDir, ".keys.json")
+				keyManager = PackKeyManager(keyFile)
+
+				// 初始化加密包缓存
+				encryptedPackCache = EncryptedPackCache(packDirectory, keyManager)
+
+				// 初始化 Challenge 管理器
+				challengeManager = ChallengeManager(sharedSecret)
+
+				logger.info("资源包加密系统初始化完成 (server_token: ${serverToken.take(16)}...)")
+			}
+
+			// 创建并启动HTTP服务器
+			httpServer = EmbeddedHttpServer(config, packDirectory, keyManager, encryptedPackCache, challengeManager, serverToken)
 			httpServer?.start()
 
 			// 注册shutdown hook以实现优雅关闭

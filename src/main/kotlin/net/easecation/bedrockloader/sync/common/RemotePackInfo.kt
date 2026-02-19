@@ -67,7 +67,14 @@ data class RemotePackInfo(
      * 下载URL（相对或绝对路径）
      */
     @SerializedName("url")
-    val url: String
+    val url: String,
+
+    /**
+     * 是否为加密包
+     * 加密模式下 md5/size 对应密文数据
+     */
+    @SerializedName("encrypted")
+    val encrypted: Boolean = false
 ) {
     /**
      * 判断是否为addon类型

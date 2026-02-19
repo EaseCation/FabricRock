@@ -87,6 +87,19 @@ class RemotePackSyncPreLaunch : PreLaunchEntrypoint {
                             }
                         }
                     }
+
+                    // 加密模式：解密本地密文到内存
+                    val manifest = plan.manifest
+                    if (manifest != null && manifest.isEncrypted()) {
+                        logger.info("Encrypted packs detected, starting decryption...")
+                        try {
+                            val decrypted = syncManager.decryptLocalPacksToMemory(manifest)
+                            logger.info("Successfully decrypted $decrypted pack(s) to memory")
+                        } catch (e: Exception) {
+                            logger.error("Pack decryption failed", e)
+                            logger.info("Encrypted packs will not be available")
+                        }
+                    }
                 }
 
                 is SyncResult.Disabled -> {
