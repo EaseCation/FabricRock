@@ -1,5 +1,6 @@
 package net.easecation.bedrockloader.mixin.client;
 
+//? if >=1.21 {
 import net.fabricmc.fabric.impl.networking.RegistrationPayload;
 import net.minecraft.client.network.ClientLoginNetworkHandler;
 import net.minecraft.network.ClientConnection;
@@ -15,12 +16,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
 
-/**
- * Sends fabricrock:confirm channel registration immediately after login success,
- * so ViaBedrock detects FabricRock before sending any chunk data.
- * Without this, the Fabric API's automatic minecraft:register is sent at PLAY phase start,
- * which may arrive after chunks have already been processed (especially with shaders).
- */
+// Sends fabricrock:confirm channel registration immediately after login success,
+// so ViaBedrock detects FabricRock before sending any chunk data.
 @SuppressWarnings("UnstableApiUsage")
 @Mixin(ClientLoginNetworkHandler.class)
 public class ClientLoginNetworkHandlerMixin {
@@ -38,3 +35,12 @@ public class ClientLoginNetworkHandlerMixin {
         ));
     }
 }
+//?} else {
+/*import net.minecraft.client.MinecraftClient;
+import org.spongepowered.asm.mixin.Mixin;
+
+// 1.20.4: FabricRock confirm mechanism not needed (1.21+ only feature for ViaBedrock)
+// No-op mixin targeting MinecraftClient to satisfy the mixin framework.
+@Mixin(MinecraftClient.class)
+public class ClientLoginNetworkHandlerMixin {}
+*///?}
