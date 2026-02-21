@@ -41,6 +41,11 @@ object InMemoryPackStore {
     fun getAll(): Map<String, InMemoryZipPack> = packs.toMap()
 
     /**
+     * 检查是否包含指定文件名的包
+     */
+    fun contains(filename: String): Boolean = packs.containsKey(filename)
+
+    /**
      * 检查是否有包
      */
     fun isEmpty(): Boolean = packs.isEmpty()

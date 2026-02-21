@@ -88,9 +88,21 @@ class PackComparator(
                     continue
                 }
 
-                // UUID不在本地存在，需要下载
-                logger.debug("UUID不存在本地，需要下载: ${remotePack.name} (UUID: $remoteUUID)")
-                toDownload.add(remotePack)
+                // UUID不在本地存在，回退到文件名匹配（加密包的UUID无法从密文中提取）
+                val sameNamePack = localPacksByFilename[remotePack.name]
+                if (sameNamePack != null && !sameNamePack.isManual) {
+                    // 找到同名的远程缓存文件，比较MD5
+                    if (sameNamePack.md5.equals(remotePack.md5, ignoreCase = true)) {
+                        logger.debug("UUID无法匹配但文件名和MD5匹配，已是最新: ${remotePack.name}")
+                        upToDate.add(remotePack.name)
+                    } else {
+                        logger.debug("UUID无法匹配但文件名匹配，MD5不同，需要更新: ${remotePack.name}")
+                        toUpdate.add(remotePack)
+                    }
+                } else {
+                    logger.debug("UUID不存在本地且无同名文件，需要下载: ${remotePack.name} (UUID: $remoteUUID)")
+                    toDownload.add(remotePack)
+                }
             } else {
                 // 策略2: 回退到文件名比较（UUID不可用时）
                 logger.debug("远程包 ${remotePack.name} 没有UUID信息，回退到文件名比较")

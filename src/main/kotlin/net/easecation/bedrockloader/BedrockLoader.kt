@@ -173,7 +173,7 @@ object BedrockLoader : ModInitializer {
 			// 创建唯一的RegistryKey
 			val groupKey = RegistryKey.of(
 				Registries.ITEM_GROUP.key,
-				identifierOf("bedrock-loader", "pack_${packId.substring(0, 8)}")
+				identifierOf("bedrock-loader", "pack_${packId.replace("-", "")}")
 			)
 
 			// 创建ItemGroup

@@ -90,10 +90,12 @@ object BedrockAddonsLoader {
 
             if (config.enabled) {
                 // 远程同步启用，加载remote目录
+                // 注意：跳过已在InMemoryPackStore中的文件（加密包会从内存加载，磁盘上是密文无法直接读取）
                 remoteDir.listFiles { file: File, name: String ->
                     val child = File(file, name)
-                    (child.isDirectory && name != ".DS_Store" && !name.startsWith(".")) ||
-                    name.endsWith(".zip") || name.endsWith(".mcpack") || name.endsWith(".mcaddon")
+                    val isPackFile = (child.isDirectory && name != ".DS_Store" && !name.startsWith(".")) ||
+                        name.endsWith(".zip") || name.endsWith(".mcpack") || name.endsWith(".mcaddon")
+                    isPackFile && !InMemoryPackStore.contains(name)
                 } ?: emptyArray()
             } else {
                 // 远程同步禁用，跳过remote目录

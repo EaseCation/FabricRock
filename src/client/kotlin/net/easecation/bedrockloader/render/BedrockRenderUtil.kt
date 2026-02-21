@@ -12,7 +12,12 @@ object BedrockRenderUtil {
 
     fun bedrockBonesToJavaModelData(bones: List<GeometryDefinition.Bone>) : ModelData {
         var boneCount = 0
+        val processedBones = mutableSetOf<GeometryDefinition.Bone>()
         fun addBoneToModelData(bone: GeometryDefinition.Bone, parentPartData: ModelPartData) {
+            if (!processedBones.add(bone)) {
+                // 防止循环引用导致无限递归（重名骨骼或循环父子关系）
+                return
+            }
             val pivotTransform = ModelTransform.of(
                     (bone.pivot?.get(0) ?: 0.0),
                     -(bone.pivot?.get(1) ?: 0.0),
