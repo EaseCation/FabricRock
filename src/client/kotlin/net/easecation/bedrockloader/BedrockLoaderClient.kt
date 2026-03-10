@@ -41,7 +41,10 @@ object BedrockLoaderClient : ClientModInitializer {
     override fun onInitializeClient() {
         ModelLoadingPlugin.register(BedrockModelLoadingPlugin)
 
-        //? if >=1.21 {
+        //? if >=26.1 {
+        /*PayloadTypeRegistry.clientboundPlay().register(FabricRockConfirmPayload.ID, FabricRockConfirmPayload.CODEC)
+        ClientPlayNetworking.registerGlobalReceiver(FabricRockConfirmPayload.ID) { _, _ -> }
+        *///?} elif >=1.21 {
         PayloadTypeRegistry.playS2C().register(FabricRockConfirmPayload.ID, FabricRockConfirmPayload.CODEC)
         ClientPlayNetworking.registerGlobalReceiver(FabricRockConfirmPayload.ID) { _, _ -> }
         //?}

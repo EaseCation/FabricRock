@@ -22,7 +22,10 @@ import net.easecation.bedrockloader.render.renderer.BlockEntityDataDrivenRendere
 import net.easecation.bedrockloader.render.renderer.EntityDataDrivenRenderer
 import net.easecation.bedrockloader.multiblock.MultiblockRegistry
 import net.easecation.bedrockloader.util.GsonUtil
-//? if >=1.21.6 {
+//? if >=26.1 {
+/*import net.fabricmc.fabric.api.client.rendering.v1.ChunkSectionLayerMap
+import net.minecraft.client.render.BlockRenderLayer
+*///?} elif >=1.21.6 {
 import net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap
 import net.minecraft.client.render.BlockRenderLayer
 //?} else {
@@ -202,7 +205,11 @@ class BedrockResourcePackLoader(
         val fileMcMeta = javaResDir.resolve("pack.mcmeta")
         val mcMeta = JavaMCMeta(
                 pack = JavaMCMeta.PackInfo(
-                        //? if >=1.21.11 {
+                        //? if >=26.1 {
+                        /*pack_format = 76,
+                        min_format = 76,
+                        max_format = 76,
+                        *///?} elif >=1.21.11 {
                         pack_format = 75,
                         min_format = 75,
                         max_format = 75,
@@ -745,7 +752,13 @@ class BedrockResourcePackLoader(
         val materialInstances = blockComponents?.minecraftMaterialInstances
         val block = BedrockAddonsRegistry.blocks[identifier] ?: return
         val renderMethod = materialInstances?.get("*")?.render_method ?: return
-        //? if >=1.21.6 {
+        //? if >=26.1 {
+        /*if (renderMethod == ComponentMaterialInstances.RenderMethod.alpha_test) {
+            ChunkSectionLayerMap.putBlock(block, BlockRenderLayer.CUTOUT)
+        } else if (renderMethod == ComponentMaterialInstances.RenderMethod.blend) {
+            ChunkSectionLayerMap.putBlock(block, BlockRenderLayer.TRANSLUCENT)
+        }
+        *///?} elif >=1.21.6 {
         if (renderMethod == ComponentMaterialInstances.RenderMethod.alpha_test) {
             BlockRenderLayerMap.putBlock(block, BlockRenderLayer.CUTOUT)
         } else if (renderMethod == ComponentMaterialInstances.RenderMethod.blend) {

@@ -83,6 +83,12 @@ def versionConfig = [
 		fabricApi: '0.141.3+1.21.11',
 		yacl: '3.8.1+1.21.11-fabric',
 		modmenu: '17.0.0-beta.2'
+	],
+	'26.1': [
+		yarn: null,                         // 26.1无Yarn映射，使用官方Mojang映射
+		fabricApi: '0.143.11+26.1',         // snapshot版本，正式版后替换
+		yacl: '3.8.2+26.1-snapshot-2',     // snapshot版本，或暂时排除
+		modmenu: '18.0.0-alpha.5'           // alpha版本，或暂时排除
 	]
 ][mcVersion]
 
@@ -92,8 +98,12 @@ project.ext.yarn_mappings = versionConfig.yarn
 project.ext.fabric_version = versionConfig.fabricApi
 project.ext.yacl_version = versionConfig.yacl
 project.ext.modmenu_version = versionConfig.modmenu
-project.ext.minecraft_dep = mcVersion.startsWith("1.20") ? "~1.20.4" : "~1.21-"
-project.ext.java_dep = mcVersion.startsWith("1.20") ? ">=17" : ">=21"
+project.ext.minecraft_dep = mcVersion.startsWith("26") ? "~26.1-"
+                           : mcVersion.startsWith("1.20") ? "~1.20.4"
+                           : "~1.21-"
+project.ext.java_dep = mcVersion.startsWith("26") ? ">=25"
+                      : mcVersion.startsWith("1.20") ? ">=17"
+                      : ">=21"
 
 base {
 	archivesName = "${project.archives_base_name}-mc${mcVersion}"
@@ -142,7 +152,12 @@ fabricApi {
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+	if (versionConfig.yarn != null) {
+		mappings "net.fabricmc:yarn:${versionConfig.yarn}:v2"
+	} else {
+		// 26.1已完全反混淆，使用官方Mojang映射作为透明映射
+		mappings loom.officialMojangMappings()
+	}
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
@@ -193,7 +208,23 @@ processResources {
 	}
 }
 
-//? if >=1.21 {
+//? if >=26.1 {
+/*tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+	kotlinOptions {
+		jvmTarget = "21"
+	}
+}
+
+java {
+	withSourcesJar()
+	sourceCompatibility = JavaVersion.toVersion("25")
+	targetCompatibility = JavaVersion.toVersion("25")
+}
+*///?} elif >=1.21 {
 tasks.withType(JavaCompile).configureEach {
 	it.options.release = 21
 }
@@ -235,8 +266,8 @@ jar {
 	}
 }
 
-//? if >=1.21.4 {
-// 1.21.4: 配置remapJar任务以忽略映射冲突
+//? if >=1.21.4 && <26.1 {
+// 1.21.4-1.21.11: 配置remapJar任务以忽略映射冲突（26.1无混淆，无需remapJar）
 tasks.named('remapJar') {
 	doFirst {
 		// 设置系统属性以允许映射冲突

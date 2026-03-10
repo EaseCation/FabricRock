@@ -13,9 +13,14 @@ import net.easecation.bedrockloader.sync.common.PackEncryption
 import net.easecation.bedrockloader.sync.server.*
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.ModInitializer
+//? if >=26.1 {
+/*import net.fabricmc.fabric.api.itemgroup.v1.FabricCreativeModeTab
+import net.fabricmc.fabric.api.itemgroup.v1.CreativeModeTabEvents
+*///?} else {
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents.ModifyEntries
+//?}
 import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.block.Block
 import net.minecraft.block.AbstractBlock
@@ -184,16 +189,34 @@ object BedrockLoader : ModInitializer {
 			)
 
 			// 创建ItemGroup
+			//? if >=26.1 {
+			/*val itemGroup = FabricCreativeModeTab.builder()
+				.icon { ItemStack(iconItem) }
+				.displayName(Text.literal(packInfo.name))
+				.build()
+			*///?} else {
 			val itemGroup = FabricItemGroup.builder()
 				.icon { ItemStack(iconItem) }
 				.displayName(Text.literal(packInfo.name))
 				.build()
+			//?}
 
 			// 注册ItemGroup
 			Registry.register(Registries.ITEM_GROUP, groupKey, itemGroup)
 			logger.info("创建创造模式选项卡: ${packInfo.name} [$packId] (${packItems.size} 个物品)")
 
 			// 添加物品到选项卡
+			//? if >=26.1 {
+			/*CreativeModeTabEvents.modifyOutputEvent(groupKey)
+				.register { output ->
+					packItems.forEach { item ->
+						val itemId = Registries.ITEM.getId(item)
+						if (!BedrockAddonsRegistry.multiblockPartOnlyIds.contains(itemId)) {
+							output.add(ItemStack(item))
+						}
+					}
+				}
+			*///?} else {
 			ItemGroupEvents.modifyEntriesEvent(groupKey)
 				.register { itemGroup ->
 					packItems.forEach { item ->
@@ -204,6 +227,7 @@ object BedrockLoader : ModInitializer {
 						}
 					}
 				}
+			//?}
 		}
 	}
 
