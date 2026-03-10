@@ -238,7 +238,11 @@ object MultiblockAssembler {
     @Suppress("UNCHECKED_CAST")
     private fun applyStringProperty(
         state: net.minecraft.block.BlockState,
+        //? if >=1.21.2 {
         prop: net.easecation.bedrockloader.block.property.BedrockProperty<*>,
+        //?} else {
+        /*prop: net.easecation.bedrockloader.block.property.BedrockProperty<*, *>,
+        *///?}
         value: String
     ): net.minecraft.block.BlockState {
         val javaProp = prop.javaProperty as net.minecraft.state.property.Property<Comparable<Any>>

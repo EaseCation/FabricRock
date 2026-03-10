@@ -113,7 +113,7 @@ class MultiblockPersistentState : PersistentState() {
             )
         }
         *///?} else {
-        
+
         /*private fun fromNbt(nbt: NbtCompound): MultiblockPersistentState {
             val state = MultiblockPersistentState()
             val list = nbt.getList("assemblies", net.minecraft.nbt.NbtElement.COMPOUND_TYPE.toInt())
@@ -124,7 +124,7 @@ class MultiblockPersistentState : PersistentState() {
                 val parts = mutableSetOf<Long>()
                 val partsNbt = entry.getList("parts", net.minecraft.nbt.NbtElement.LONG_TYPE.toInt())
                 for (j in 0 until partsNbt.size) {
-                    val partLong = partsNbt.getLong(j)
+                    val partLong = (partsNbt[j] as NbtLong).longValue()
                     parts.add(partLong)
                     state.partToController[partLong] = ctrlLong
                 }
@@ -135,8 +135,11 @@ class MultiblockPersistentState : PersistentState() {
 
         fun getOrCreate(world: ServerWorld): MultiblockPersistentState {
             return world.persistentStateManager.getOrCreate(
-                { fromNbt(it) },
-                { MultiblockPersistentState() },
+                PersistentState.Type(
+                    { MultiblockPersistentState() },
+                    { nbt -> fromNbt(nbt) },
+                    null
+                ),
                 STATE_KEY
             )
         }

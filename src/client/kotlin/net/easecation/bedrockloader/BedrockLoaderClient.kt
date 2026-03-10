@@ -24,7 +24,7 @@ object BedrockLoaderClient : ClientModInitializer {
     val logger: Logger = LoggerFactory.getLogger("bedrock-loader")
 
     //? if >=1.21 {
-    /*/** Empty payload used to announce FabricRock presence to ViaBedrock proxy. */
+    /** Empty payload used to announce FabricRock presence to ViaBedrock proxy. */
     class FabricRockConfirmPayload : CustomPayload {
         companion object {
             val ID: CustomPayload.Id<FabricRockConfirmPayload> =
@@ -36,7 +36,7 @@ object BedrockLoaderClient : ClientModInitializer {
         }
         override fun getId(): CustomPayload.Id<out CustomPayload> = ID
     }
-    *///?}
+    //?}
 
     override fun onInitializeClient() {
         ModelLoadingPlugin.register(BedrockModelLoadingPlugin)
