@@ -8,10 +8,10 @@ import net.minecraft.server.world.ServerWorld
 import net.minecraft.util.Identifier
 import net.minecraft.util.math.BlockPos
 import net.minecraft.world.PersistentState
-//? if >=1.21.2 {
-import net.minecraft.registry.RegistryWrapper
-//?}
-//? if >=1.21.11 {
+//? if >=1.21.1 && <1.21.5 {
+/*import net.minecraft.registry.RegistryWrapper
+*///?}
+//? if >=1.21.5 {
 import net.minecraft.world.PersistentStateType
 import com.mojang.serialization.Codec
 import com.mojang.serialization.codecs.RecordCodecBuilder
@@ -38,7 +38,7 @@ class MultiblockPersistentState : PersistentState() {
         /** 该多方块的所有部件位置（不含控制方块自身） */
         val parts: MutableSet<Long>
     ) {
-        //? if >=1.21.11 {
+        //? if >=1.21.5 {
         companion object {
             val CODEC: Codec<ControllerData> = RecordCodecBuilder.create { instance ->
                 instance.group(
@@ -53,7 +53,7 @@ class MultiblockPersistentState : PersistentState() {
     companion object {
         const val STATE_KEY = "bedrock_multiblock"
 
-        //? if >=1.21.11 {
+        //? if >=1.21.5 {
         private val PART_TO_CTRL_CODEC: Codec<MutableMap<Long, Long>> =
             Codec.unboundedMap(Codec.STRING.xmap(String::toLong, Long::toString), Codec.LONG)
                 .xmap({ it.toMutableMap() }, { it })
@@ -81,8 +81,8 @@ class MultiblockPersistentState : PersistentState() {
             @Suppress("UNCHECKED_CAST")
             return world.persistentStateManager.getOrCreate(STATE_TYPE) as MultiblockPersistentState
         }
-        //?} elif >=1.21.2 {
-        
+        //?} elif >=1.21.1 && <1.21.5 {
+
         /*private fun fromNbt(nbt: NbtCompound): MultiblockPersistentState {
             val state = MultiblockPersistentState()
             val list = nbt.getList("assemblies", net.minecraft.nbt.NbtElement.COMPOUND_TYPE.toInt())
@@ -93,7 +93,7 @@ class MultiblockPersistentState : PersistentState() {
                 val parts = mutableSetOf<Long>()
                 val partsNbt = entry.getList("parts", net.minecraft.nbt.NbtElement.LONG_TYPE.toInt())
                 for (j in 0 until partsNbt.size) {
-                    val partLong = partsNbt.getLong(j)
+                    val partLong = (partsNbt[j] as NbtLong).longValue()
                     parts.add(partLong)
                     state.partToController[partLong] = ctrlLong
                 }
@@ -146,8 +146,8 @@ class MultiblockPersistentState : PersistentState() {
         *///?}
     }
 
-    //? if <1.21.2 {
-    
+    //? if <1.21.1 {
+
     /*override fun writeNbt(nbt: NbtCompound): NbtCompound {
         val list = NbtList()
         controllerToData.forEach { (ctrlLong, data) ->
@@ -162,8 +162,8 @@ class MultiblockPersistentState : PersistentState() {
         nbt.put("assemblies", list)
         return nbt
     }
-    *///?} elif >=1.21.2 && <1.21.11 {
-    
+    *///?} elif >=1.21.1 && <1.21.5 {
+
     /*override fun writeNbt(nbt: NbtCompound, registryLookup: RegistryWrapper.WrapperLookup): NbtCompound {
         val list = NbtList()
         controllerToData.forEach { (ctrlLong, data) ->

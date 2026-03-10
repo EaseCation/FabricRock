@@ -716,7 +716,7 @@ data class BlockContext(
             MultiblockAssembler.assemble(serverWorld, pos, placements, facing, def, persistentState)
         }
 
-        //? if >=1.21.11 {
+        //? if >=1.21.2 {
         override fun onDestroyedByExplosion(world: ServerWorld, pos: BlockPos, explosion: Explosion) {
             if (MultiblockRegistry.byBlockId.containsKey(identifier)) {
                 val persistentState = MultiblockPersistentState.getOrCreate(world)
