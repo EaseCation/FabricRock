@@ -7,6 +7,8 @@ import net.easecation.bedrockloader.loader.BedrockBehaviorPackLoader
 import net.easecation.bedrockloader.loader.BlockStateMappingExporter
 import net.easecation.bedrockloader.loader.BlockEntityTypeMappingExporter
 import net.easecation.bedrockloader.loader.EntityTypeMappingExporter
+import net.easecation.bedrockloader.multiblock.MultiblockEventHandler
+import net.easecation.bedrockloader.multiblock.MultiblockLoader
 import net.easecation.bedrockloader.sync.common.PackEncryption
 import net.easecation.bedrockloader.sync.server.*
 import net.fabricmc.api.EnvType
@@ -55,6 +57,11 @@ object BedrockLoader : ModInitializer {
 		logger.info("Loading behaviour pack...")
 		val behaviorPackLoader = BedrockBehaviorPackLoader(context)
 		behaviorPackLoader.load()
+
+		// 加载多方块定义（在方块注册完成之后）
+		logger.info("Loading multiblock definitions...")
+		MultiblockLoader(context).load()
+		MultiblockEventHandler.register()
 
 		// 导出方块状态映射（用于 ViaBedrock 同步）
 		logger.info("Exporting block state mappings...")
@@ -190,7 +197,11 @@ object BedrockLoader : ModInitializer {
 			ItemGroupEvents.modifyEntriesEvent(groupKey)
 				.register { itemGroup ->
 					packItems.forEach { item ->
-						itemGroup.add(ItemStack(item))
+						val itemId = Registries.ITEM.getId(item)
+						// 跳过仅作为多方块部件的方块（不在创造栏中显示）
+						if (!BedrockAddonsRegistry.multiblockPartOnlyIds.contains(itemId)) {
+							itemGroup.add(ItemStack(item))
+						}
 					}
 				}
 		}

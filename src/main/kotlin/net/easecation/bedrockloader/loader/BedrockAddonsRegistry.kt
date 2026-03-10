@@ -24,6 +24,10 @@ object BedrockAddonsRegistry {
     // 方块上下文映射（用于导出方块状态映射）
     val blockContexts: MutableMap<Identifier, BlockContext> = mutableMapOf()
 
+    // 仅作为部件（从不作为控制方块）的方块 ID，在创造物品栏中隐藏
+    // 由 MultiblockLoader 填充；用 /give 仍可获取这些方块进行调试
+    val multiblockPartOnlyIds: MutableSet<Identifier> = mutableSetOf()
+
     /**
      * 按包ID获取物品列表
      * @param packId 包UUID

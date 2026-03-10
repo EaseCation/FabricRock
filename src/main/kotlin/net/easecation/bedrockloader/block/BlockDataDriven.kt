@@ -20,11 +20,18 @@ import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.easecation.bedrockloader.loader.error.LoadingError
 import net.easecation.bedrockloader.loader.error.LoadingErrorCollector
 import net.easecation.bedrockloader.util.MapColorMatcher
+import net.easecation.bedrockloader.multiblock.MultiblockAssembler
+import net.easecation.bedrockloader.multiblock.MultiblockPersistentState
+import net.easecation.bedrockloader.multiblock.MultiblockRegistry
 import net.minecraft.block.*
 import net.minecraft.block.AbstractBlock.Settings
 import net.minecraft.block.entity.BlockEntity
 import net.minecraft.block.enums.BlockHalf
+import net.minecraft.entity.LivingEntity
+import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.ItemPlacementContext
+import net.minecraft.item.ItemStack
+import net.minecraft.server.world.ServerWorld
 import net.minecraft.state.StateManager
 import net.minecraft.state.property.Property
 import net.minecraft.util.Identifier
@@ -34,6 +41,11 @@ import net.minecraft.util.math.Direction
 import net.minecraft.util.shape.VoxelShape
 import net.minecraft.util.shape.VoxelShapes
 import net.minecraft.world.BlockView
+import net.minecraft.world.World
+import net.minecraft.world.explosion.Explosion
+//? if <1.21.11 {
+/*import net.minecraft.block.PistonBehavior
+*///?}
 import org.joml.Matrix3f
 import org.joml.Matrix4d
 import org.joml.Matrix4f
@@ -336,7 +348,8 @@ data class BlockContext(
 
         private val orSplitRegex = """\s*\|\|\s*""".toRegex()
         private val andSplitRegex = """\s*&&\s*""".toRegex()
-        private val blockStateRegex = """^\s*q(uery)?\s*\.\s*block_state\s*\(\s*'(?<key>[^']+)'\s*\)\s*(?<operator>==|!=)\s*'(?<value>[^']+)'\s*$""".toRegex()
+        // value 支持两种格式：带单引号的字符串 '...' 或不带引号的整数/布尔字面量（基岩版原生整数 state 不带引号）
+        private val blockStateRegex = """^\s*q(uery)?\s*\.\s*block_state\s*\(\s*'(?<key>[^']+)'\s*\)\s*(?<operator>==|!=)\s*(?:'(?<value>[^']*)'|(?<rawValue>[^\s'"]+))\s*$""".toRegex()
 
         private val componentsByState: Map<BlockState, BlockComponents>
 
@@ -395,7 +408,7 @@ data class BlockContext(
             }
             val key = matchResult.groups["key"]?.value ?: return false
             val operator = matchResult.groups["operator"]?.value ?: return false
-            val value = matchResult.groups["value"]?.value ?: return false
+            val value = matchResult.groups["value"]?.value ?: matchResult.groups["rawValue"]?.value ?: return false
             val property = properties[key]
             if (property == null) {
                 BedrockLoader.logger.warn("[BlockDataDriven] Block $identifier contains unknown property in permutation: $key")
@@ -676,6 +689,79 @@ data class BlockContext(
             val hasBlockEntity = components.neteaseBlockEntity != null
 
             return isFullBlock && isOpaque && !hasBlockEntity
+        }
+        *///?}
+
+        override fun onPlaced(world: World, pos: BlockPos, state: BlockState, placer: LivingEntity?, itemStack: ItemStack) {
+            super.onPlaced(world, pos, state, placer, itemStack)
+            if (world.isClient) return
+            val def = MultiblockRegistry.findControllerDef(identifier, this@BlockContext, state) ?: return
+            val serverWorld = world as ServerWorld
+            // 从已由 getPlacementState() 设置好的 state 中读取朝向
+            val facing = if (def.rotation?.enabled == true && def.rotation.facingProperty != null) {
+                val prop = properties[def.rotation.facingProperty]
+                if (prop != null && state.contains(prop.javaProperty))
+                    state.getOrEmpty(prop.javaProperty).orElse(null) as? Direction ?: Direction.NORTH
+                else Direction.NORTH
+            } else Direction.NORTH
+            val persistentState = MultiblockPersistentState.getOrCreate(serverWorld)
+            val placements = MultiblockAssembler.checkCanAssemble(serverWorld, pos, def, facing)
+            if (placements == null) {
+                // 无法组装（位置被占），移除控制方块并退还物品
+                world.setBlockState(pos, Blocks.AIR.defaultState)
+                (placer as? PlayerEntity)?.let { player ->
+                    if (!player.inventory.insertStack(itemStack.copy())) {
+                        player.dropItem(itemStack.copy(), false)
+                    }
+                }
+                return
+            }
+            MultiblockAssembler.assemble(serverWorld, pos, placements, facing, def, persistentState)
+        }
+
+        //? if <1.21.11 {
+        /*override fun getPistonBehavior(state: BlockState): PistonBehavior {
+            if (MultiblockRegistry.byBlockId.containsKey(identifier)) return PistonBehavior.BLOCK
+            return super.getPistonBehavior(state)
+        }
+        *///?}
+
+        //? if >=1.21.11 {
+        override fun onDestroyedByExplosion(world: ServerWorld, pos: BlockPos, explosion: Explosion) {
+            if (MultiblockRegistry.byBlockId.containsKey(identifier)) {
+                val persistentState = MultiblockPersistentState.getOrCreate(world)
+                val controllerPos = when {
+                    persistentState.isController(pos) -> pos
+                    else -> persistentState.getControllerPos(pos)
+                }
+                if (controllerPos != null) {
+                    val multiblockId = persistentState.getMultiblockId(controllerPos)
+                    val def = multiblockId?.let { MultiblockRegistry.byIdentifier[it] }
+                    if (def != null) {
+                        MultiblockAssembler.disassembleSkipping(world, controllerPos, def, persistentState, pos)
+                    }
+                }
+            }
+            super.onDestroyedByExplosion(world, pos, explosion)
+        }
+        //?} else {
+        /*override fun onDestroyedByExplosion(world: World, pos: BlockPos, explosion: Explosion) {
+            if (!world.isClient && MultiblockRegistry.byBlockId.containsKey(identifier)) {
+                val serverWorld = world as ServerWorld
+                val persistentState = MultiblockPersistentState.getOrCreate(serverWorld)
+                val controllerPos = when {
+                    persistentState.isController(pos) -> pos
+                    else -> persistentState.getControllerPos(pos)
+                }
+                if (controllerPos != null) {
+                    val multiblockId = persistentState.getMultiblockId(controllerPos)
+                    val def = multiblockId?.let { MultiblockRegistry.byIdentifier[it] }
+                    if (def != null) {
+                        MultiblockAssembler.disassembleSkipping(serverWorld, controllerPos, def, persistentState, pos)
+                    }
+                }
+            }
+            super.onDestroyedByExplosion(world, pos, explosion)
         }
         *///?}
     }

@@ -2,6 +2,7 @@ package net.easecation.bedrockloader.loader.deserializer
 
 import net.easecation.bedrockloader.bedrock.definition.BlockBehaviourDefinition
 import net.easecation.bedrockloader.bedrock.definition.EntityBehaviourDefinition
+import net.easecation.bedrockloader.bedrock.definition.MultiblockDefinition
 import net.easecation.bedrockloader.loader.InMemoryZipPack
 import net.easecation.bedrockloader.loader.context.BedrockBehaviorContext
 import net.easecation.bedrockloader.util.GsonUtil
@@ -45,6 +46,12 @@ object BedrockBehaviorDeserializer : PackDeserializer<BedrockBehaviorContext> {
                     val identifier: Identifier = blockBehaviour.description.identifier
                     context.blocks[identifier] = blockBehaviour
                 }
+            } else if (relativeName.startsWith("multiblocks/") && relativeName.endsWith(".json")) {
+                file.getInputStream(entry).use { stream ->
+                    val multiblockDefinition: MultiblockDefinition = GsonUtil.GSON.fromJson(InputStreamReader(stream), MultiblockDefinition::class.java)
+                    val multiblock: MultiblockDefinition.Multiblock = multiblockDefinition.multiblock
+                    context.multiblocks[multiblock.identifier] = multiblock
+                }
             }
         }
         return context
@@ -75,6 +82,12 @@ object BedrockBehaviorDeserializer : PackDeserializer<BedrockBehaviorContext> {
                     val blockBehaviour: BlockBehaviourDefinition.BlockBehaviour = blockBehaviourDefinition.minecraftBlock
                     val identifier: Identifier = blockBehaviour.description.identifier
                     context.blocks[identifier] = blockBehaviour
+                }
+            } else if (relativeName.startsWith("multiblocks/") && relativeName.endsWith(".json")) {
+                pack.getInputStream(name)?.use { stream ->
+                    val multiblockDefinition: MultiblockDefinition = GsonUtil.GSON.fromJson(InputStreamReader(stream), MultiblockDefinition::class.java)
+                    val multiblock: MultiblockDefinition.Multiblock = multiblockDefinition.multiblock
+                    context.multiblocks[multiblock.identifier] = multiblock
                 }
             }
         }
