@@ -43,9 +43,6 @@ import net.minecraft.util.shape.VoxelShapes
 import net.minecraft.world.BlockView
 import net.minecraft.world.World
 import net.minecraft.world.explosion.Explosion
-//? if <1.21.11 {
-/*import net.minecraft.block.PistonBehavior
-*///?}
 import org.joml.Matrix3f
 import org.joml.Matrix4d
 import org.joml.Matrix4f
@@ -719,13 +716,6 @@ data class BlockContext(
             MultiblockAssembler.assemble(serverWorld, pos, placements, facing, def, persistentState)
         }
 
-        //? if <1.21.11 {
-        /*override fun getPistonBehavior(state: BlockState): PistonBehavior {
-            if (MultiblockRegistry.byBlockId.containsKey(identifier)) return PistonBehavior.BLOCK
-            return super.getPistonBehavior(state)
-        }
-        *///?}
-
         //? if >=1.21.11 {
         override fun onDestroyedByExplosion(world: ServerWorld, pos: BlockPos, explosion: Explosion) {
             if (MultiblockRegistry.byBlockId.containsKey(identifier)) {
@@ -755,7 +745,7 @@ data class BlockContext(
                 }
                 if (controllerPos != null) {
                     val multiblockId = persistentState.getMultiblockId(controllerPos)
-                    val def = multiblockId?.let { MultiblockRegistry.byIdentifier[it] }
+                    val def = if (multiblockId != null) MultiblockRegistry.byIdentifier[multiblockId] else null
                     if (def != null) {
                         MultiblockAssembler.disassembleSkipping(serverWorld, controllerPos, def, persistentState, pos)
                     }

@@ -42,7 +42,6 @@ object BedrockLoaderClient : ClientModInitializer {
         ModelLoadingPlugin.register(BedrockModelLoadingPlugin)
 
         //? if >=1.21 {
-        // Register FabricRock confirm channel so ViaBedrock can detect this mod
         PayloadTypeRegistry.playS2C().register(FabricRockConfirmPayload.ID, FabricRockConfirmPayload.CODEC)
         ClientPlayNetworking.registerGlobalReceiver(FabricRockConfirmPayload.ID) { _, _ -> }
         //?}

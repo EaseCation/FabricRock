@@ -1,7 +1,7 @@
 plugins {
     kotlin("jvm") version "2.1.10"
     application
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("io.github.goooler.shadow") version "8.1.8"
 }
 
 group = "net.easecation.bedrockloader"

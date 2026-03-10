@@ -209,8 +209,7 @@ class BedrockResourcePackLoader(
         }
         return JsonUnbakedModel(parent, emptyList(), builder.build(), null, null, ModelTransformation.NONE)
         *///?} else {
-        /*// 1.21.1-1.21.3: 使用Map
-        return JsonUnbakedModel(parent, emptyList(), textureMap, null, null, ModelTransformation.NONE, emptyList())
+        /*return JsonUnbakedModel(parent, emptyList(), textureMap, null, null, ModelTransformation.NONE, emptyList())
         *///?}
     }
 
@@ -252,7 +251,6 @@ class BedrockResourcePackLoader(
     }
 
     //? if >=1.21.4 {
-    // 为1.21.4生成物品模型定义文件 (assets/<namespace>/items/<item_id>.json)
     private fun createItemDefinition(identifier: Identifier, modelPath: String, tints: List<Int>? = null) {
         val namespaceDir = namespaceDir(identifier.namespace)
         val file = namespaceDir.resolve("items/${identifier.path}.json")
@@ -268,25 +266,18 @@ class BedrockResourcePackLoader(
     //?}
 
     //? if >=1.21.5 {
-    /**
-     * 写物理 models/item/<id>.json 文件到磁盘。
-     * 在 1.21.5+ 中，modifyModelOnLoad 仅对有 JSON 文件的模型触发，
-     * 因此需要写物理文件让原版管线正确加载物品模型。
-     */
     private fun writeItemModelJson(identifier: Identifier, parent: String, textures: Map<String, String>) {
         val namespaceDir = namespaceDir(identifier.namespace)
         val modelsItemDir = namespaceDir.resolve("models/item")
         if (!modelsItemDir.exists()) modelsItemDir.mkdirs()
         val texturesStr = textures.entries.joinToString(",") { (key, value) ->
-            """"$key":"$value""""
+            "\"${key}\":\"${value}\""
         }
-        val json = """{"parent":"$parent","textures":{$texturesStr}}"""
+        val json = "{\"parent\":\"$parent\",\"textures\":{$texturesStr}}"
         modelsItemDir.resolve("${identifier.path}.json").writeText(json)
     }
 
-    /**
-     * 为标准立方体方块物品写 models/item/<id>.json
-     */
+    // 为标准立方体方块物品写 models/item/<id>.json
     private fun writeItemCubeModelJson(
         identifier: Identifier,
         textures: BlockResourceDefinition.Textures?,
@@ -338,11 +329,9 @@ class BedrockResourcePackLoader(
         }
     }
 
-    /**
-     * 为标准立方体方块写 models/block/<id>.json
-     * 在 1.21.5+ 中，BlockStateResolver 使用 ModelVariant(modelId) 引用模型，
-     * 需要物理 JSON 文件才能正确加载。
-     */
+    // 为标准立方体方块写 models/block/<id>.json
+    // 在 1.21.5+ 中，BlockStateResolver 使用 ModelVariant(modelId) 引用模型，
+    // 需要物理 JSON 文件才能正确加载。
     private fun writeBlockCubeModelJson(
         identifier: Identifier,
         textures: BlockResourceDefinition.Textures?,
@@ -394,9 +383,9 @@ class BedrockResourcePackLoader(
             val modelsBlockDir = namespaceDir.resolve("models/block")
             if (!modelsBlockDir.exists()) modelsBlockDir.mkdirs()
             val texturesStr = textureJsonMap.entries.joinToString(",") { (k, v) ->
-                """"$k":"$v""""
+                "\"${k}\":\"${v}\""
             }
-            val json = """{"parent":"block/cube_all","textures":{$texturesStr}}"""
+            val json = "{\"parent\":\"block/cube_all\",\"textures\":{$texturesStr}}"
             modelsBlockDir.resolve("${identifier.path}.json").writeText(json)
         }
     }
@@ -493,7 +482,6 @@ class BedrockResourcePackLoader(
             val model = createCubeModel(identifier, textures, materialInstances)
             BedrockAddonsRegistryClient.blockModels[identifier] = model
             //? if >=1.21.5 {
-            // 写物理 JSON 文件，让 ModelVariant 引用的模型能被找到
             writeBlockCubeModelJson(identifier, textures, materialInstances)
             //?}
         }
@@ -518,7 +506,6 @@ class BedrockResourcePackLoader(
                         val (model, _) = result
                         BedrockAddonsRegistryClient.itemModels[identifier] = model
                         //? if >=1.21.5 {
-                        // 写 dummy JSON 文件，modifyItemModelBeforeBake() 会在烘焙时替换为几何体模型
                         writeItemModelJson(identifier, "block/block", emptyMap())
                         //?}
                         //? if >=1.21.4 {
@@ -533,7 +520,6 @@ class BedrockResourcePackLoader(
             // 使用 block_icon 创建平面图标
             val blockIcon = bedrockClientEntity.block_icon ?: return
             //? if >=1.21.5 {
-            // 写物理 JSON 文件，让原版管线加载
             context.resource.terrainTextureToJava(identifier.namespace, blockIcon)?.let {
                 writeItemModelJson(identifier, "item/generated", mapOf("layer0" to it.toString()))
             }
@@ -559,14 +545,12 @@ class BedrockResourcePackLoader(
                 val model = createGeometryModel(identifier, geometry!!, materialInstances) ?: return
                 BedrockAddonsRegistryClient.itemModels[identifier] = model
                 //? if >=1.21.5 {
-                // 写 dummy JSON 文件，modifyItemModelBeforeBake() 会在烘焙时替换为几何体模型
                 writeItemModelJson(identifier, "block/block", emptyMap())
                 //?}
             } else {
                 // 标准立方体：使用cube模型
                 val textures = block?.carried_textures ?: block?.textures
                 //? if >=1.21.5 {
-                // 写物理 JSON 文件，让原版管线加载
                 writeItemCubeModelJson(identifier, textures, materialInstances)
                 //?} else {
                 /*val model = createCubeModel(identifier, textures, materialInstances)
@@ -753,7 +737,6 @@ class BedrockResourcePackLoader(
             val spawnEggTexture = clientEntity?.spawn_egg?.texture
             if (spawnEggTexture != null) {
                 //? if >=1.21.5 {
-                // 写物理 JSON 文件，让原版管线加载
                 context.resource.itemTextureToJava(itemIdentifier.namespace, spawnEggTexture)?.let {
                     writeItemModelJson(itemIdentifier, "item/generated", mapOf("layer0" to it.toString()))
                 }
@@ -773,11 +756,9 @@ class BedrockResourcePackLoader(
                 val overlayColor = clientEntity?.spawn_egg?.overlay_color
                     ?.replace("#", "")?.toLong(16)?.toInt() ?: 0xFFFFFF
                 //? if >=1.21.5 {
-                // 1.21.5+: 原版 template_spawn_egg 已移除，使用模组内置的 bedrockloader:item/template_spawn_egg
                 createItemDefinition(itemIdentifier, "bedrockloader:item/template_spawn_egg", listOf(baseColor, overlayColor))
                 //?} elif >=1.21.4 {
-                /*// 1.21.4: 使用原版 template_spawn_egg 模型 + tints 着色
-                createItemDefinition(itemIdentifier, "item/template_spawn_egg", listOf(baseColor, overlayColor))
+                /*createItemDefinition(itemIdentifier, "item/template_spawn_egg", listOf(baseColor, overlayColor))
                 *///?} else {
                 /*BedrockAddonsRegistryClient.itemModels[itemIdentifier] = net.fabricmc.fabric.api.client.model.loading.v1.DelegatingUnbakedModel(identifierOf("item/template_spawn_egg"))
                 *///?}

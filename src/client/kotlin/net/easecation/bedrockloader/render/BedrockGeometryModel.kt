@@ -393,7 +393,6 @@ class BedrockGeometryModel private constructor(
     //?}
 
     //? if >=1.21.5 {
-    // BlockStateModel implementation
     override fun addParts(random: Random, parts: MutableList<BlockModelPart>) {
         // Empty - we use FRAPI for rendering
     }

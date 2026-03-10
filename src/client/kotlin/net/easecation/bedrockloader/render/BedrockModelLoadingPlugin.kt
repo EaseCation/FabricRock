@@ -130,8 +130,6 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
         *///?}
 
         //? if >=1.21.5 {
-        // 1.21.5+: 标准立方体和平面图标物品通过物理 models/item/*.json 文件加载（原版管线处理）
-        // 仅 BedrockGeometryModel 类型需要通过 modifyItemModelBeforeBake 拦截
         pluginContext.modifyItemModelBeforeBake().register { model, context ->
             val itemId = context.itemId()
             val customModel = BedrockAddonsRegistryClient.itemModels[itemId]

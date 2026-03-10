@@ -1,5 +1,5 @@
 plugins {
-	id 'fabric-loom' version '1.13.6'
+	id 'fabric-loom' version '1.15.4'
 	id 'maven-publish'
     id "org.jetbrains.kotlin.jvm" version "2.1.10"
     id 'dev.kikugie.stonecutter'

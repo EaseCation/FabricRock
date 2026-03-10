@@ -82,8 +82,8 @@ class MultiblockPersistentState : PersistentState() {
             return world.persistentStateManager.getOrCreate(STATE_TYPE) as MultiblockPersistentState
         }
         //?} elif >=1.21.2 {
-        /*
-        private fun fromNbt(nbt: NbtCompound): MultiblockPersistentState {
+        
+        /*private fun fromNbt(nbt: NbtCompound): MultiblockPersistentState {
             val state = MultiblockPersistentState()
             val list = nbt.getList("assemblies", net.minecraft.nbt.NbtElement.COMPOUND_TYPE.toInt())
             for (i in 0 until list.size) {
@@ -163,8 +163,8 @@ class MultiblockPersistentState : PersistentState() {
         return nbt
     }
     *///?} elif >=1.21.2 && <1.21.11 {
-    /*
-    override fun writeNbt(nbt: NbtCompound, registryLookup: RegistryWrapper.WrapperLookup): NbtCompound {
+    
+    /*override fun writeNbt(nbt: NbtCompound, registryLookup: RegistryWrapper.WrapperLookup): NbtCompound {
         val list = NbtList()
         controllerToData.forEach { (ctrlLong, data) ->
             val entry = NbtCompound()

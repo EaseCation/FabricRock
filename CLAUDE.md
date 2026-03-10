@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Bedrock Loader** 是一个Minecraft Java版的Fabric模组,用于加载Minecraft基岩版(Bedrock Edition)的插件包,包括自定义方块、实体、模型和纹理等内容。
 
 - **Minecraft版本**: 1.20.4, 1.21.1, 1.21.2, 1.21.3, 1.21.4, 1.21.5, 1.21.6, 1.21.7, 1.21.8, 1.21.9, 1.21.10, 1.21.11 (多版本支持)
-- **构建系统**: Gradle + Fabric Loom 1.13.6 + Stonecutter 0.4.4
+- **构建系统**: Gradle + Fabric Loom 1.15.4 + Stonecutter 0.8.3
 - **编程语言**: Kotlin (主要) + Java (少量Mixin)
 - **Java版本**: 21
 - **依赖**: Fabric API, Fabric Language Kotlin
@@ -40,37 +40,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # 查看所有Stonecutter任务
 ./gradlew tasks --group stonecutter
 
-# 切换到特定版本并构建
-./gradlew "Set active project to 1.20.4" && ./gradlew :1.20.4:build
-./gradlew "Set active project to 1.21.1" && ./gradlew :1.21.1:build
-./gradlew "Set active project to 1.21.2" && ./gradlew :1.21.2:build
-./gradlew "Set active project to 1.21.3" && ./gradlew :1.21.3:build
-./gradlew "Set active project to 1.21.4" && ./gradlew :1.21.4:build
-./gradlew "Set active project to 1.21.5" && ./gradlew :1.21.5:build
-./gradlew "Set active project to 1.21.6" && ./gradlew :1.21.6:build
-./gradlew "Set active project to 1.21.7" && ./gradlew :1.21.7:build
-./gradlew "Set active project to 1.21.8" && ./gradlew :1.21.8:build
-./gradlew "Set active project to 1.21.9" && ./gradlew :1.21.9:build
-./gradlew "Set active project to 1.21.10" && ./gradlew :1.21.10:build
-./gradlew "Set active project to 1.21.11" && ./gradlew :1.21.11:build
+# 切换到特定版本并构建 (Stonecutter 0.8+ 新任务名)
+./gradlew stonecutterSwitchTo1.20.4 && ./gradlew :1.20.4:build
+./gradlew stonecutterSwitchTo1.21.1 && ./gradlew :1.21.1:build
+./gradlew stonecutterSwitchTo1.21.2 && ./gradlew :1.21.2:build
+./gradlew stonecutterSwitchTo1.21.3 && ./gradlew :1.21.3:build
+./gradlew stonecutterSwitchTo1.21.4 && ./gradlew :1.21.4:build
+./gradlew stonecutterSwitchTo1.21.5 && ./gradlew :1.21.5:build
+./gradlew stonecutterSwitchTo1.21.6 && ./gradlew :1.21.6:build
+./gradlew stonecutterSwitchTo1.21.7 && ./gradlew :1.21.7:build
+./gradlew stonecutterSwitchTo1.21.8 && ./gradlew :1.21.8:build
+./gradlew stonecutterSwitchTo1.21.9 && ./gradlew :1.21.9:build
+./gradlew stonecutterSwitchTo1.21.10 && ./gradlew :1.21.10:build
+./gradlew stonecutterSwitchTo1.21.11 && ./gradlew :1.21.11:build
 
 # 重置到基准版本 (提交代码前必须执行)
-./gradlew "Reset active project"
+./gradlew stonecutterSwitchTo1.21.11
 
 # 构建所有版本 (依次执行)
-./gradlew "Set active project to 1.20.4" && ./gradlew :1.20.4:build && \
-./gradlew "Set active project to 1.21.1" && ./gradlew :1.21.1:build && \
-./gradlew "Set active project to 1.21.2" && ./gradlew :1.21.2:build && \
-./gradlew "Set active project to 1.21.3" && ./gradlew :1.21.3:build && \
-./gradlew "Set active project to 1.21.4" && ./gradlew :1.21.4:build && \
-./gradlew "Set active project to 1.21.5" && ./gradlew :1.21.5:build && \
-./gradlew "Set active project to 1.21.6" && ./gradlew :1.21.6:build && \
-./gradlew "Set active project to 1.21.7" && ./gradlew :1.21.7:build && \
-./gradlew "Set active project to 1.21.8" && ./gradlew :1.21.8:build && \
-./gradlew "Set active project to 1.21.9" && ./gradlew :1.21.9:build && \
-./gradlew "Set active project to 1.21.10" && ./gradlew :1.21.10:build && \
-./gradlew "Set active project to 1.21.11" && ./gradlew :1.21.11:build && \
-./gradlew "Reset active project"
+./gradlew stonecutterSwitchTo1.20.4 && ./gradlew :1.20.4:build && \
+./gradlew stonecutterSwitchTo1.21.1 && ./gradlew :1.21.1:build && \
+./gradlew stonecutterSwitchTo1.21.2 && ./gradlew :1.21.2:build && \
+./gradlew stonecutterSwitchTo1.21.3 && ./gradlew :1.21.3:build && \
+./gradlew stonecutterSwitchTo1.21.4 && ./gradlew :1.21.4:build && \
+./gradlew stonecutterSwitchTo1.21.5 && ./gradlew :1.21.5:build && \
+./gradlew stonecutterSwitchTo1.21.6 && ./gradlew :1.21.6:build && \
+./gradlew stonecutterSwitchTo1.21.7 && ./gradlew :1.21.7:build && \
+./gradlew stonecutterSwitchTo1.21.8 && ./gradlew :1.21.8:build && \
+./gradlew stonecutterSwitchTo1.21.9 && ./gradlew :1.21.9:build && \
+./gradlew stonecutterSwitchTo1.21.10 && ./gradlew :1.21.10:build && \
+./gradlew stonecutterSwitchTo1.21.11 && ./gradlew :1.21.11:build && \
+./gradlew stonecutterSwitchTo1.21.11
 ```
 
 **构建产物位置**:
@@ -456,16 +456,29 @@ intermediateVersionCode()
 **工作流程**:
 
 1. **开发时**: 在基准版本(1.21.11)上开发,使用条件注释标记版本差异
-2. **切换版本**: 运行`./gradlew "Set active project to X.XX.X"`
+2. **切换版本**: 运行`./gradlew stonecutterSwitchToX.XX.X`
    - Stonecutter会修改源文件,注释掉不适用的代码,取消注释适用的代码
 3. **构建**: 运行`./gradlew :X.XX.X:build`生成该版本的jar
-4. **提交前**: 必须运行`./gradlew "Reset active project"`重置到基准版本
+4. **提交前**: 必须运行`./gradlew stonecutterSwitchTo1.21.11`重置到基准版本
 
 **重要注意事项**:
 - ⚠️ Stonecutter会直接修改源文件,不是生成副本
 - ⚠️ 提交代码前必须重置到基准版本(1.21.11)
 - ⚠️ 不要手动修改`stonecutter.gradle`中的active版本
 - ⚠️ 条件注释的格式必须严格遵守,否则Stonecutter无法识别
+
+**Stonecutter 0.8.3 词法器兼容性注意事项** (升级时发现的三类坑):
+
+1. **`/*//` 模式** — `//? if` 块的内容首行是 `//` 注释时，Stonecutter 对该块取反注释会生成 `/*//`，触发"Unclosed scope"错误。原因是词法器在 `IN_STAR` 模式下遇到 `//` 会切换到 `IN_SLASH` 模式，丢失块注释上下文，导致 `*///?}` 关闭标记无法被识别。
+   - **解决方案**: 删除 `//? if` 和 `//?} else {` 块中的首行 `//` 注释行（将注释移到代码行同行或删除）。
+   - **受影响文件**: `BedrockResourcePackLoader.kt`、`BedrockModelLoadingPlugin.kt`、`BedrockLoaderClient.kt`、`BedrockGeometryModel.kt`、`BedrockItemModelUnbaked.kt`
+
+2. **四引号字符串** — Kotlin 原始字符串 `""""$key":"$value""""` 最后的多余 `"` 会使词法器进入 `IN_STRING` 模式，后续 `//?}` 标记全部被忽略，触发"Unclosed scope"错误。
+   - **解决方案**: 将 `""""...""""` 替换为普通转义字符串 `"\"...\""`。
+   - **错误示例**: `""""$key":"$value""""` → **正确写法**: `"\"${key}\":\"${value}\""`
+
+3. **KDoc 注释** — `/** ... */` 格式的 KDoc 注释在 `//? if` 条件块内会导致词法器作用域识别问题。
+   - **解决方案**: 将 `/** ... */` 改为 `//` 行注释。
 
 **当前版本支持状态**:
 - ✅ 1.20.4 - 完全支持

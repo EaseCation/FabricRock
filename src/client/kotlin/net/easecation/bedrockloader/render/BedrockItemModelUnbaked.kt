@@ -63,7 +63,6 @@ class BedrockItemModelUnbaked(
 
         val settings = ModelSettings(true, defaultSprite, transforms)
         //? if >=1.21.11 {
-        // 直接实现 ItemModel 接口，避免反射访问 BasicItemModel 的包私有构造函数
         val renderLayer = TexturedRenderLayers.getEntityCutout()
         return object : ItemModel {
             override fun update(
