@@ -3,7 +3,15 @@ package net.easecation.bedrockloader.render
 import net.easecation.bedrockloader.bedrock.block.component.ComponentTransformation
 import net.easecation.bedrockloader.bedrock.definition.GeometryDefinition
 import net.easecation.bedrockloader.render.model.*
+//? if >=1.21.4 {
+import net.fabricmc.fabric.api.renderer.v1.Renderer
 import net.fabricmc.fabric.api.renderer.v1.mesh.Mesh
+import net.fabricmc.fabric.api.renderer.v1.mesh.MutableMesh
+//?} else {
+/*import net.fabricmc.fabric.api.renderer.v1.RendererAccess
+import net.fabricmc.fabric.api.renderer.v1.mesh.Mesh
+import net.fabricmc.fabric.api.renderer.v1.mesh.MeshBuilder
+*///?}
 import net.minecraft.client.texture.Sprite
 import net.minecraft.client.util.math.MatrixStack
 import org.joml.Quaternionf
@@ -90,6 +98,64 @@ object BedrockRenderUtil {
             }
         }
         return modelData
+    }
+
+    /**
+     * 将多个已烘焙 Mesh（每个对应 multiblock 的一个 part）合并为单个 Mesh。
+     * 每个 part 的顶点坐标会按 offset（block 坐标）平移，整体等比缩放至 [0,1]³ 并居中。
+     * UV 坐标直接复制（已是 atlas 坐标，不再调用 spriteBake）。
+     *
+     * @param meshesWithOffsets List of (Mesh, [ox, oy, oz]) pairs
+     * @return Combined Mesh
+     */
+    fun combineMultiblockMeshes(meshesWithOffsets: List<Pair<Mesh, List<Int>>>): Mesh {
+        val allOffsets = meshesWithOffsets.map { it.second }
+        val bboxMinX = allOffsets.minOf { it[0] }.toFloat()
+        val bboxMinY = allOffsets.minOf { it[1] }.toFloat()
+        val bboxMinZ = allOffsets.minOf { it[2] }.toFloat()
+        val bboxMaxX = allOffsets.maxOf { it[0] }.toFloat() + 1f
+        val bboxMaxY = allOffsets.maxOf { it[1] }.toFloat() + 1f
+        val bboxMaxZ = allOffsets.maxOf { it[2] }.toFloat() + 1f
+
+        val displayScale = 1.5f
+        val scale = displayScale / maxOf(bboxMaxX - bboxMinX, bboxMaxY - bboxMinY, bboxMaxZ - bboxMinZ)
+        val translateX = 0.5f - (bboxMinX + bboxMaxX) / 2f * scale
+        val translateY = 0.5f - (bboxMinY + bboxMaxY) / 2f * scale
+        val translateZ = 0.5f - (bboxMinZ + bboxMaxZ) / 2f * scale
+
+        //? if >=1.21.4 {
+        val mutableMesh: MutableMesh = Renderer.get().mutableMesh()
+        val emitter = mutableMesh.emitter()
+        //?} else {
+        /*val meshBuilder: MeshBuilder = RendererAccess.INSTANCE.renderer!!.meshBuilder()
+        val emitter = meshBuilder.emitter
+        *///?}
+        meshesWithOffsets.forEach { (mesh, offset) ->
+            val ox = offset[0].toFloat()
+            val oy = offset[1].toFloat()
+            val oz = offset[2].toFloat()
+            mesh.forEach { quadView ->
+                for (i in 0..3) {
+                    emitter.pos(i,
+                        (quadView.x(i) + ox) * scale + translateX,
+                        (quadView.y(i) + oy) * scale + translateY,
+                        (quadView.z(i) + oz) * scale + translateZ
+                    )
+                    emitter.color(i, quadView.color(i))
+                    emitter.uv(i, quadView.u(i), quadView.v(i))
+                    emitter.lightmap(i, quadView.lightmap(i))
+                    if (quadView.hasNormal(i)) {
+                        emitter.normal(i, quadView.normalX(i), quadView.normalY(i), quadView.normalZ(i))
+                    }
+                }
+                emitter.emit()
+            }
+        }
+        //? if >=1.21.4 {
+        return mutableMesh.immutableCopy()
+        //?} else {
+        /*return meshBuilder.build()
+        *///?}
     }
 
     /**

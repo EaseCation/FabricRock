@@ -6,6 +6,7 @@ import net.easecation.bedrockloader.bedrock.block.component.ComponentTransformat
 import net.easecation.bedrockloader.block.BlockContext
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistry
 import net.easecation.bedrockloader.loader.BedrockAddonsRegistryClient
+import net.easecation.bedrockloader.loader.MultiblockItemData
 //? if <1.21.4 {
 /*import net.fabricmc.fabric.api.client.model.loading.v1.DelegatingUnbakedModel
 *///?}
@@ -132,6 +133,10 @@ object BedrockModelLoadingPlugin : ModelLoadingPlugin {
         //? if >=1.21.5 {
         pluginContext.modifyItemModelBeforeBake().register { model, context ->
             val itemId = context.itemId()
+            val multiblockData = BedrockAddonsRegistryClient.multiblockItemData[itemId]
+            if (multiblockData != null) {
+                return@register MultiblockItemModelUnbaked(multiblockData)
+            }
             val customModel = BedrockAddonsRegistryClient.itemModels[itemId]
             if (customModel is BedrockGeometryModel) {
                 BedrockItemModelUnbaked(customModel)

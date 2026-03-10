@@ -414,9 +414,9 @@ class BedrockGeometryModel private constructor(
     }
     *///?}
 
-    //? if >=1.21.5 {
     fun getModelPartForBaking(): ModelPart = modelPart
-    //?}
+    fun getBakedMesh(): Mesh? = mesh
+    fun getBlockTransformation(): ComponentTransformation? = blockTransformation
 
     //? if >=1.21.5 {
     override fun addParts(random: Random, parts: MutableList<BlockModelPart>) {
@@ -451,7 +451,20 @@ class BedrockGeometryModel private constructor(
         randomSupplier: Supplier<Random>,
         cullTest: Predicate<Direction?>
     ) { mesh?.outputTo(emitter) }
-    override fun emitItemQuads(emitter: QuadEmitter, randomSupplier: Supplier<Random>) { mesh?.outputTo(emitter) }
+    override fun emitItemQuads(emitter: QuadEmitter, randomSupplier: Supplier<Random>) {
+        val id = blockIdentifier
+        if (id != null) {
+            val data = BedrockAddonsRegistryClient.multiblockItemData[id]
+            if (data != null) {
+                val combined = BedrockAddonsRegistryClient.getOrBuildMultiblockMesh(id, data)
+                if (combined != null) {
+                    combined.outputTo(emitter)
+                    return
+                }
+            }
+        }
+        mesh?.outputTo(emitter)
+    }
     override fun getTransformation(): ModelTransformation = transformation
     *///?} else {
     /*override fun getQuads(state: BlockState?, face: Direction?, random: Random?): MutableList<BakedQuad> = mutableListOf()
@@ -462,7 +475,20 @@ class BedrockGeometryModel private constructor(
     override fun getParticleSprite(): Sprite = defaultSprite!!
     override fun isVanillaAdapter(): Boolean = false
     override fun emitBlockQuads(blockRenderView: BlockRenderView, blockState: BlockState, blockPos: BlockPos, supplier: Supplier<Random>, renderContext: RenderContext) { mesh?.outputTo(renderContext.emitter) }
-    override fun emitItemQuads(itemStack: ItemStack, supplier: Supplier<Random>, renderContext: RenderContext) { mesh?.outputTo(renderContext.emitter) }
+    override fun emitItemQuads(itemStack: ItemStack, supplier: Supplier<Random>, renderContext: RenderContext) {
+        val id = blockIdentifier
+        if (id != null) {
+            val data = BedrockAddonsRegistryClient.multiblockItemData[id]
+            if (data != null) {
+                val combined = BedrockAddonsRegistryClient.getOrBuildMultiblockMesh(id, data)
+                if (combined != null) {
+                    combined.outputTo(renderContext.emitter)
+                    return
+                }
+            }
+        }
+        mesh?.outputTo(renderContext.emitter)
+    }
     override fun getTransformation(): ModelTransformation = transformation
     override fun getOverrides(): ModelOverrideList = ModelOverrideList.EMPTY
     *///?}

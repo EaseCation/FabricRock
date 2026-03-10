@@ -5,6 +5,8 @@ import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.bedrock.block.component.BlockComponents
 import net.easecation.bedrockloader.bedrock.block.component.ComponentGeometry
 import net.easecation.bedrockloader.bedrock.block.component.ComponentMaterialInstances
+import net.easecation.bedrockloader.block.BlockContext
+import net.easecation.bedrockloader.render.BedrockMaterialHelper
 import net.easecation.bedrockloader.bedrock.definition.BlockResourceDefinition
 import net.easecation.bedrockloader.bedrock.definition.EntityRenderControllerDefinition
 import net.easecation.bedrockloader.bedrock.definition.EntityResourceDefinition
@@ -18,6 +20,7 @@ import net.easecation.bedrockloader.render.BedrockMaterialInstance
 import net.easecation.bedrockloader.render.VersionCompat
 import net.easecation.bedrockloader.render.renderer.BlockEntityDataDrivenRenderer
 import net.easecation.bedrockloader.render.renderer.EntityDataDrivenRenderer
+import net.easecation.bedrockloader.multiblock.MultiblockRegistry
 import net.easecation.bedrockloader.util.GsonUtil
 //? if >=1.21.6 {
 import net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap
@@ -95,6 +98,66 @@ class BedrockResourcePackLoader(
             createSpawnEggModel(identifier, clientEntity)
             // renderer
             registerEntityRenderController(identifier)
+        }
+        // Multiblock item models
+        BedrockAddonsRegistryClient.clearMultiblockMeshCache()
+        registerMultiblockItemModels()
+    }
+
+    private fun registerMultiblockItemModels() {
+        MultiblockRegistry.byIdentifier.values.forEach { multiblock ->
+            val controllerPart = multiblock.parts.find { it.isController } ?: return@forEach
+            val controllerId = controllerPart.blockId
+
+            val partPairs = multiblock.parts.mapNotNull { part ->
+                val baseModel = BedrockAddonsRegistryClient.blockModels[part.blockId] as? BedrockGeometryModel
+                    ?: return@mapNotNull null
+                val block = BedrockAddonsRegistry.blocks[part.blockId] as? BlockContext.BlockDataDriven
+                    ?: return@mapNotNull Pair(baseModel, part.offset)
+
+                // 根据 stateOverrides 找到匹配的 BlockState
+                val stateOverrides = part.stateOverrides
+                val matchingState = if (stateOverrides.isEmpty()) {
+                    block.defaultState
+                } else {
+                    block.stateManager.states.find { state ->
+                        stateOverrides.all { (propName, propValue) ->
+                            state.entries.any { (prop, value) ->
+                                prop.name == propName && value.toString() == propValue
+                            }
+                        }
+                    } ?: block.defaultState
+                }
+
+                // 检查该状态是否需要切换 geometry
+                val baseGeometryId = block.getGeometryIdentifier(block.defaultState)
+                val stateGeometryId = block.getGeometryIdentifier(matchingState)
+                val geometryModel = if (stateGeometryId != null && stateGeometryId != baseGeometryId) {
+                    val geometryFactory = BedrockAddonsRegistryClient.geometries[stateGeometryId]
+                    if (geometryFactory != null) {
+                        val stateMaterialInstances = block.getComponents(matchingState).minecraftMaterialInstances
+                        val materials = if (stateMaterialInstances != null) {
+                            BedrockMaterialHelper.createMaterialsFromInstances(
+                                part.blockId.namespace, part.blockId, stateMaterialInstances
+                            )
+                        } else {
+                            baseModel.materials
+                        }
+                        geometryFactory.create(materials, part.blockId)
+                    } else baseModel
+                } else baseModel
+
+                // 应用 permutation 的材质/变换覆盖（getModelVariant 返回 this 或新变体）
+                val stateModel = geometryModel.getModelVariant(block, matchingState) as? BedrockGeometryModel
+                    ?: geometryModel
+
+                Pair(stateModel, part.offset)
+            }
+
+            if (partPairs.isNotEmpty()) {
+                BedrockAddonsRegistryClient.multiblockItemData[controllerId] = MultiblockItemData(partPairs)
+                BedrockLoader.logger.info("[BedrockResourcePackLoader] Registered multiblock item model for $controllerId with ${partPairs.size} parts")
+            }
         }
     }
 

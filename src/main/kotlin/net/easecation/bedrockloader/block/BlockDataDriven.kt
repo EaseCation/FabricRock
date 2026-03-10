@@ -91,6 +91,30 @@ data class BlockContext(
         val DIRECTION = BedrockIntProperty.of("direction", (0..3).toSet())
         val FACING_DIRECTION = BedrockIntProperty.of("facing_direction", (0..5).toSet())
 
+        private val permOrSplit = Regex("""\s*\|\|\s*""")
+        private val permAndSplit = Regex("""\s*&&\s*""")
+        private val permBsRegex = Regex("""^\s*q(uery)?\s*\.\s*block_state\s*\(\s*'(?<key>[^']+)'\s*\)\s*(?<operator>==|!=)\s*(?:'(?<value>[^']*)'|(?<rawValue>[^\s'"]+))\s*$""")
+
+        private fun evalPermutationForState(condition: String, state: BlockState): Boolean {
+            return permOrSplit.split(condition).any { orGroup ->
+                permAndSplit.split(orGroup).all { cond ->
+                    val m = permBsRegex.matchEntire(cond.trim()) ?: return@all false
+                    val key = m.groups["key"]?.value ?: return@all false
+                    val op = m.groups["operator"]?.value ?: return@all false
+                    val value = m.groups["value"]?.value ?: m.groups["rawValue"]?.value ?: return@all false
+                    @Suppress("UNCHECKED_CAST")
+                    val prop = state.properties.find { it.name == key } as? net.minecraft.state.property.Property<Comparable<Any>>
+                        ?: return@all false
+                    val valueName = state.get(prop).toString()
+                    when (op) {
+                        "==" -> valueName == value
+                        "!=" -> valueName != value
+                        else -> false
+                    }
+                }
+            }
+        }
+
         //? if >=1.21.4 {
         /**
          * 1.21.4: 使用预配置的settings创建Block（settings已包含registry key）
@@ -136,8 +160,18 @@ data class BlockContext(
                 }
             }
 
-            components.minecraftLightEmission?.let {
-                settings.luminance { _ -> it }
+            val baseLuminance = components.minecraftLightEmission ?: 0
+            val hasPermLuminance = behaviour.permutations?.any { (_, c) -> c.minecraftLightEmission != null } == true
+            if (baseLuminance > 0 || hasPermLuminance) {
+                settings.luminance { state ->
+                    var luminance = baseLuminance
+                    behaviour.permutations?.forEach { (condition, perms) ->
+                        if (evalPermutationForState(condition, state)) {
+                            perms.minecraftLightEmission?.let { luminance = it }
+                        }
+                    }
+                    luminance
+                }
             }
 
             components.minecraftMapColor?.let { mapColor ->
@@ -323,8 +357,18 @@ data class BlockContext(
                     }
 
                 }
-                components.minecraftLightEmission?.let {
-                    settings.luminance { _ -> it }
+                val baseLuminance = components.minecraftLightEmission ?: 0
+                val hasPermLuminance = behaviour.permutations?.any { (_, c) -> c.minecraftLightEmission != null } == true
+                if (baseLuminance > 0 || hasPermLuminance) {
+                    settings.luminance { state ->
+                        var luminance = baseLuminance
+                        behaviour.permutations?.forEach { (condition, perms) ->
+                            if (evalPermutationForState(condition, state)) {
+                                perms.minecraftLightEmission?.let { luminance = it }
+                            }
+                        }
+                        luminance
+                    }
                 }
                 // 应用 map_color: 将基岩版颜色匹配到最接近的 Java 版 MapColor
                 components.minecraftMapColor?.let { mapColor ->
@@ -335,8 +379,8 @@ data class BlockContext(
                 return settings
             }
 
-            val settings = calculateSettings()
             val properties = calculateProperties()
+            val settings = calculateSettings()
             return BlockContext(identifier, behaviour, properties).BlockDataDriven(settings)
         }
     }
