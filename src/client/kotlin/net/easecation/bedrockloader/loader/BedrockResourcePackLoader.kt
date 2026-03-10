@@ -662,7 +662,7 @@ class BedrockResourcePackLoader(
                 VersionCompat.BLOCK_ATLAS_TEXTURE,
                 identifierOf(identifier.namespace, "block/${texture.substringAfterLast("/")}")
             )
-            return@mapValues BedrockMaterialInstance(spriteId)
+            return@mapValues BedrockMaterialInstance(spriteId, material.render_method)
         }?.mapValues {
             it.value ?: BedrockMaterialInstance(
                 SpriteIdentifier(

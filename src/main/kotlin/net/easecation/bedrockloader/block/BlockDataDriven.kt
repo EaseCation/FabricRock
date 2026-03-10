@@ -575,7 +575,7 @@ data class BlockContext(
             context: ShapeContext
         ): VoxelShape = when {
             this.collidable -> when (val box = getComponents(state).minecraftCollisionBox) {
-                is ComponentCollisionBox.ComponentCollisionBoxBoolean -> getOutlineShape(state, world, pos, context)
+                is ComponentCollisionBox.ComponentCollisionBoxBoolean -> if (box.value) getOutlineShape(state, world, pos, context) else VoxelShapes.empty()
                 is ComponentCollisionBox.ComponentCollisionBoxCustom -> VoxelShapes.cuboid(
                     applyFaceDirectionalToBox(state, applyTransformation(state, Box(
                         (1.0 / 16) * (16 - (box.origin[0] + 8 + box.size[0])),

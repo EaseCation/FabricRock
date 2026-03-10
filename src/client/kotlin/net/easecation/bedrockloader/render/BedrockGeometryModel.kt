@@ -2,6 +2,7 @@ package net.easecation.bedrockloader.render
 
 import net.easecation.bedrockloader.BedrockLoader
 import net.easecation.bedrockloader.animation.EntityAnimationManager
+import net.easecation.bedrockloader.bedrock.block.component.ComponentMaterialInstances
 import net.easecation.bedrockloader.bedrock.block.component.ComponentTransformation
 import net.easecation.bedrockloader.bedrock.definition.GeometryDefinition
 import net.easecation.bedrockloader.block.BlockContext
@@ -301,7 +302,12 @@ class BedrockGeometryModel private constructor(
             sprites[key] = spriteGetter.get(material.spriteId, model)
         }
         defaultSprite = sprites["*"] ?: sprites.values.firstOrNull()
-        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites, blockTransformation)
+        val doubleSidedMaterials = materials.entries
+            .filter { (_, mat) -> mat.renderMethod == ComponentMaterialInstances.RenderMethod.alpha_test
+                               || mat.renderMethod == ComponentMaterialInstances.RenderMethod.double_sided }
+            .map { it.key }
+            .toSet()
+        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites, blockTransformation, doubleSidedMaterials)
         return this
     }
 
@@ -318,7 +324,12 @@ class BedrockGeometryModel private constructor(
             sprites[key] = spriteGetter.get(material.spriteId)
         }
         defaultSprite = sprites["*"] ?: sprites.values.firstOrNull()
-        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites, blockTransformation)
+        val doubleSidedMaterials = materials.entries
+            .filter { (_, mat) -> mat.renderMethod == ComponentMaterialInstances.RenderMethod.alpha_test
+                               || mat.renderMethod == ComponentMaterialInstances.RenderMethod.double_sided }
+            .map { it.key }
+            .toSet()
+        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites, blockTransformation, doubleSidedMaterials)
         return this
     }
 
@@ -340,7 +351,12 @@ class BedrockGeometryModel private constructor(
             sprites[key] = textureGetter.apply(material.spriteId)
         }
         defaultSprite = sprites["*"] ?: sprites.values.firstOrNull()
-        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites, blockTransformation)
+        val doubleSidedMaterials = materials.entries
+            .filter { (_, mat) -> mat.renderMethod == ComponentMaterialInstances.RenderMethod.alpha_test
+                               || mat.renderMethod == ComponentMaterialInstances.RenderMethod.double_sided }
+            .map { it.key }
+            .toSet()
+        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites, blockTransformation, doubleSidedMaterials)
         return this
     }
     *///?} elif >=1.21 && <1.21.2 {
@@ -361,7 +377,12 @@ class BedrockGeometryModel private constructor(
             sprites[key] = textureGetter.apply(material.spriteId)
         }
         defaultSprite = sprites["*"] ?: sprites.values.firstOrNull()
-        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites, blockTransformation)
+        val doubleSidedMaterials = materials.entries
+            .filter { (_, mat) -> mat.renderMethod == ComponentMaterialInstances.RenderMethod.alpha_test
+                               || mat.renderMethod == ComponentMaterialInstances.RenderMethod.double_sided }
+            .map { it.key }
+            .toSet()
+        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites, blockTransformation, doubleSidedMaterials)
         return this
     }
     *///?} else {
@@ -383,7 +404,12 @@ class BedrockGeometryModel private constructor(
             sprites[key] = textureGetter.apply(material.spriteId)
         }
         defaultSprite = sprites["*"] ?: sprites.values.firstOrNull()
-        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites, blockTransformation)
+        val doubleSidedMaterials = materials.entries
+            .filter { (_, mat) -> mat.renderMethod == ComponentMaterialInstances.RenderMethod.alpha_test
+                               || mat.renderMethod == ComponentMaterialInstances.RenderMethod.double_sided }
+            .map { it.key }
+            .toSet()
+        mesh = BedrockRenderUtil.bakeModelPartToMesh(modelPart, defaultSprite!!, sprites, blockTransformation, doubleSidedMaterials)
         return this
     }
     *///?}

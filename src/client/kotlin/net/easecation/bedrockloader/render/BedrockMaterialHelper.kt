@@ -60,7 +60,7 @@ object BedrockMaterialHelper {
                 identifierOf(namespace, "block/${texture.substringAfterLast("/")}")
             )
 
-            BedrockMaterialInstance(spriteId)
+            BedrockMaterialInstance(spriteId, material.render_method)
         }
     }
 
